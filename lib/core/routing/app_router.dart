@@ -1,0 +1,34 @@
+import 'package:go_router/go_router.dart';
+
+import '../../features/home/presentation/pages/home_page.dart';
+
+class AppRouter {
+  const AppRouter._();
+
+  static final GoRouter router = GoRouter(
+    routes: <RouteBase>[
+      GoRoute(path: '/', redirect: (_, _) => '/home'),
+      GoRoute(path: '/home', builder: (_, _) => const HomePage()),
+      GoRoute(
+        path: '/scan',
+        builder: (_, _) => const PlaceholderPage(title: 'Scan'),
+      ),
+      GoRoute(
+        path: '/control',
+        builder: (_, _) => const PlaceholderPage(title: 'Control'),
+      ),
+      GoRoute(
+        path: '/chat',
+        builder: (_, _) => const PlaceholderPage(title: 'Chat'),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (_, _) => const PlaceholderPage(title: 'Settings'),
+      ),
+      GoRoute(
+        path: '/mcp',
+        builder: (_, _) => const PlaceholderPage(title: 'MCP'),
+      ),
+    ],
+  );
+}
