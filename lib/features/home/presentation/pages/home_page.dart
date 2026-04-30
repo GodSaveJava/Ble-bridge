@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../application/providers/application_providers.dart';
+import '../../../mcp_server/presentation/controllers/mcp_service_controller.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -10,6 +11,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
+    final mcpState = ref.watch(mcpServiceControllerProvider);
 
     final String deviceSubtitle = activeStatus.maybeWhen(
       data: (status) => status.isConnected
@@ -39,7 +41,11 @@ class HomePage extends ConsumerWidget {
           Card(
             child: ListTile(
               title: const Text('MCP Service'),
-              subtitle: const Text('Stopped'),
+              subtitle: Text(
+                mcpState.isRunning
+                    ? 'Running at ${mcpState.endpointInfo?.host}:${mcpState.endpointInfo?.port}'
+                    : 'Stopped',
+              ),
               trailing: FilledButton.tonal(
                 onPressed: () => context.push('/mcp'),
                 child: const Text('Open'),

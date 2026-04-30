@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/ble_device/presentation/pages/scan_page.dart';
 import '../../features/control/presentation/pages/control_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/mcp_server/presentation/pages/mcp_page.dart';
 
 class AppRouter {
   const AppRouter._();
@@ -21,10 +22,7 @@ class AppRouter {
         path: '/settings',
         builder: (_, _) => const PlaceholderPage(title: 'Settings'),
       ),
-      GoRoute(
-        path: '/mcp',
-        builder: (_, _) => const PlaceholderPage(title: 'MCP'),
-      ),
+      GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
     ],
   );
 }

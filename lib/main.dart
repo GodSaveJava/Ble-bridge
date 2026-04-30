@@ -13,6 +13,9 @@ void main() {
         hardwareRepositoryProvider.overrideWith((ref) {
           return ref.watch(defaultHardwareRepositoryProvider);
         }),
+        mcpServiceProvider.overrideWith((ref) {
+          return ref.watch(defaultMcpServiceProvider);
+        }),
       ],
       child: const ToyLinkApp(),
     ),

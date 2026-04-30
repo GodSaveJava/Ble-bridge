@@ -3,15 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
 import '../use_cases/control_device_use_case.dart';
+import '../use_cases/manage_mcp_service_use_case.dart';
 import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
+import '../../domain/services/mcp_service.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
   throw UnimplementedError(
     'Provide a concrete HardwareRepository in infrastructure layer.',
   );
+});
+
+final mcpServiceProvider = Provider<McpService>((_) {
+  throw UnimplementedError('Provide a concrete McpService in infrastructure.');
 });
 
 final safetyGuardProvider = Provider<SafetyGuard>((_) => const SafetyGuard());
@@ -47,4 +53,8 @@ final discoveredDevicesStreamProvider = StreamProvider<List<ToyDeviceInfo>>((
   ref,
 ) {
   return ref.watch(manageActiveDeviceUseCaseProvider).watchDiscoveredDevices();
+});
+
+final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((ref) {
+  return ManageMcpServiceUseCase(mcpService: ref.watch(mcpServiceProvider));
 });

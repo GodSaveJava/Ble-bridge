@@ -1,11 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/app.dart';
+import 'package:toylink_ai/infrastructure/providers/infrastructure_providers.dart';
 
 void main() {
   testWidgets('renders home shell', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ToyLinkApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultMcpServiceProvider);
+          }),
+        ],
+        child: const ToyLinkApp(),
+      ),
+    );
 
     expect(find.text('ToyLink AI'), findsOneWidget);
     expect(find.text('Device Status'), findsOneWidget);
