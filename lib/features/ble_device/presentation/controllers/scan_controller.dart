@@ -39,20 +39,21 @@ class ScanState {
 class ScanController extends Notifier<ScanState> {
   @override
   ScanState build() {
-    ref.listen<AsyncValue<List<ToyDeviceInfo>>>(discoveredDevicesStreamProvider, (
-      AsyncValue<List<ToyDeviceInfo>>? _,
-      AsyncValue<List<ToyDeviceInfo>> next,
-    ) {
-      next.whenData((List<ToyDeviceInfo> devices) {
-        state = state.copyWith(devices: devices);
-      });
-      next.whenOrNull(
-        error: (Object error, StackTrace stackTrace) => state = state.copyWith(
-          isScanning: false,
-          errorMessage: '扫描设备失败，请重试。',
-        ),
-      );
-    });
+    ref.listen<AsyncValue<List<ToyDeviceInfo>>>(
+      discoveredDevicesStreamProvider,
+      (
+        AsyncValue<List<ToyDeviceInfo>>? _,
+        AsyncValue<List<ToyDeviceInfo>> next,
+      ) {
+        next.whenData((List<ToyDeviceInfo> devices) {
+          state = state.copyWith(devices: devices);
+        });
+        next.whenOrNull(
+          error: (Object error, StackTrace stackTrace) => state = state
+              .copyWith(isScanning: false, errorMessage: '扫描设备失败，请重试。'),
+        );
+      },
+    );
 
     return const ScanState();
   }
@@ -88,10 +89,7 @@ class ScanController extends Notifier<ScanState> {
         connectedDeviceId: info.id,
       );
     } catch (_) {
-      state = state.copyWith(
-        isConnecting: false,
-        errorMessage: '连接设备失败，请重试。',
-      );
+      state = state.copyWith(isConnecting: false, errorMessage: '连接设备失败，请重试。');
     }
   }
 

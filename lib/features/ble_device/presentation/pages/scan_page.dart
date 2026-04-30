@@ -64,8 +64,9 @@ class ScanPage extends ConsumerWidget {
                       ),
                     ),
                     TextButton(
-                      onPressed: () =>
-                          ref.read(scanControllerProvider.notifier).clearError(),
+                      onPressed: () => ref
+                          .read(scanControllerProvider.notifier)
+                          .clearError(),
                       child: const Text('关闭'),
                     ),
                   ],
@@ -92,13 +93,13 @@ class ScanPage extends ConsumerWidget {
                   onPressed: state.isConnecting
                       ? null
                       : () async {
-                            await ref
-                                .read(scanControllerProvider.notifier)
-                                .connect(device);
-                            if (context.mounted) {
-                              context.go('/control');
-                            }
-                          },
+                          await ref
+                              .read(scanControllerProvider.notifier)
+                              .connect(device);
+                          if (context.mounted) {
+                            context.go('/control');
+                          }
+                        },
                   child: Text(
                     state.isConnecting && state.connectedDeviceId != device.id
                         ? '连接中...'

@@ -55,6 +55,8 @@ final discoveredDevicesStreamProvider = StreamProvider<List<ToyDeviceInfo>>((
   return ref.watch(manageActiveDeviceUseCaseProvider).watchDiscoveredDevices();
 });
 
-final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((ref) {
+final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((
+  ref,
+) {
   return ManageMcpServiceUseCase(mcpService: ref.watch(mcpServiceProvider));
 });

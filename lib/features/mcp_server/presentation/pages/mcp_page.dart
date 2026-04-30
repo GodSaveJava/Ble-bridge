@@ -69,8 +69,9 @@ class McpPage extends ConsumerWidget {
                   ),
                 ),
                 trailing: TextButton(
-                  onPressed: () =>
-                      ref.read(mcpServiceControllerProvider.notifier).clearError(),
+                  onPressed: () => ref
+                      .read(mcpServiceControllerProvider.notifier)
+                      .clearError(),
                   child: const Text('关闭'),
                 ),
               ),
