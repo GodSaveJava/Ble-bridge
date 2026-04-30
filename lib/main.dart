@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'application/providers/application_providers.dart';
 import 'app.dart';
+import 'infrastructure/providers/infrastructure_providers.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: ToyLinkApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        hardwareRepositoryProvider.overrideWith((ref) {
+          return ref.watch(defaultHardwareRepositoryProvider);
+        }),
+      ],
+      child: const ToyLinkApp(),
+    ),
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/control/presentation/pages/control_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 
 class AppRouter {
@@ -13,10 +14,7 @@ class AppRouter {
         path: '/scan',
         builder: (_, _) => const PlaceholderPage(title: 'Scan'),
       ),
-      GoRoute(
-        path: '/control',
-        builder: (_, _) => const PlaceholderPage(title: 'Control'),
-      ),
+      GoRoute(path: '/control', builder: (_, _) => const ControlPage()),
       GoRoute(
         path: '/chat',
         builder: (_, _) => const PlaceholderPage(title: 'Chat'),

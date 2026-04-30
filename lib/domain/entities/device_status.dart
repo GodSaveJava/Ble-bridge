@@ -36,4 +36,30 @@ class DeviceStatus {
       lastUpdatedAt: DateTime.now(),
     );
   }
+
+  DeviceStatus copyWith({
+    String? deviceId,
+    bool? isConnected,
+    int? suckIntensity,
+    int? vibeIntensity,
+    int? emsIntensity,
+    int? suckMode,
+    int? vibeMode,
+    int? emsMode,
+    DateTime? lastUpdatedAt,
+    int? batteryLevel,
+  }) {
+    return DeviceStatus(
+      deviceId: deviceId ?? this.deviceId,
+      isConnected: isConnected ?? this.isConnected,
+      suckIntensity: suckIntensity ?? this.suckIntensity,
+      vibeIntensity: vibeIntensity ?? this.vibeIntensity,
+      emsIntensity: emsIntensity ?? this.emsIntensity,
+      suckMode: suckMode ?? this.suckMode,
+      vibeMode: vibeMode ?? this.vibeMode,
+      emsMode: emsMode ?? this.emsMode,
+      lastUpdatedAt: lastUpdatedAt ?? DateTime.now(),
+      batteryLevel: batteryLevel ?? this.batteryLevel,
+    );
+  }
 }
