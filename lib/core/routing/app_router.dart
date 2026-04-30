@@ -5,6 +5,7 @@ import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/control/presentation/pages/control_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/mcp_server/presentation/pages/mcp_page.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
 
 class AppRouter {
   const AppRouter._();
@@ -16,10 +17,7 @@ class AppRouter {
       GoRoute(path: '/scan', builder: (_, _) => const ScanPage()),
       GoRoute(path: '/control', builder: (_, _) => const ControlPage()),
       GoRoute(path: '/chat', builder: (_, _) => const ChatPage()),
-      GoRoute(
-        path: '/settings',
-        builder: (_, _) => const PlaceholderPage(title: 'Settings'),
-      ),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
       GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
     ],
   );

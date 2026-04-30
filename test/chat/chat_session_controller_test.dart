@@ -9,9 +9,7 @@ void main() {
   group('ChatSessionController', () {
     test('appends user and assistant messages when sending input', () {
       final container = ProviderContainer(
-        overrides: [
-          mcpServiceProvider.overrideWith((_) => MockMcpService()),
-        ],
+        overrides: [mcpServiceProvider.overrideWith((_) => MockMcpService())],
       );
       addTearDown(container.dispose);
 
@@ -28,9 +26,7 @@ void main() {
 
     test('records tool events with payload', () {
       final container = ProviderContainer(
-        overrides: [
-          mcpServiceProvider.overrideWith((_) => MockMcpService()),
-        ],
+        overrides: [mcpServiceProvider.overrideWith((_) => MockMcpService())],
       );
       addTearDown(container.dispose);
 
