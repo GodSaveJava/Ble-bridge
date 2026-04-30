@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class HomePage extends StatelessWidget {
+import '../../../../application/providers/application_providers.dart';
+
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
+
+    final String deviceSubtitle = activeStatus.maybeWhen(
+      data: (status) => status.isConnected
+          ? '已连接: ${status.deviceId}'
+          : 'No active device connected.',
+      orElse: () => 'No active device connected.',
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text('ToyLink AI')),
       body: ListView(
@@ -14,10 +26,12 @@ class HomePage extends StatelessWidget {
           Card(
             child: ListTile(
               title: const Text('Device Status'),
-              subtitle: const Text('No active device connected.'),
+              subtitle: Text(deviceSubtitle),
               trailing: FilledButton(
                 onPressed: () => context.push('/scan'),
-                child: const Text('Connect'),
+                child: Text(
+                  deviceSubtitle.startsWith('已连接') ? 'Manage' : 'Connect',
+                ),
               ),
             ),
           ),

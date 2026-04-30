@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
 import '../use_cases/control_device_use_case.dart';
+import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/entities/device_status.dart';
+import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
@@ -31,4 +33,18 @@ final controlDeviceUseCaseProvider = Provider<ControlDeviceUseCase>((ref) {
     activeDeviceRegistry: ref.watch(activeDeviceRegistryProvider),
     safetyGuard: ref.watch(safetyGuardProvider),
   );
+});
+
+final manageActiveDeviceUseCaseProvider = Provider<ManageActiveDeviceUseCase>((
+  ref,
+) {
+  return ManageActiveDeviceUseCase(
+    hardwareRepository: ref.watch(hardwareRepositoryProvider),
+  );
+});
+
+final discoveredDevicesStreamProvider = StreamProvider<List<ToyDeviceInfo>>((
+  ref,
+) {
+  return ref.watch(manageActiveDeviceUseCaseProvider).watchDiscoveredDevices();
 });
