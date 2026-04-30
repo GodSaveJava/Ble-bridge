@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../mcp/mcp_tool_router.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
 import '../use_cases/control_device_use_case.dart';
@@ -59,4 +60,10 @@ final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((
   ref,
 ) {
   return ManageMcpServiceUseCase(mcpService: ref.watch(mcpServiceProvider));
+});
+
+final mcpToolRouterProvider = Provider<McpToolRouter>((ref) {
+  return McpToolRouter(
+    controlDeviceUseCase: ref.watch(controlDeviceUseCaseProvider),
+  );
 });
