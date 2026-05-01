@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../application/providers/application_providers.dart';
 import '../../../mcp_server/presentation/controllers/mcp_service_controller.dart';
+import '../controllers/quick_start_controller.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -12,11 +13,12 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
     final mcpState = ref.watch(mcpServiceControllerProvider);
+    final quickStart = ref.watch(quickStartControllerProvider);
 
-    final String deviceSubtitle = activeStatus.maybeWhen(
+    final deviceSubtitle = activeStatus.maybeWhen(
       data: (status) =>
-          status.isConnected ? '已连接设备：${status.deviceId}' : '当前暂无已连接设备',
-      orElse: () => '当前暂无已连接设备',
+          status.isConnected ? '已连接：${status.deviceId}' : '当前没有已连接设备',
+      orElse: () => '当前没有已连接设备',
     );
 
     return Scaffold(
@@ -46,6 +48,46 @@ class HomePage extends ConsumerWidget {
               trailing: FilledButton.tonal(
                 onPressed: () => context.push('/mcp'),
                 child: const Text('打开'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    '一键启动',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('自动完成：扫描设备 → 连接设备 → 启动 MCP 服务'),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: quickStart.isRunning
+                        ? null
+                        : () async {
+                            final bool ok = await ref
+                                .read(quickStartControllerProvider.notifier)
+                                .runQuickStart();
+                            if (ok && context.mounted) {
+                              context.go('/control');
+                            }
+                          },
+                    child: Text(quickStart.isRunning ? '启动中...' : '开始一键启动'),
+                  ),
+                  if (quickStart.errorMessage != null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      quickStart.errorMessage!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
