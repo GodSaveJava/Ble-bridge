@@ -119,10 +119,7 @@ class ControlPanelController extends Notifier<ControlPanelState> {
         requiresEmsConfirmation: confirmationRequired,
       );
     } catch (_) {
-      state = state.copyWith(
-        isBusy: false,
-        errorMessage: 'Unexpected control error.',
-      );
+      state = state.copyWith(isBusy: false, errorMessage: '控制失败，请稍后重试。');
     }
   }
 }

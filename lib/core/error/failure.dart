@@ -42,7 +42,7 @@ class Failure implements Exception {
        );
 
   const Failure.noActiveDevice({
-    String message = 'No active device is connected.',
+    String message = '当前没有已连接设备。',
     String? debugMessage,
   }) : this(
          code: FailureCode.noActiveDevice,
@@ -50,13 +50,11 @@ class Failure implements Exception {
          debugMessage: debugMessage,
        );
 
-  const Failure.unknown({
-    String message = 'Unknown error occurred.',
-    String? debugMessage,
-  }) : this(
-         code: FailureCode.unknown,
-         message: message,
-         debugMessage: debugMessage,
-         recoverable: false,
-       );
+  const Failure.unknown({String message = '发生未知错误。', String? debugMessage})
+    : this(
+        code: FailureCode.unknown,
+        message: message,
+        debugMessage: debugMessage,
+        recoverable: false,
+      );
 }

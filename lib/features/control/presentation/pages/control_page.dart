@@ -14,48 +14,48 @@ class ControlPage extends ConsumerWidget {
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manual Control')),
+      appBar: AppBar(title: const Text('手动控制')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
           _StatusCard(activeStatus: activeStatus),
           const SizedBox(height: 16),
           _ChannelSlider(
-            title: 'Suck',
+            title: '吮吸强度',
             value: state.suck.toDouble(),
             max: 100,
             onChanged: state.isBusy
                 ? null
-                : (double value) => ref
+                : (value) => ref
                       .read(controlPanelControllerProvider.notifier)
                       .setSuck(value.round()),
           ),
           const SizedBox(height: 16),
           _ChannelSlider(
-            title: 'Vibe',
+            title: '震动强度',
             value: state.vibe.toDouble(),
             max: 100,
             onChanged: state.isBusy
                 ? null
-                : (double value) => ref
+                : (value) => ref
                       .read(controlPanelControllerProvider.notifier)
                       .setVibe(value.round()),
           ),
           const SizedBox(height: 16),
           _ChannelSlider(
-            title: 'EMS',
+            title: '微电流强度',
             value: state.ems.toDouble(),
             max: 20,
             onChanged: state.isBusy
                 ? null
-                : (double value) => ref
+                : (value) => ref
                       .read(controlPanelControllerProvider.notifier)
                       .setEms(value.round()),
           ),
           if (state.requiresEmsConfirmation) ...<Widget>[
             const SizedBox(height: 12),
             const Text(
-              'EMS above soft limit requires explicit confirmation.',
+              '当前微电流超过建议值，需要你明确确认后才可执行。',
               style: TextStyle(color: Colors.orange),
             ),
           ],
@@ -69,7 +69,7 @@ class ControlPage extends ConsumerWidget {
               onPressed: () => ref
                   .read(controlPanelControllerProvider.notifier)
                   .clearError(),
-              child: const Text('Dismiss'),
+              child: const Text('知道了'),
             ),
           ],
           const SizedBox(height: 20),
@@ -79,7 +79,7 @@ class ControlPage extends ConsumerWidget {
                 : () => ref
                       .read(controlPanelControllerProvider.notifier)
                       .stopAll(),
-            child: Text(state.isBusy ? 'Working...' : 'Stop All'),
+            child: Text(state.isBusy ? '执行中...' : '一键停止'),
           ),
         ],
       ),
@@ -98,18 +98,13 @@ class _StatusCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: activeStatus.when(
-          data: (status) {
-            return Text(
-              'Device: ${status.deviceId}\n'
-              'Connected: ${status.isConnected}\n'
-              'Suck: ${status.suckIntensity}  '
-              'Vibe: ${status.vibeIntensity}  '
-              'EMS: ${status.emsIntensity}',
-            );
-          },
-          error: (Object error, StackTrace stackTrace) =>
-              const Text('Status stream unavailable'),
-          loading: () => const Text('Waiting for device status...'),
+          data: (status) => Text(
+            '设备：${status.deviceId}\n'
+            '连接状态：${status.isConnected ? '已连接' : '未连接'}\n'
+            '吮吸：${status.suckIntensity}  震动：${status.vibeIntensity}  微电流：${status.emsIntensity}',
+          ),
+          error: (error, stackTrace) => const Text('设备状态暂时不可用'),
+          loading: () => const Text('正在读取设备状态...'),
         ),
       ),
     );
@@ -137,7 +132,7 @@ class _ChannelSlider extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('$title: ${value.round()}'),
+            Text('$title：${value.round()}'),
             Slider(
               min: 0,
               max: max,

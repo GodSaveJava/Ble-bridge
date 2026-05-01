@@ -73,7 +73,7 @@ class McpToolRouter {
           return const McpToolResult(
             ok: false,
             errorCode: 'tool_not_found',
-            errorMessage: 'Requested MCP tool is not supported.',
+            errorMessage: '当前不支持该 MCP 工具。',
           );
       }
     } on Failure catch (failure) {
@@ -87,7 +87,7 @@ class McpToolRouter {
       return const McpToolResult(
         ok: false,
         errorCode: 'mcp_internal_error',
-        errorMessage: 'Unexpected error while executing MCP tool.',
+        errorMessage: '执行 MCP 工具时发生异常。',
       );
     }
   }
@@ -117,7 +117,7 @@ class McpToolRouter {
       return value;
     }
     throw Failure.validation(
-      message: 'Missing or invalid integer argument: $key',
+      message: '参数缺失或类型错误：$key（应为整数）',
       details: <String, Object?>{'argument': key},
     );
   }
@@ -135,7 +135,7 @@ class McpToolRouter {
       return value;
     }
     throw Failure.validation(
-      message: 'Invalid integer argument: $key',
+      message: '参数类型错误：$key（应为整数）',
       details: <String, Object?>{'argument': key},
     );
   }

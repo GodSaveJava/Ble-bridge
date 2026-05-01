@@ -14,10 +14,9 @@ class HomePage extends ConsumerWidget {
     final mcpState = ref.watch(mcpServiceControllerProvider);
 
     final String deviceSubtitle = activeStatus.maybeWhen(
-      data: (status) => status.isConnected
-          ? '已连接: ${status.deviceId}'
-          : 'No active device connected.',
-      orElse: () => 'No active device connected.',
+      data: (status) =>
+          status.isConnected ? '已连接设备：${status.deviceId}' : '当前暂无已连接设备',
+      orElse: () => '当前暂无已连接设备',
     );
 
     return Scaffold(
@@ -27,28 +26,26 @@ class HomePage extends ConsumerWidget {
         children: <Widget>[
           Card(
             child: ListTile(
-              title: const Text('Device Status'),
+              title: const Text('设备状态'),
               subtitle: Text(deviceSubtitle),
               trailing: FilledButton(
                 onPressed: () => context.push('/scan'),
-                child: Text(
-                  deviceSubtitle.startsWith('已连接') ? 'Manage' : 'Connect',
-                ),
+                child: Text(deviceSubtitle.startsWith('已连接') ? '管理' : '连接'),
               ),
             ),
           ),
           const SizedBox(height: 12),
           Card(
             child: ListTile(
-              title: const Text('MCP Service'),
+              title: const Text('MCP 服务'),
               subtitle: Text(
                 mcpState.isRunning
-                    ? 'Running at ${mcpState.endpointInfo?.host}:${mcpState.endpointInfo?.port}'
-                    : 'Stopped',
+                    ? '运行中：${mcpState.endpointInfo?.host}:${mcpState.endpointInfo?.port}'
+                    : '未启动',
               ),
               trailing: FilledButton.tonal(
                 onPressed: () => context.push('/mcp'),
-                child: const Text('Open'),
+                child: const Text('打开'),
               ),
             ),
           ),
@@ -58,40 +55,21 @@ class HomePage extends ConsumerWidget {
             runSpacing: 12,
             children: <Widget>[
               _QuickNavButton(
-                label: 'Scan',
+                label: '扫描连接',
                 onTap: () => context.push('/scan'),
               ),
               _QuickNavButton(
-                label: 'Control',
+                label: '手动控制',
                 onTap: () => context.push('/control'),
               ),
+              _QuickNavButton(label: '聊天', onTap: () => context.push('/chat')),
               _QuickNavButton(
-                label: 'Chat',
-                onTap: () => context.push('/chat'),
-              ),
-              _QuickNavButton(
-                label: 'Settings',
+                label: '设置',
                 onTap: () => context.push('/settings'),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class PlaceholderPage extends StatelessWidget {
-  const PlaceholderPage({required this.title, super.key});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text('$title page is planned in next implementation phase.'),
       ),
     );
   }
@@ -106,7 +84,7 @@ class _QuickNavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 140,
+      width: 156,
       child: OutlinedButton(onPressed: onTap, child: Text(label)),
     );
   }

@@ -41,20 +41,20 @@ class ScanController extends Notifier<ScanState> {
   ScanState build() {
     ref.listen<AsyncValue<List<ToyDeviceInfo>>>(
       discoveredDevicesStreamProvider,
-      (
-        AsyncValue<List<ToyDeviceInfo>>? _,
-        AsyncValue<List<ToyDeviceInfo>> next,
-      ) {
-        next.whenData((List<ToyDeviceInfo> devices) {
+      (previous, next) {
+        next.whenData((devices) {
           state = state.copyWith(devices: devices);
         });
         next.whenOrNull(
-          error: (Object error, StackTrace stackTrace) => state = state
-              .copyWith(isScanning: false, errorMessage: '扫描设备失败，请重试。'),
+          error: (error, stackTrace) {
+            state = state.copyWith(
+              isScanning: false,
+              errorMessage: '扫描设备失败，请重试。',
+            );
+          },
         );
       },
     );
-
     return const ScanState();
   }
 

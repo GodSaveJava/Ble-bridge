@@ -39,7 +39,7 @@ void main() {
 
       final state = container.read(chatSessionControllerProvider);
       expect(state.messages.last.role, ChatMessageRole.toolEvent);
-      expect(state.messages.last.content, contains('Tool=get_status'));
+      expect(state.messages.last.content, contains('工具：get_status'));
     });
   });
 }

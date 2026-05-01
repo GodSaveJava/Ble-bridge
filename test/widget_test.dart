@@ -22,7 +22,7 @@ void main() {
     );
 
     expect(find.text('ToyLink AI'), findsOneWidget);
-    expect(find.text('Device Status'), findsOneWidget);
-    expect(find.text('MCP Service'), findsOneWidget);
+    expect(find.text('设备状态'), findsOneWidget);
+    expect(find.text('MCP 服务'), findsOneWidget);
   });
 }

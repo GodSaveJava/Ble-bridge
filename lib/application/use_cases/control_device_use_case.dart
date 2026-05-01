@@ -145,7 +145,7 @@ class ControlDeviceUseCase {
     }
     if (decision.type == SafetyDecisionType.requireConfirmation) {
       throw Failure.validation(
-        message: 'Command requires explicit user confirmation.',
+        message: '该操作需要你先在本机进行明确确认。',
         details: <String, Object?>{
           'reason': 'confirmation_required',
           'channel': command.channel.name,
@@ -160,7 +160,7 @@ class ControlDeviceUseCase {
   void _validateMode(int mode) {
     if (mode < 1 || mode > 4) {
       throw Failure.validation(
-        message: 'Mode must be between 1 and 4.',
+        message: '模式值必须在 1 到 4 之间。',
         details: <String, Object?>{'mode': mode},
       );
     }

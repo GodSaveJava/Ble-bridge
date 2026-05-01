@@ -9,7 +9,7 @@ class ScanPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ScanState state = ref.watch(scanControllerProvider);
+    final state = ref.watch(scanControllerProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('扫描与连接')),
@@ -22,9 +22,7 @@ class ScanPage extends ConsumerWidget {
               child: Row(
                 children: <Widget>[
                   Expanded(
-                    child: Text(
-                      state.isScanning ? '正在扫描 SOSEXY 设备...' : '点击开始扫描',
-                    ),
+                    child: Text(state.isScanning ? '正在扫描设备...' : '点击开始扫描'),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
@@ -33,7 +31,7 @@ class ScanPage extends ConsumerWidget {
                         : () => ref
                               .read(scanControllerProvider.notifier)
                               .startScan(),
-                    child: const Text('开始扫描'),
+                    child: const Text('开始'),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
@@ -79,7 +77,7 @@ class ScanPage extends ConsumerWidget {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(12),
-                child: Text('暂无发现设备。请先开始扫描。'),
+                child: Text('还没有发现设备，请先开始扫描。'),
               ),
             ),
           for (final device in state.devices) ...<Widget>[
@@ -87,7 +85,7 @@ class ScanPage extends ConsumerWidget {
               child: ListTile(
                 title: Text(device.displayName),
                 subtitle: Text(
-                  'RSSI: ${device.rssi ?? '--'}  协议: ${device.protocolKey}',
+                  '信号: ${device.rssi ?? '--'}  协议: ${device.protocolKey}',
                 ),
                 trailing: FilledButton.tonal(
                   onPressed: state.isConnecting

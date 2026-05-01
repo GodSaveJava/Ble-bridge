@@ -24,7 +24,7 @@ class _AppLockOverlayHostState extends ConsumerState<AppLockOverlayHost> {
 
   @override
   Widget build(BuildContext context) {
-    final AppLockState lockState = ref.watch(appLockControllerProvider);
+    final lockState = ref.watch(appLockControllerProvider);
 
     return Stack(
       children: <Widget>[
@@ -51,7 +51,7 @@ class _AppLockOverlayHostState extends ConsumerState<AppLockOverlayHost> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text('请输入 PIN（MVP 默认 1234）'),
+                          const Text('请输入 PIN（当前测试密码：1234）'),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _pinController,
@@ -67,7 +67,7 @@ class _AppLockOverlayHostState extends ConsumerState<AppLockOverlayHost> {
                             width: double.infinity,
                             child: FilledButton(
                               onPressed: () {
-                                final bool ok = ref
+                                final ok = ref
                                     .read(appLockControllerProvider.notifier)
                                     .unlockWithPin(_pinController.text.trim());
                                 if (ok) {
@@ -77,7 +77,7 @@ class _AppLockOverlayHostState extends ConsumerState<AppLockOverlayHost> {
                                   });
                                 } else {
                                   setState(() {
-                                    _error = 'PIN 错误，请重试';
+                                    _error = '密码错误，请重试';
                                   });
                                 }
                               },

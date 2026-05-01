@@ -8,7 +8,7 @@ class McpPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final McpServiceState state = ref.watch(mcpServiceControllerProvider);
+    final state = ref.watch(mcpServiceControllerProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('MCP 服务')),
@@ -22,14 +22,14 @@ class McpPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    state.isRunning ? '状态: 运行中' : '状态: 已停止',
+                    state.isRunning ? '状态：运行中' : '状态：未启动',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     state.endpointInfo == null
-                        ? 'Endpoint: -'
-                        : 'Endpoint: http://${state.endpointInfo!.host}:${state.endpointInfo!.port}${state.endpointInfo!.path}',
+                        ? '地址：-'
+                        : '地址：http://${state.endpointInfo!.host}:${state.endpointInfo!.port}${state.endpointInfo!.path}',
                   ),
                   const SizedBox(height: 12),
                   Row(

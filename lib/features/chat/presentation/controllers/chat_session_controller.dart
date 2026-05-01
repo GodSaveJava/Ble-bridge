@@ -45,7 +45,7 @@ class ChatSessionController extends Notifier<ChatSessionState> {
       messages: <ChatMessage>[
         _message(
           role: ChatMessageRole.system,
-          content: '聊天壳层已就绪。当前不接入真实模型，仅用于展示消息流与工具调用记录。',
+          content: '聊天功能已就绪。当前为本地演示模式，暂未接入真实大模型。',
         ),
       ],
     );
@@ -56,15 +56,15 @@ class ChatSessionController extends Notifier<ChatSessionState> {
   }
 
   void sendUserMessage() {
-    final String text = state.inputDraft.trim();
+    final text = state.inputDraft.trim();
     if (text.isEmpty) {
       return;
     }
 
-    final List<ChatMessage> updated = <ChatMessage>[
+    final updated = <ChatMessage>[
       ...state.messages,
       _message(role: ChatMessageRole.user, content: text),
-      _message(role: ChatMessageRole.assistant, content: '收到消息（本地壳层模式）：$text'),
+      _message(role: ChatMessageRole.assistant, content: '收到：$text'),
     ];
     state = state.copyWith(messages: updated, inputDraft: '');
   }
@@ -75,14 +75,14 @@ class ChatSessionController extends Notifier<ChatSessionState> {
     required bool accepted,
   }) {
     final McpEndpointInfo? endpoint = ref.read(mcpServiceProvider).endpointInfo;
-    final String endpointText = endpoint == null
+    final endpointText = endpoint == null
         ? 'MCP 未启动'
         : '${endpoint.host}:${endpoint.port}${endpoint.path}';
 
-    final ChatMessage event = _message(
+    final event = _message(
       role: ChatMessageRole.toolEvent,
       content:
-          'Tool=$toolName accepted=$accepted endpoint=$endpointText payload=$payload',
+          '工具：$toolName | 是否执行：${accepted ? '是' : '否'} | 服务：$endpointText | 参数：$payload',
     );
     state = state.copyWith(messages: <ChatMessage>[...state.messages, event]);
   }

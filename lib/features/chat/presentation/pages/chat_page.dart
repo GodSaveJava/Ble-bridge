@@ -29,17 +29,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final ChatSessionState state = ref.watch(chatSessionControllerProvider);
+    final state = ref.watch(chatSessionControllerProvider);
     final mcpState = ref.watch(mcpServiceControllerProvider);
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
 
-    final bool hasActiveDevice = activeStatus.maybeWhen(
+    final hasActiveDevice = activeStatus.maybeWhen(
       data: (status) => status.isConnected,
       orElse: () => false,
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat Shell')),
+      appBar: AppBar(title: const Text('智能聊天')),
       body: Column(
         children: <Widget>[
           _ChatHeader(
@@ -50,10 +50,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: state.messages.length,
-              itemBuilder: (context, index) {
-                final ChatMessage msg = state.messages[index];
-                return _MessageCard(message: msg);
-              },
+              itemBuilder: (context, index) =>
+                  _MessageCard(message: state.messages[index]),
             ),
           ),
           Padding(
@@ -66,9 +64,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         .read(chatSessionControllerProvider.notifier)
                         .updateDraft,
                     controller: _inputController,
-                    decoration: const InputDecoration(
-                      hintText: '输入消息（本地壳层，不连接真实模型）',
-                    ),
+                    decoration: const InputDecoration(hintText: '请输入你想说的话'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -132,7 +128,7 @@ class _ChatHeader extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Text(
-        'MCP: ${mcpRunning ? 'Running' : 'Stopped'} | Device: ${hasActiveDevice ? 'Connected' : 'Not Connected'}',
+        'MCP：${mcpRunning ? '运行中' : '未启动'} | 设备：${hasActiveDevice ? '已连接' : '未连接'}',
       ),
     );
   }
@@ -145,11 +141,11 @@ class _MessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color tint = switch (message.role) {
-      ChatMessageRole.user => Colors.blueGrey,
-      ChatMessageRole.assistant => Colors.teal,
-      ChatMessageRole.system => Colors.deepPurple,
-      ChatMessageRole.toolEvent => Colors.orange,
+    final tint = switch (message.role) {
+      ChatMessageRole.user => Colors.pink.shade200,
+      ChatMessageRole.assistant => Colors.pink.shade400,
+      ChatMessageRole.system => Colors.deepPurple.shade300,
+      ChatMessageRole.toolEvent => Colors.orange.shade400,
     };
 
     return Card(
