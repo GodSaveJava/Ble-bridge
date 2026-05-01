@@ -50,7 +50,7 @@ void main() {
 
       expect(response.statusCode, HttpStatus.ok);
       expect(json['ok'], true);
-      expect((json['data'] as Map<String, dynamic>)['suckIntensity'], 25);
+      expect((json['status'] as Map<String, dynamic>)['suckIntensity'], 25);
     });
 
     test('returns validation error for malformed payload', () async {
@@ -88,7 +88,89 @@ void main() {
 
       expect(response.statusCode, HttpStatus.badRequest);
       expect(json['ok'], false);
-      expect(json['errorCode'], 'validation_error');
+      expect(
+        (json['error'] as Map<String, dynamic>)['code'],
+        'validation_error',
+      );
+    });
+
+    test('returns tool definitions from /mcp/tools', () async {
+      final container = ProviderContainer(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith(
+            (_) => MockHardwareRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final router = container.read(mcpToolRouterProvider);
+      final service = LocalMcpHttpService(
+        toolRouter: router,
+        host: '127.0.0.1',
+        port: 8873,
+      );
+      addTearDown(service.stop);
+
+      await service.start();
+
+      final client = HttpClient();
+      addTearDown(client.close);
+
+      final request = await client.getUrl(
+        Uri.parse('http://127.0.0.1:8873/mcp/tools'),
+      );
+      final response = await request.close();
+      final body = await utf8.decodeStream(response);
+      final Map<String, dynamic> json =
+          jsonDecode(body) as Map<String, dynamic>;
+
+      expect(response.statusCode, HttpStatus.ok);
+      expect(json['ok'], true);
+      expect((json['tools'] as List<dynamic>).length, 6);
+    });
+
+    test('supports call-style payload at /mcp/call', () async {
+      final container = ProviderContainer(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith(
+            (_) => MockHardwareRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final router = container.read(mcpToolRouterProvider);
+      final service = LocalMcpHttpService(
+        toolRouter: router,
+        host: '127.0.0.1',
+        port: 8874,
+      );
+      addTearDown(service.stop);
+
+      await service.start();
+
+      final client = HttpClient();
+      addTearDown(client.close);
+
+      final request = await client.postUrl(
+        Uri.parse('http://127.0.0.1:8874/mcp/call'),
+      );
+      request.headers.contentType = ContentType.json;
+      request.write(
+        jsonEncode(<String, Object?>{
+          'tool': 'set_vibe',
+          'input': <String, Object?>{'intensity': 40, 'mode': 1},
+        }),
+      );
+      final response = await request.close();
+      final body = await utf8.decodeStream(response);
+      final Map<String, dynamic> json =
+          jsonDecode(body) as Map<String, dynamic>;
+
+      expect(response.statusCode, HttpStatus.ok);
+      expect(json['ok'], true);
+      expect((json['status'] as Map<String, dynamic>)['vibeIntensity'], 40);
     });
   });
 }

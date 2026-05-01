@@ -8,15 +8,6 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import '../../application/mcp/mcp_tool_router.dart';
 import '../../domain/services/mcp_service.dart';
 
-/// Local MCP HTTP service for MVP.
-///
-/// Transport responsibilities:
-/// - Expose a local POST endpoint for tool execution.
-/// - Validate JSON payload shape.
-/// - Map request/response as structured JSON.
-///
-/// Business responsibilities stay in [McpToolRouter], so protocol/safety
-/// behavior is still governed by application/domain rules.
 class LocalMcpHttpService implements McpService {
   LocalMcpHttpService({
     required McpToolRouter toolRouter,
@@ -89,14 +80,30 @@ class LocalMcpHttpService implements McpService {
       });
     }
 
-    if (request.url.path != 'mcp/tool' || request.method != 'POST') {
-      return _jsonResponse(HttpStatus.notFound, <String, Object?>{
-        'ok': false,
-        'errorCode': 'route_not_found',
-        'errorMessage': 'Unsupported MCP route.',
+    if (request.url.path == 'mcp/tools' && request.method == 'GET') {
+      return _jsonResponse(HttpStatus.ok, <String, Object?>{
+        'ok': true,
+        'tools': _toolDefinitions(),
       });
     }
 
+    if (request.url.path == 'mcp/call' && request.method == 'POST') {
+      return _handleCallStyleRequest(request);
+    }
+
+    if (request.url.path == 'mcp/tool' && request.method == 'POST') {
+      return _handleLegacyToolRequest(request);
+    }
+
+    return _errorResponse(
+      HttpStatus.notFound,
+      code: 'route_not_found',
+      message: 'Unsupported MCP route.',
+      recoverable: false,
+    );
+  }
+
+  Future<Response> _handleLegacyToolRequest(Request request) async {
     try {
       final dynamic json = jsonDecode(await request.readAsString());
       if (json is! Map<String, dynamic>) {
@@ -116,33 +123,123 @@ class LocalMcpHttpService implements McpService {
         name,
         arguments: (arguments ?? <String, dynamic>{}).cast<String, Object?>(),
       );
-
-      return _jsonResponse(
-        result.ok ? HttpStatus.ok : HttpStatus.badRequest,
-        <String, Object?>{
-          'ok': result.ok,
-          'data': result.data,
-          'errorCode': result.errorCode,
-          'errorMessage': result.errorMessage,
-        },
-      );
+      return _buildToolResultResponse(result);
     } on FormatException {
       return _validationError('Invalid JSON payload.');
     } catch (_) {
-      return _jsonResponse(HttpStatus.internalServerError, <String, Object?>{
-        'ok': false,
-        'errorCode': 'mcp_internal_error',
-        'errorMessage': 'Unexpected server error.',
-      });
+      return _errorResponse(
+        HttpStatus.internalServerError,
+        code: 'mcp_internal_error',
+        message: 'Unexpected server error.',
+        recoverable: false,
+      );
     }
   }
 
+  Future<Response> _handleCallStyleRequest(Request request) async {
+    try {
+      final dynamic json = jsonDecode(await request.readAsString());
+      if (json is! Map<String, dynamic>) {
+        return _validationError('Request body must be a JSON object.');
+      }
+
+      final tool = json['tool'];
+      final input = json['input'];
+      if (tool is! String || tool.isEmpty) {
+        return _validationError('Missing or invalid tool field.');
+      }
+      if (input != null && input is! Map<String, dynamic>) {
+        return _validationError('Input must be a JSON object.');
+      }
+
+      final result = await _toolRouter.callTool(
+        tool,
+        arguments: (input ?? <String, dynamic>{}).cast<String, Object?>(),
+      );
+      return _buildToolResultResponse(result);
+    } on FormatException {
+      return _validationError('Invalid JSON payload.');
+    } catch (_) {
+      return _errorResponse(
+        HttpStatus.internalServerError,
+        code: 'mcp_internal_error',
+        message: 'Unexpected server error.',
+        recoverable: false,
+      );
+    }
+  }
+
+  Response _buildToolResultResponse(McpToolResult result) {
+    if (result.ok) {
+      return _jsonResponse(HttpStatus.ok, <String, Object?>{
+        'ok': true,
+        'status': result.data,
+      });
+    }
+    return _errorResponse(
+      HttpStatus.badRequest,
+      code: result.errorCode ?? 'mcp_internal_error',
+      message: result.errorMessage ?? 'MCP tool call failed.',
+      details: result.data,
+      recoverable: true,
+    );
+  }
+
   Response _validationError(String message) {
-    return _jsonResponse(HttpStatus.badRequest, <String, Object?>{
+    return _errorResponse(
+      HttpStatus.badRequest,
+      code: 'validation_error',
+      message: message,
+      recoverable: true,
+    );
+  }
+
+  Response _errorResponse(
+    int statusCode, {
+    required String code,
+    required String message,
+    required bool recoverable,
+    Map<String, Object?>? details,
+  }) {
+    return _jsonResponse(statusCode, <String, Object?>{
       'ok': false,
-      'errorCode': 'validation_error',
-      'errorMessage': message,
+      'error': <String, Object?>{
+        'code': code,
+        'message': message,
+        'recoverable': recoverable,
+        'details': details,
+      },
     });
+  }
+
+  List<Map<String, Object?>> _toolDefinitions() {
+    return <Map<String, Object?>>[
+      <String, Object?>{
+        'name': 'set_suck',
+        'description': 'Set suck intensity and mode.',
+      },
+      <String, Object?>{
+        'name': 'set_vibe',
+        'description': 'Set vibe intensity and mode.',
+      },
+      <String, Object?>{
+        'name': 'set_ems',
+        'description':
+            'Set EMS intensity and mode (soft limit requires confirmation).',
+      },
+      <String, Object?>{
+        'name': 'set_all',
+        'description': 'Set all channels in one logical request.',
+      },
+      <String, Object?>{
+        'name': 'stop_all',
+        'description': 'Stop all channels immediately.',
+      },
+      <String, Object?>{
+        'name': 'get_status',
+        'description': 'Get active device status.',
+      },
+    ];
   }
 
   Response _jsonResponse(int statusCode, Map<String, Object?> body) {
