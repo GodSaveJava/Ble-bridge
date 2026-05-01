@@ -7,6 +7,9 @@ class MockForegroundConnectionService implements ForegroundConnectionService {
   bool get isRunning => _running;
 
   @override
+  Future<bool> isServiceRunning() async => _running;
+
+  @override
   Future<void> start() async {
     _running = true;
   }

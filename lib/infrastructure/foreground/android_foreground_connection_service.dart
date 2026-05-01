@@ -41,6 +41,9 @@ class AndroidForegroundConnectionService
 
   @override
   bool get isRunning => false;
+
+  @override
+  Future<bool> isServiceRunning() => FlutterForegroundTask.isRunningService;
 }
 
 @pragma('vm:entry-point')

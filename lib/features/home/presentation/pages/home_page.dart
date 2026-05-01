@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../../../mcp_server/presentation/controllers/mcp_service_controller.dart';
+import '../controllers/foreground_service_controller.dart';
 import '../controllers/quick_start_controller.dart';
 
 class HomePage extends ConsumerWidget {
@@ -15,8 +16,9 @@ class HomePage extends ConsumerWidget {
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
     final mcpState = ref.watch(mcpServiceControllerProvider);
     final quickStart = ref.watch(quickStartControllerProvider);
+    final fgState = ref.watch(foregroundServiceControllerProvider);
 
-    final deviceSubtitle = activeStatus.maybeWhen(
+    final String deviceSubtitle = activeStatus.maybeWhen(
       data: (status) =>
           status.isConnected ? '已连接：${status.deviceId}' : '当前没有已连接设备',
       orElse: () => '当前没有已连接设备',
@@ -61,11 +63,70 @@ class HomePage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const Text(
+                      '后台保活',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('状态：${fgState.isRunning ? '运行中' : '未运行'}'),
+                    if (fgState.lastRefreshedAt != null)
+                      Text(
+                        '最近刷新：${fgState.lastRefreshedAt!.hour.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.minute.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.second.toString().padLeft(2, '0')}',
+                      ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: <Widget>[
+                        FilledButton.tonal(
+                          onPressed: fgState.isBusy
+                              ? null
+                              : () => ref
+                                    .read(
+                                      foregroundServiceControllerProvider
+                                          .notifier,
+                                    )
+                                    .refresh(),
+                          child: const Text('刷新状态'),
+                        ),
+                        OutlinedButton(
+                          onPressed: fgState.isBusy || !fgState.isRunning
+                              ? null
+                              : () => ref
+                                    .read(
+                                      foregroundServiceControllerProvider
+                                          .notifier,
+                                    )
+                                    .stop(),
+                          child: const Text('停止保活'),
+                        ),
+                      ],
+                    ),
+                    if (fgState.errorMessage != null) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Text(
+                        fgState.errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
                       '一键启动',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    const Text('自动完成：扫描设备 → 连接设备 → 启动 MCP 服务'),
+                    const Text('自动完成：扫描设备 → 连接设备 → 启动后台保活 → 启动 MCP'),
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: quickStart.isRunning
@@ -74,9 +135,19 @@ class HomePage extends ConsumerWidget {
                               final bool ok = await ref
                                   .read(quickStartControllerProvider.notifier)
                                   .runQuickStart();
-                              if (ok && context.mounted) {
-                                context.go('/control');
+                              if (!ok || !context.mounted) {
+                                return;
                               }
+                              await ref
+                                  .read(
+                                    foregroundServiceControllerProvider
+                                        .notifier,
+                                  )
+                                  .refresh();
+                              if (!context.mounted) {
+                                return;
+                              }
+                              context.go('/control');
                             },
                       child: Text(quickStart.isRunning ? '启动中...' : '开始一键启动'),
                     ),
