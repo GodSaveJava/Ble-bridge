@@ -40,6 +40,7 @@ class QuickStartController extends Notifier<QuickStartState> {
     try {
       final manageDevice = ref.read(manageActiveDeviceUseCaseProvider);
       final manageMcp = ref.read(manageMcpServiceUseCaseProvider);
+      final foreground = ref.read(foregroundConnectionServiceProvider);
 
       await manageDevice.startScan();
       final ToyDeviceInfo selected = await manageDevice
@@ -49,6 +50,7 @@ class QuickStartController extends Notifier<QuickStartState> {
           .then((list) => list.first);
 
       await manageDevice.connect(selected);
+      await foreground.start();
       await manageMcp.start();
       state = state.copyWith(isRunning: false, completed: true);
       return true;

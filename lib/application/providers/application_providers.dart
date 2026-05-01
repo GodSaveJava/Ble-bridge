@@ -9,6 +9,7 @@ import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
+import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
@@ -20,6 +21,13 @@ final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
 final mcpServiceProvider = Provider<McpService>((_) {
   throw UnimplementedError('Provide a concrete McpService in infrastructure.');
 });
+
+final foregroundConnectionServiceProvider =
+    Provider<ForegroundConnectionService>((_) {
+      throw UnimplementedError(
+        'Provide a concrete ForegroundConnectionService in infrastructure.',
+      );
+    });
 
 final safetyGuardProvider = Provider<SafetyGuard>((_) => const SafetyGuard());
 
