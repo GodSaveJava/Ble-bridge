@@ -40,6 +40,12 @@ void main() {
         foregroundConnectionServiceProvider.overrideWith((ref) {
           return ref.watch(defaultForegroundConnectionServiceProvider);
         }),
+        adapterManifestRepositoryProvider.overrideWith((ref) {
+          return ref.watch(defaultAdapterManifestRepositoryProvider);
+        }),
+        verifiedAdapterRepositoryProvider.overrideWith((ref) {
+          return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+        }),
       ],
       child: const ToyLinkApp(),
     ),
