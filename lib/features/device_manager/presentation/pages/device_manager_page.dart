@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,7 +46,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '粘贴适配器说明书 JSON 后点击导入。第一阶段仅支持 manifest + 内置 codecKey。',
+                      '如果你有外部逆向工具导出的适配器文件，可以直接粘贴后导入。建议先点“填充示例”了解结构。',
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -57,7 +59,9 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Row(
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
                       children: <Widget>[
                         FilledButton(
                           onPressed: state.isImporting
@@ -69,7 +73,18 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                                     .importJsonText(_jsonController.text),
                           child: Text(state.isImporting ? '导入中...' : '导入'),
                         ),
-                        const SizedBox(width: 10),
+                        OutlinedButton(
+                          onPressed: state.adapters.isEmpty
+                              ? null
+                              : () {
+                                  final Map<String, Object?> sample =
+                                      state.adapters.first.toJson();
+                                  _jsonController.text = const JsonEncoder
+                                      .withIndent('  ')
+                                      .convert(sample);
+                                },
+                          child: const Text('填充示例'),
+                        ),
                         OutlinedButton(
                           onPressed: () {
                             _jsonController.clear();
@@ -122,9 +137,8 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                           'ID: ${manifest.adapterId}\ncodec: ${manifest.codecKey}\nversion: ${manifest.version}',
                         ),
                         trailing: OutlinedButton(
-                          onPressed: () => context.push(
-                            '/verification/${manifest.adapterId}',
-                          ),
+                          onPressed: () =>
+                              context.push('/verification/${manifest.adapterId}'),
                           child: const Text('开始验证'),
                         ),
                       ),

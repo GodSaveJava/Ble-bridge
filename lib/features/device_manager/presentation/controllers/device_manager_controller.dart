@@ -60,6 +60,15 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
   }
 
   Future<void> importJsonText(String rawJson) async {
+    if (rawJson.trim().isEmpty) {
+      state = state.copyWith(
+        isImporting: false,
+        errorMessage: '请输入适配器 JSON 内容后再导入。',
+        clearSuccess: true,
+      );
+      return;
+    }
+
     state = state.copyWith(
       isImporting: true,
       clearError: true,
@@ -74,12 +83,12 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
       await ref.read(manageAdapterUseCaseProvider).importManifestJson(decoded);
       state = state.copyWith(
         isImporting: false,
-        successMessage: 'Adapter imported successfully.',
+        successMessage: '适配器导入成功。',
       );
     } catch (error) {
       state = state.copyWith(
         isImporting: false,
-        errorMessage: 'Failed to import adapter file: $error',
+        errorMessage: '适配器导入失败：$error',
       );
     }
   }

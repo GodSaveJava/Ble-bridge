@@ -44,7 +44,7 @@ class BuiltInAdapterTemplates {
           'emsIntensity': <String, Object?>{'min': 0, 'max': 20},
           'mode': <String, Object?>{'min': 1, 'max': 4},
         },
-        'notes': 'Built-in starter template',
+        'notes': '内置起步模板，可复制后按设备协议修改。',
       }),
     ];
   }
