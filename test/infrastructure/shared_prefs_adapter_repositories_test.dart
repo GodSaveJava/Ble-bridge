@@ -26,6 +26,17 @@ void main() {
       expect(loaded, isNotNull);
       expect(loaded!.adapterId, 'a1');
     });
+
+    test('loads built-in template on first launch', () async {
+      final List<AdapterManifest> manifests = await repository.watchAll().first;
+      expect(manifests.isNotEmpty, isTrue);
+      expect(
+        manifests.any(
+          (AdapterManifest e) => e.adapterId == 'generic.triple_channel.v1',
+        ),
+        isTrue,
+      );
+    });
   });
 
   group('SharedPrefsVerifiedAdapterRepository', () {

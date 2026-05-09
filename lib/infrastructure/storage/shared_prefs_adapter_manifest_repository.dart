@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/adapter_manifest.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
+import 'built_in_adapter_templates.dart';
 
 class SharedPrefsAdapterManifestRepository
     implements AdapterManifestRepository {
@@ -62,8 +63,9 @@ class SharedPrefsAdapterManifestRepository
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? raw = prefs.getString(_storageKey);
     if (raw == null || raw.isEmpty) {
-      _cache = <AdapterManifest>[];
-      return <AdapterManifest>[];
+      final List<AdapterManifest> defaults = BuiltInAdapterTemplates.defaults();
+      await _saveAll(defaults);
+      return List<AdapterManifest>.from(defaults);
     }
     final List<Object?> decoded = jsonDecode(raw) as List<Object?>;
     final List<AdapterManifest> manifests = decoded
