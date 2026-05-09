@@ -6,6 +6,7 @@ import '../mcp/mcp_tool_router.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
 import '../use_cases/control_device_use_case.dart';
+import '../use_cases/manage_adapter_use_case.dart';
 import '../use_cases/manage_mcp_service_use_case.dart';
 import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
@@ -106,5 +107,12 @@ final adapterRegistryProvider = Provider<AdapterRegistry>((ref) {
 final adapterValidatorProvider = Provider<AdapterValidator>((ref) {
   return AdapterValidator(
     verifiedAdapterRepository: ref.watch(verifiedAdapterRepositoryProvider),
+  );
+});
+
+final manageAdapterUseCaseProvider = Provider<ManageAdapterUseCase>((ref) {
+  return ManageAdapterUseCase(
+    adapterRegistry: ref.watch(adapterRegistryProvider),
+    adapterValidator: ref.watch(adapterValidatorProvider),
   );
 });
