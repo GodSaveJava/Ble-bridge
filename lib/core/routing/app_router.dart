@@ -4,6 +4,7 @@ import '../../features/ble_device/presentation/pages/scan_page.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/control/presentation/pages/control_page.dart';
 import '../../features/device_manager/presentation/pages/device_manager_page.dart';
+import '../../features/device_manager/presentation/pages/adapter_verification_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/mcp_server/presentation/pages/mcp_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -23,6 +24,13 @@ class AppRouter {
       GoRoute(
         path: '/device-manager',
         builder: (_, _) => const DeviceManagerPage(),
+      ),
+      GoRoute(
+        path: '/verification/:adapterId',
+        builder: (context, state) {
+          final String adapterId = state.pathParameters['adapterId'] ?? '';
+          return AdapterVerificationPage(adapterId: adapterId);
+        },
       ),
     ],
   );

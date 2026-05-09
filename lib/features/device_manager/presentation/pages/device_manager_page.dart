@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../domain/entities/adapter_manifest.dart';
 import '../../../../shared/widgets/toylink_background.dart';
@@ -119,6 +120,12 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                         title: Text(manifest.displayName),
                         subtitle: Text(
                           'ID: ${manifest.adapterId}\ncodec: ${manifest.codecKey}\nversion: ${manifest.version}',
+                        ),
+                        trailing: OutlinedButton(
+                          onPressed: () => context.push(
+                            '/verification/${manifest.adapterId}',
+                          ),
+                          child: const Text('开始验证'),
                         ),
                       ),
                   ],
