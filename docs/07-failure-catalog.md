@@ -1,38 +1,27 @@
 # Failure 目录
 
-## 文档目的
+## 1. 文档目的
 
-这份文档定义 ToyLink AI 中所有核心错误的统一表达方式。
+本文件定义 ToyLink AI 的统一错误语言。
 
-它的目标是让以下几层看到的是“同一件错误”，只是表现形式不同：
+它要保证以下几层看到的是“同一个错误”，只是表现形式不同：
 
-- application 层
-- UI 层
-- MCP 层
-- 日志层
+- application
+- UI
+- MCP
+- 日志
 
-如果没有这份文档，常见结果就是：
-
-- UI 随便写提示
-- MCP 随便返回字符串
-- 日志随便打异常
-- 后面谁都不知道同一个问题到底该怎么处理
-
-## Failure 设计原则
+## 2. 设计原则
 
 - 全项目只保留一套主错误抽象：`Failure`
-- 不直接把插件异常暴露给 UI
-- 错误必须能帮助恢复，而不只是“告诉你失败了”
-- UI 和 MCP 要共享同一套失败语义
-- 错误文案要对用户友好，但日志要保留工程排查价值
+- 不把插件原始异常直接暴露给 UI
+- 错误要帮助恢复，而不只是报错
+- UI 与 MCP 使用同一套错误事实
+- 日志保留排查价值，但不能泄露隐私
 
-一句话理解：
+## 3. 顶层分类
 
-错误不是“报出来就完了”，而是要让系统知道“接下来该怎么办”。
-
-## Failure 顶层分类
-
-ToyLink AI MVP 推荐使用以下顶层分类：
+第一阶段推荐使用以下 `Failure.code`：
 
 - `validation`
 - `permissionDenied`
@@ -44,47 +33,149 @@ ToyLink AI MVP 推荐使用以下顶层分类：
 - `deviceWrite`
 - `protocolUnsupported`
 - `noActiveDevice`
+- `adapterSchemaInvalid`
+- `adapterNotVerified`
+- `adapterConflict`
+- `adapterVerificationFailed`
+- `adapterRevoked`
 - `mcpServer`
 - `storage`
 - `securityLock`
 - `unknown`
 
-## Failure 通用字段
+## 4. 通用字段
 
-每个 `Failure` 实例建议至少具备这些字段：
+每个 `Failure` 至少包含：
 
 - `code`
 - `message`
-- `debugMessage?`
 - `recoverable`
-- `details?`
-- `source?`
+- `details`
+- `source`
+- `debugMessage`
 
-字段解释：
+## 5. 重点 Failure 说明
 
-- `code`：程序内部稳定标识
-- `message`：面向用户或上层的主要说明
-- `debugMessage`：给开发者或日志使用的补充信息
-- `recoverable`：用户是否可以通过重试、授权、重连等方式恢复
-- `details`：结构化补充信息
-- `source`：错误来源，如 `ble`、`mcp`、`storage`
+### validation
 
-## UI 表现总规则
+- 含义：输入参数不合法
+- 场景：强度越界、模式错误、MCP 参数结构错误
+- UI：表单或操作提示
+- MCP：`validation_failed`
 
-不同 Failure 的 UI 表现不应该完全一样。
+### permissionDenied
 
-推荐规则：
+- 含义：缺少蓝牙、通知等权限
+- 场景：扫描前未授权
+- UI：引导去设置页授权
+- MCP：`validation_failed`
 
-- 可恢复错误：优先用提示 + 操作建议
-- 关键阻断错误：用页面级错误态或弹窗
-- 安全相关错误：提示必须明确，不能弱化
-- 后台或技术细节：不要直接把原始异常展示给用户
+### bluetoothUnavailable
 
-## MCP 表现总规则
+- 含义：蓝牙关闭或设备不支持
+- UI：阻断提示
+- MCP：`device_disconnected`
 
-MCP 侧的错误必须结构化，不要只返回一句模糊文本。
+### deviceConnection
 
-推荐返回字段：
+- 含义：连接建立失败
+- UI：显示重连
+- MCP：`device_disconnected`
+
+### deviceDisconnected
+
+- 含义：设备已断开
+- UI：控制页禁用并提示重新连接
+- MCP：`device_disconnected`
+
+### deviceWrite
+
+- 含义：命令写入失败
+- 场景：超时、特征不可写、队列中断
+- UI：提示重试或重连
+- MCP：`device_disconnected`
+
+### protocolUnsupported
+
+- 含义：当前设备与协议模板不兼容
+- UI：提示切换模板或重新选择设备
+- MCP：`validation_failed`
+
+### noActiveDevice
+
+- 含义：没有活跃设备
+- UI：引导去扫描页
+- MCP：`no_active_device`
+
+### adapterSchemaInvalid
+
+- 含义：适配器文件结构不合法
+- 场景：缺字段、字段类型错误、版本不兼容
+- UI：导入失败并提示文件问题
+- MCP：通常不会直接暴露；若必须映射，用 `validation_failed`
+
+### adapterNotVerified
+
+- 含义：适配器尚未验证通过
+- 场景：导入后未跑验证、重验证前设备被拦截
+- UI：引导进入验证向导
+- MCP：`adapter_not_verified`
+
+### adapterConflict
+
+- 含义：适配器与当前设备不匹配
+- 场景：粗筛通过但精匹配失败
+- UI：提示切换模板或高级模式
+- MCP：`validation_failed`
+
+### adapterVerificationFailed
+
+- 含义：验证流程失败
+- 场景：用户反馈“反应不对”、验证步骤超时、`stop_all` 验证失败
+- UI：允许重试验证
+- MCP：`adapter_verification_failed`
+
+### adapterRevoked
+
+- 含义：适配器曾通过验证，但现在被撤销或需要重验证
+- 场景：版本变化、GATT 指纹变化、安全策略收紧
+- UI：提示重新验证
+- MCP：`adapter_revoked`
+
+### mcpServer
+
+- 含义：MCP 服务启动或运行异常
+- UI：MCP 页显示错误态
+- MCP：`mcp_internal_error`
+
+### storage
+
+- 含义：本地存储读写失败
+- UI：轻量提示或错误页
+- MCP：`mcp_internal_error`
+
+### securityLock
+
+- 含义：当前操作被本地安全锁拦截
+- UI：显示解锁流程
+- MCP：`validation_failed`
+
+### unknown
+
+- 含义：未归类异常
+- UI：通用错误态
+- MCP：`mcp_internal_error`
+
+## 6. UI 表现规则
+
+- 可恢复错误：提示 + 下一步建议
+- 阻断错误：页面级错误态或弹窗
+- 安全错误：必须明确，不弱化
+- 技术细节：不直接展示原始异常
+
+## 7. MCP 映射规则
+
+MCP 错误必须结构化返回：
 
 - `ok`
 - `error.code`
@@ -92,273 +183,33 @@ MCP 侧的错误必须结构化，不要只返回一句模糊文本。
 - `error.recoverable`
 - `error.details`
 
-## 日志规则
+适配器相关新增稳定错误码：
 
-日志记录 Failure 时：
+- `adapter_not_verified`
+- `adapter_verification_failed`
+- `adapter_revoked`
 
-- 记录 `code`
-- 记录来源和上下文
-- 记录可帮助排查的信息
-- 不记录敏感控制历史
-- 不记录完整 BLE payload
-- 不记录 интим私聊天原文到普通日志
+## 8. 日志规则
 
-## Failure 明细
+日志中允许记录：
 
-### validation
-
-- 中文名称：参数校验失败
-- 说明：输入值超出允许范围，或缺少必要参数
-- 典型触发场景：
-  - 强度超范围
-  - 模式值非法
-  - MCP 参数结构不合法
-- 是否可恢复：是
-- 推荐用户提示：输入内容不符合要求，请检查后重试
-- 推荐恢复动作：修正参数、重新提交
-- UI 层表现：表单提示、输入校验提示、轻量错误提示
-- MCP 对应错误码：`validation_failed`
-
-### permissionDenied
-
-- 中文名称：权限被拒绝
-- 说明：系统权限不足，当前操作无法继续
-- 典型触发场景：
-  - 蓝牙扫描权限被拒绝
-  - 通知权限被拒绝导致前台服务无法正常体验
-- 是否可恢复：是
-- 推荐用户提示：请前往系统设置开启所需权限
-- 推荐恢复动作：跳转设置页、重新授权
-- UI 层表现：引导卡片、弹窗、带按钮提示
-- MCP 对应错误码：`validation_failed`
-
-说明：
-
-虽然它不是“参数错误”，但在 MVP 的 MCP 层可以先统一映射到通用失败码，再通过 `details` 说明权限原因。
-
-### bluetoothUnavailable
-
-- 中文名称：蓝牙不可用
-- 说明：设备不支持 BLE，或蓝牙当前关闭
-- 典型触发场景：
-  - 设备硬件不支持
-  - 蓝牙开关关闭
-- 是否可恢复：部分可恢复
-- 推荐用户提示：请确认设备支持蓝牙并已开启蓝牙功能
-- 推荐恢复动作：打开蓝牙、检查设备环境
-- UI 层表现：页面级阻断提示
-- MCP 对应错误码：`device_disconnected`
-
-### scanFailed
-
-- 中文名称：扫描失败
-- 说明：扫描流程启动失败或被系统中断
-- 典型触发场景：
-  - 扫描 API 报错
-  - 权限状态异常导致扫描中断
-- 是否可恢复：是
-- 推荐用户提示：设备扫描失败，请稍后重试
-- 推荐恢复动作：重新扫描、检查权限和蓝牙状态
-- UI 层表现：列表上方错误条、重试按钮
-- MCP 对应错误码：`mcp_internal_error`
-
-### deviceNotFound
-
-- 中文名称：设备未找到
-- 说明：目标设备未出现在扫描结果中，或上次保存的设备无法找到
-- 典型触发场景：
-  - 用户选择的设备离线
-  - 自动恢复设备时未匹配到
-- 是否可恢复：是
-- 推荐用户提示：未找到目标设备，请确认设备已开启并靠近手机
-- 推荐恢复动作：重新扫描、重新选择设备
-- UI 层表现：空状态 + 重试
-- MCP 对应错误码：`no_active_device`
-
-### deviceConnection
-
-- 中文名称：设备连接失败
-- 说明：连接过程未成功建立
-- 典型触发场景：
-  - 连接超时
-  - 服务发现失败
-  - 系统层断开
-- 是否可恢复：是
-- 推荐用户提示：连接设备失败，请重试
-- 推荐恢复动作：重新连接、重新扫描
-- UI 层表现：连接态错误提示、重试按钮
-- MCP 对应错误码：`device_disconnected`
-
-### deviceDisconnected
-
-- 中文名称：设备已断开
-- 说明：设备在已连接或准备控制时发生断连
-- 典型触发场景：
-  - 用户离开设备范围
-  - 系统蓝牙异常
-  - 设备主动断开
-- 是否可恢复：是
-- 推荐用户提示：设备连接已断开，请重新连接
-- 推荐恢复动作：重新连接、回到设备列表
-- UI 层表现：控制页禁用态 + 重连提示
-- MCP 对应错误码：`device_disconnected`
-
-### deviceWrite
-
-- 中文名称：设备写入失败
-- 说明：命令构造正确，但写入 BLE 特征时失败
-- 典型触发场景：
-  - 写入超时
-  - 特征不可写
-  - 写入队列中断
-- 是否可恢复：是
-- 推荐用户提示：控制命令发送失败，请重试或重新连接设备
-- 推荐恢复动作：重试一次、必要时重连
-- UI 层表现：操作失败提示
-- MCP 对应错误码：`device_disconnected`
-
-说明：
-
-如果后续需要更细化，也可以区分成 `device_write_timeout`、`device_write_unsupported` 等内部子码。
-
-### protocolUnsupported
-
-- 中文名称：协议不受支持
-- 说明：发现的设备或当前 GATT 结构不符合已知协议
-- 典型触发场景：
-  - 找不到预期服务 UUID
-  - 找不到目标写入特征
-- 是否可恢复：部分可恢复
-- 推荐用户提示：当前设备协议暂不受支持
-- 推荐恢复动作：检查设备型号、切换协议模板
-- UI 层表现：阻断提示 + 设备管理入口
-- MCP 对应错误码：`mcp_internal_error`
-
-### noActiveDevice
-
-- 中文名称：当前没有活跃设备
-- 说明：系统尚未建立当前控制目标
-- 典型触发场景：
-  - MCP 已启动，但没有连接设备
-  - 手动控制页面打开时设备已被清空
-- 是否可恢复：是
-- 推荐用户提示：请先连接一个设备
-- 推荐恢复动作：前往扫描页连接设备
-- UI 层表现：空状态引导
-- MCP 对应错误码：`no_active_device`
-
-### mcpServer
-
-- 中文名称：MCP 服务错误
-- 说明：MCP 服务启动、绑定、注册工具或运行时出现异常
-- 典型触发场景：
-  - 端口绑定失败
-  - tool 注册失败
-  - transport 初始化失败
-- 是否可恢复：部分可恢复
-- 推荐用户提示：本地 MCP 服务启动失败，请重试
-- 推荐恢复动作：重新启动 MCP 服务、检查端口占用
-- UI 层表现：服务状态卡片错误态
-- MCP 对应错误码：`mcp_internal_error`
-
-### storage
-
-- 中文名称：本地存储错误
-- 说明：读取或写入本地数据失败
-- 典型触发场景：
-  - Hive 读取失败
-  - SharedPreferences 写入失败
-  - Secure Storage 访问异常
-- 是否可恢复：部分可恢复
-- 推荐用户提示：本地数据读写失败，请稍后重试
-- 推荐恢复动作：重试、重启应用、必要时清理本地数据
-- UI 层表现：轻量提示或页面级错误
-- MCP 对应错误码：`mcp_internal_error`
-
-### securityLock
-
-- 中文名称：安全锁阻止访问
-- 说明：当前操作需要先通过本地安全验证
-- 典型触发场景：
-  - App Lock 未解锁
-  - 敏感设置未授权访问
-- 是否可恢复：是
-- 推荐用户提示：请先完成身份验证
-- 推荐恢复动作：触发生物识别或本地解锁
-- UI 层表现：认证弹窗或锁屏页
-- MCP 对应错误码：`validation_failed`
-
-说明：
-
-MVP 中 MCP 不做复杂认证协商，所以先以拒绝执行为主，细节通过 `details` 说明。
-
-### unknown
-
-- 中文名称：未知错误
-- 说明：未归类的异常或预期外情况
-- 典型触发场景：
-  - 未处理插件异常
-  - 程序逻辑遗漏
-- 是否可恢复：不确定
-- 推荐用户提示：发生了未知错误，请稍后重试
-- 推荐恢复动作：重试、重新进入页面、记录日志排查
-- UI 层表现：通用错误态
-- MCP 对应错误码：`mcp_internal_error`
-
-## Failure 和 UI 的关系
-
-推荐你这样理解：
-
-- `Failure` 负责说明“错了什么”
-- UI 负责决定“怎么告诉用户”
-
-不要把用户提示写死在业务逻辑里，但也不要让 UI 自己凭感觉解释错误。
-
-## Failure 和 MCP 的关系
-
-推荐你这样理解：
-
-- `Failure` 是应用内部的统一错误语言
-- MCP 错误码是对外暴露给工具调用方的稳定协议语言
-
-也就是说：
-
-- 一个 `Failure` 不一定和一个 MCP 错误码一一对应
-- 但 MCP 返回必须能稳定映射回某类 `Failure`
-
-## Failure 和日志的关系
-
-推荐日志内容：
-
-- Failure `code`
+- `Failure.code`
 - 来源模块
 - 操作上下文
 - 简短调试信息
 
-避免日志内容：
+日志中禁止记录：
 
-- 原始完整 BLE payload
-- 长期保存的 интим密使用行为记录
-- 敏感聊天原文
+- 完整 BLE payload
+- 敏感控制历史
+- 隐私聊天原文
 
-## 测试要求
+## 9. 测试要求
 
-至少要覆盖这些测试：
+至少覆盖：
 
-- 各类 `Failure` 的创建与字段完整性
-- 典型插件异常到 `Failure` 的映射
-- UI 是否针对关键 `Failure` 呈现正确状态
-- MCP 是否针对关键 `Failure` 返回正确错误码
-- 安全相关错误是否不会被普通错误提示掩盖
-
-## 给初级开发者的建议
-
-如果你在开发时遇到错误处理犹豫，可以按这个顺序想：
-
-1. 这是什么类型的失败？
-2. 用户现在最需要知道什么？
-3. 用户下一步应该做什么？
-4. MCP 调用方应该收到什么稳定错误码？
-5. 日志里记录什么才够排查，又不会泄露隐私？
-
-只要按这个顺序想，错误处理通常就不会写偏。
+- 适配器导入校验失败映射
+- 未验证适配器被 MCP 拒绝
+- `stop_all` 失败和抢占相关错误
+- EMS 超限错误映射
+- UI 是否针对关键 Failure 渲染正确状态

@@ -11,8 +11,10 @@ This project is **hardware-sensitive** and **privacy-sensitive**. Safety, mainta
 Build and maintain ToyLink AI as a production-grade Flutter app that:
 
 - connects to BLE toys with a simple user flow
+- lets users pair devices locally and verify them safely inside the app
 - abstracts device-specific protocols behind a stable domain model
 - exposes safe local MCP tools for AI-driven control
+- exposes verified devices to external AI clients through local MCP
 - preserves privacy by keeping sensitive control local-first
 - remains easy to extend for future hardware brands and Buttplug-compatible integrations
 
@@ -113,6 +115,18 @@ Rules:
 - Do not scatter `if (brand == ...)` across the app.
 - Prefer capability-based design over brand-based branching.
 - Keep protocol metadata configurable where practical.
+
+### 6. Adapter System
+
+ToyLink AI expands hardware support through a controlled adapter system.
+
+Rules:
+
+- First-stage adapters must be `manifest + built-in codecKey`, not executable plugins.
+- Shared adapter files may be imported and exported, but local verification status must never be embedded in the shared file.
+- Adapter verification state must be stored locally and tied to the current device or GATT fingerprint.
+- Unverified adapters must not enter MCP control flow.
+- Adapter declarations may narrow safety limits, but may never widen system safety limits.
 
 ## Safety Rules
 
@@ -371,9 +385,10 @@ Core screens should include:
 - device scan/connect
 - manual control
 - MCP server status
-- chat shell
+- device manager / adapter import
 - settings/security
-- device manager
+
+The in-app chat shell may exist later, but it is not the first-stage primary control entry.
 
 ## Chat Rules
 
@@ -386,6 +401,15 @@ Rules:
 - separate chat transcript state from MCP tool execution state
 - expose tool invocation records clearly in the UI
 - do not tightly couple chat UX to one vendor API
+
+## Product Shape Rules
+
+For the current stage of the project:
+
+- Treat ToyLink AI as a local control runtime first.
+- External AI clients are expected to control the app through local MCP.
+- Do not expand the product into a full chat platform before the pairing, verification, and MCP control loop is stable.
+- Favor template selection, device verification, and safety visibility over conversational polish.
 
 ## Storage Rules
 
