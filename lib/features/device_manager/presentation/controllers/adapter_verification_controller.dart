@@ -30,10 +30,10 @@ class AdapterVerificationState {
     this.errorMessage,
     this.successMessage,
     this.steps = const <VerificationStepDraft>[
-      VerificationStepDraft(key: 'set_suck', label: 'Suck 10 模式 1'),
-      VerificationStepDraft(key: 'set_vibe', label: 'Vibe 10 模式 1'),
-      VerificationStepDraft(key: 'set_ems', label: 'EMS 1 模式 1'),
-      VerificationStepDraft(key: 'stop_all', label: 'Stop All'),
+      VerificationStepDraft(key: 'set_suck', label: '吮吸强度 10（模式 1）'),
+      VerificationStepDraft(key: 'set_vibe', label: '震动强度 10（模式 1）'),
+      VerificationStepDraft(key: 'set_ems', label: '微电流强度 1（模式 1）'),
+      VerificationStepDraft(key: 'stop_all', label: '一键停止 stop_all'),
     ],
   });
 
@@ -92,9 +92,7 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
           )
           .toList();
 
-      await ref
-          .read(manageAdapterUseCaseProvider)
-          .markVerificationPassed(
+      await ref.read(manageAdapterUseCaseProvider).markVerificationPassed(
             AdapterVerificationInput(
               adapterId: adapterId,
               deviceFingerprint: deviceFingerprint,
@@ -106,7 +104,7 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
 
       state = state.copyWith(
         isSubmitting: false,
-        successMessage: '验证已通过，可用于 MCP 控制。',
+        successMessage: '验证已通过：该适配器可用于 MCP 控制。',
       );
     } catch (error) {
       state = state.copyWith(isSubmitting: false, errorMessage: '验证失败：$error');

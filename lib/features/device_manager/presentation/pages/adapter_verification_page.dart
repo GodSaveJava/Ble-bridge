@@ -33,11 +33,13 @@ class AdapterVerificationPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text('适配器：$adapterId'),
+                    Text('适配器 ID：$adapterId'),
                     const SizedBox(height: 6),
-                    Text('当前设备：$deviceFingerprint'),
+                    Text('当前设备标识：$deviceFingerprint'),
                     const SizedBox(height: 6),
-                    const Text('请先在设备上低强度体验每一步，再勾选“反应正确”。'),
+                    const Text(
+                      '请先在低强度下逐项测试，再勾选“通过”。建议每次动作不超过 3 秒。',
+                    ),
                   ],
                 ),
               ),
@@ -52,6 +54,7 @@ class AdapterVerificationPage extends ConsumerWidget {
                         (step) => CheckboxListTile(
                           value: step.passed,
                           title: Text(step.label),
+                          subtitle: const Text('确认该动作结果符合预期后再勾选'),
                           onChanged: state.isSubmitting
                               ? null
                               : (bool? value) {
