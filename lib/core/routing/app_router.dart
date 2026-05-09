@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/ble_device/presentation/pages/scan_page.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
 import '../../features/control/presentation/pages/control_page.dart';
+import '../../features/device_manager/presentation/pages/device_manager_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/mcp_server/presentation/pages/mcp_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -19,6 +20,10 @@ class AppRouter {
       GoRoute(path: '/chat', builder: (_, _) => const ChatPage()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
       GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
+      GoRoute(
+        path: '/device-manager',
+        builder: (_, _) => const DeviceManagerPage(),
+      ),
     ],
   );
 }

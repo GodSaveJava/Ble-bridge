@@ -178,6 +178,10 @@ class HomePage extends ConsumerWidget {
                   onTap: () => context.push('/control'),
                 ),
                 _QuickNavButton(
+                  label: '设备管理',
+                  onTap: () => context.push('/device-manager'),
+                ),
+                _QuickNavButton(
                   label: '聊天',
                   onTap: () => context.push('/chat'),
                 ),
