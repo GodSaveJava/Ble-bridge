@@ -73,7 +73,7 @@ class McpToolRouter {
           return const McpToolResult(
             ok: false,
             errorCode: 'tool_not_found',
-            errorMessage: '当前不支持该 MCP 工具。',
+            errorMessage: 'Unsupported MCP tool.',
           );
       }
     } on Failure catch (failure) {
@@ -87,7 +87,7 @@ class McpToolRouter {
       return const McpToolResult(
         ok: false,
         errorCode: 'mcp_internal_error',
-        errorMessage: '执行 MCP 工具时发生异常。',
+        errorMessage: 'MCP tool execution failed.',
       );
     }
   }
@@ -112,12 +112,12 @@ class McpToolRouter {
   }
 
   int _requiredInt(Map<String, Object?> args, String key) {
-    final value = args[key];
+    final Object? value = args[key];
     if (value is int) {
       return value;
     }
     throw Failure.validation(
-      message: '参数缺失或类型错误：$key（应为整数）',
+      message: 'Missing or invalid argument: $key must be an integer.',
       details: <String, Object?>{'argument': key},
     );
   }
@@ -127,7 +127,7 @@ class McpToolRouter {
     String key, {
     required int defaultValue,
   }) {
-    final value = args[key];
+    final Object? value = args[key];
     if (value == null) {
       return defaultValue;
     }
@@ -135,7 +135,7 @@ class McpToolRouter {
       return value;
     }
     throw Failure.validation(
-      message: '参数类型错误：$key（应为整数）',
+      message: 'Invalid argument: $key must be an integer.',
       details: <String, Object?>{'argument': key},
     );
   }
@@ -147,6 +147,9 @@ class McpToolRouter {
       FailureCode.deviceDisconnected => 'device_disconnected',
       FailureCode.deviceWrite => 'device_write_failed',
       FailureCode.securityLock => 'security_lock_required',
+      FailureCode.adapterNotVerified => 'adapter_not_verified',
+      FailureCode.adapterVerificationFailed => 'adapter_verification_failed',
+      FailureCode.adapterRevoked => 'adapter_revoked',
       _ => 'mcp_internal_error',
     };
   }

@@ -1,14 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/adapter_registry.dart';
+import '../services/adapter_validator.dart';
 import '../mcp/mcp_tool_router.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
 import '../use_cases/control_device_use_case.dart';
 import '../use_cases/manage_mcp_service_use_case.dart';
 import '../use_cases/manage_active_device_use_case.dart';
+import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
+import '../../domain/repositories/verified_adapter_repository.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 
@@ -20,6 +24,22 @@ final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
 
 final mcpServiceProvider = Provider<McpService>((_) {
   throw UnimplementedError('Provide a concrete McpService in infrastructure.');
+});
+
+final adapterManifestRepositoryProvider = Provider<AdapterManifestRepository>((
+  _,
+) {
+  throw UnimplementedError(
+    'Provide a concrete AdapterManifestRepository in infrastructure.',
+  );
+});
+
+final verifiedAdapterRepositoryProvider = Provider<VerifiedAdapterRepository>((
+  _,
+) {
+  throw UnimplementedError(
+    'Provide a concrete VerifiedAdapterRepository in infrastructure.',
+  );
 });
 
 final foregroundConnectionServiceProvider =
@@ -73,5 +93,18 @@ final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((
 final mcpToolRouterProvider = Provider<McpToolRouter>((ref) {
   return McpToolRouter(
     controlDeviceUseCase: ref.watch(controlDeviceUseCaseProvider),
+  );
+});
+
+final adapterRegistryProvider = Provider<AdapterRegistry>((ref) {
+  return AdapterRegistry(
+    adapterManifestRepository: ref.watch(adapterManifestRepositoryProvider),
+    verifiedAdapterRepository: ref.watch(verifiedAdapterRepositoryProvider),
+  );
+});
+
+final adapterValidatorProvider = Provider<AdapterValidator>((ref) {
+  return AdapterValidator(
+    verifiedAdapterRepository: ref.watch(verifiedAdapterRepositoryProvider),
   );
 });
