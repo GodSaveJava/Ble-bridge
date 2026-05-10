@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../application/providers/application_providers.dart';
 import '../../../../shared/widgets/toylink_background.dart';
@@ -19,8 +20,9 @@ class HomePage extends ConsumerWidget {
     final fgState = ref.watch(foregroundServiceControllerProvider);
 
     final String deviceSubtitle = activeStatus.maybeWhen(
-      data: (status) =>
-          status.isConnected ? '已连接：${status.deviceId}' : '当前没有已连接设备',
+      data: (status) => status.isConnected
+          ? '已连接设备：${status.deviceId}'
+          : '当前没有已连接设备',
       orElse: () => '当前没有已连接设备',
     );
 
@@ -72,6 +74,10 @@ class HomePage extends ConsumerWidget {
                       Text(
                         '最近刷新：${fgState.lastRefreshedAt!.hour.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.minute.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.second.toString().padLeft(2, '0')}',
                       ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '如果切后台后连接容易断开，请在系统设置中关闭电池优化并允许自启动。',
+                    ),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 10,
@@ -98,6 +104,12 @@ class HomePage extends ConsumerWidget {
                                     )
                                     .stop(),
                           child: const Text('停止保活'),
+                        ),
+                        OutlinedButton(
+                          onPressed: () async {
+                            await openAppSettings();
+                          },
+                          child: const Text('去系统设置'),
                         ),
                       ],
                     ),
@@ -126,7 +138,7 @@ class HomePage extends ConsumerWidget {
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    const Text('自动完成：扫描设备 → 连接设备 → 启动后台保活 → 启动 MCP'),
+                    const Text('自动完成：扫描设备 -> 连接设备 -> 启动后台保活 -> 启动 MCP'),
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: quickStart.isRunning
@@ -181,14 +193,8 @@ class HomePage extends ConsumerWidget {
                   label: '设备管理',
                   onTap: () => context.push('/device-manager'),
                 ),
-                _QuickNavButton(
-                  label: '聊天',
-                  onTap: () => context.push('/chat'),
-                ),
-                _QuickNavButton(
-                  label: '设置',
-                  onTap: () => context.push('/settings'),
-                ),
+                _QuickNavButton(label: '聊天', onTap: () => context.push('/chat')),
+                _QuickNavButton(label: '设置', onTap: () => context.push('/settings')),
               ],
             ),
           ],

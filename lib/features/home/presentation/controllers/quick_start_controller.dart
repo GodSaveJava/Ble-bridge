@@ -58,7 +58,7 @@ class QuickStartController extends Notifier<QuickStartState> {
       state = state.copyWith(
         isRunning: false,
         completed: false,
-        errorMessage: '一键启动失败，请确认蓝牙和设备状态后重试。',
+        errorMessage: '一键启动失败，请检查蓝牙、权限和设备状态后重试。',
       );
       return false;
     } finally {
