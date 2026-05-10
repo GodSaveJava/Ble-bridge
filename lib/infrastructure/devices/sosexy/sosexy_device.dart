@@ -31,6 +31,7 @@ class SosexyDevice implements ToyDevice {
 
   BluetoothDevice? _device;
   BluetoothCharacteristic? _writeCharacteristic;
+  StreamSubscription<BluetoothConnectionState>? _connectionStateSub;
   DeviceStatus _status;
   bool _draining = false;
   bool _disposed = false;
@@ -96,6 +97,19 @@ class SosexyDevice implements ToyDevice {
     }
     _status = _status.copyWith(isConnected: true);
     _statusController.add(_status);
+    await _connectionStateSub?.cancel();
+    _connectionStateSub = device.connectionState.listen((connectionState) {
+      if (connectionState == BluetoothConnectionState.disconnected) {
+        _writeCharacteristic = null;
+        _status = _status.copyWith(
+          isConnected: false,
+          suckIntensity: 0,
+          vibeIntensity: 0,
+          emsIntensity: 0,
+        );
+        _statusController.add(_status);
+      }
+    });
     return true;
   }
 
@@ -104,6 +118,8 @@ class SosexyDevice implements ToyDevice {
     final device = _device;
     _writeCharacteristic = null;
     _queue.clear();
+    await _connectionStateSub?.cancel();
+    _connectionStateSub = null;
     if (device != null) {
       await device.disconnect();
     }
@@ -196,6 +212,7 @@ class SosexyDevice implements ToyDevice {
       return;
     }
     _disposed = true;
+    await _connectionStateSub?.cancel();
     await _statusController.close();
   }
 

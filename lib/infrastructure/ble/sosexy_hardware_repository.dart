@@ -22,8 +22,12 @@ class SosexyHardwareRepository implements HardwareRepository {
   final Map<String, ScanResult> _scanCache = <String, ScanResult>{};
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<DeviceStatus>? _deviceStatusSub;
+  StreamSubscription<BluetoothConnectionState>? _deviceConnectionStateSub;
   ToyDevice? _activeDevice;
   bool _isScanning = false;
+  ToyDeviceInfo? _lastConnectedInfo;
+  bool _manualDisconnectInProgress = false;
+  bool _isReconnecting = false;
 
   @override
   Stream<List<ToyDeviceInfo>> watchDiscoveredDevices() =>
@@ -62,8 +66,16 @@ class SosexyHardwareRepository implements HardwareRepository {
     final device = SosexyDevice(id: info.id, name: info.displayName);
     await device.connect(result.device);
     await _deviceStatusSub?.cancel();
+    await _deviceConnectionStateSub?.cancel();
     _deviceStatusSub = device.statusStream.listen(_statusController.add);
+    _deviceConnectionStateSub = result.device.connectionState.listen((state) {
+      if (state == BluetoothConnectionState.disconnected &&
+          !_manualDisconnectInProgress) {
+        unawaited(_tryReconnectWithBackoff());
+      }
+    });
     _activeDevice = device;
+    _lastConnectedInfo = info;
     _statusController.add(await device.getStatus());
   }
 
@@ -73,12 +85,17 @@ class SosexyHardwareRepository implements HardwareRepository {
     if (device == null) {
       return;
     }
+    _manualDisconnectInProgress = true;
     await device.disconnect();
     if (device is SosexyDevice) {
       await device.dispose();
     }
+    await _deviceConnectionStateSub?.cancel();
+    _deviceConnectionStateSub = null;
     _activeDevice = null;
+    _lastConnectedInfo = null;
     _statusController.add(await device.getStatus());
+    _manualDisconnectInProgress = false;
   }
 
   @override
@@ -126,11 +143,49 @@ class SosexyHardwareRepository implements HardwareRepository {
   Future<void> dispose() async {
     await _scanSub?.cancel();
     await _deviceStatusSub?.cancel();
+    await _deviceConnectionStateSub?.cancel();
     await _scanController.close();
     await _statusController.close();
     final device = _activeDevice;
     if (device is SosexyDevice) {
       await device.dispose();
+    }
+  }
+
+  Future<void> _tryReconnectWithBackoff() async {
+    if (_isReconnecting) {
+      return;
+    }
+    final ToyDeviceInfo? info = _lastConnectedInfo;
+    if (info == null) {
+      return;
+    }
+    _isReconnecting = true;
+    try {
+      const delays = <Duration>[
+        Duration(seconds: 1),
+        Duration(seconds: 3),
+        Duration(seconds: 5),
+      ];
+      for (final delay in delays) {
+        await Future<void>.delayed(delay);
+        if (_manualDisconnectInProgress) {
+          return;
+        }
+        try {
+          await startScan();
+          await Future<void>.delayed(const Duration(seconds: 2));
+          await stopScan();
+          if (_scanCache.containsKey(info.id)) {
+            await connectActiveDevice(info);
+            return;
+          }
+        } catch (_) {
+          // Continue retrying.
+        }
+      }
+    } finally {
+      _isReconnecting = false;
     }
   }
 }
