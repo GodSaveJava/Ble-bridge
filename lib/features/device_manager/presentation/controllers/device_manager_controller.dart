@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/adapter_manifest.dart';
+import '../../../../domain/entities/verified_adapter_record.dart';
 
 class DeviceManagerState {
   const DeviceManagerState({
@@ -165,6 +166,11 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
 final adapterListProvider = StreamProvider<List<AdapterManifest>>((ref) {
   return ref.read(manageAdapterUseCaseProvider).watchAvailableAdapters();
 });
+
+final verifiedAdapterRecordsProvider =
+    StreamProvider<List<VerifiedAdapterRecord>>((ref) {
+      return ref.read(verifiedAdapterRepositoryProvider).watchAll();
+    });
 
 final deviceManagerControllerProvider =
     NotifierProvider<DeviceManagerController, DeviceManagerState>(

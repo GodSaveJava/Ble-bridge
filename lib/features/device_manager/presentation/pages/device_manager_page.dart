@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/adapter_manifest.dart';
+import '../../../../domain/entities/verified_adapter_record.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/device_manager_controller.dart';
 
@@ -61,6 +63,16 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   @override
   Widget build(BuildContext context) {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
+    final recordsAsync = ref.watch(verifiedAdapterRecordsProvider);
+    final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
+    final String? activeDeviceId = activeStatus.maybeWhen(
+      data: (status) => status.deviceId,
+      orElse: () => null,
+    );
+    final List<VerifiedAdapterRecord> records = recordsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <VerifiedAdapterRecord>[],
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('设备管理')),
       body: ToyLinkBackground(
@@ -177,17 +189,34 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     const SizedBox(height: 8),
                     if (state.adapters.isEmpty) const Text('暂无适配器，请先导入。'),
                     for (final AdapterManifest manifest in state.adapters)
-                      ListTile(
-                        dense: true,
-                        title: Text(manifest.displayName),
-                        subtitle: Text(
-                          'ID: ${manifest.adapterId}\ncodec: ${manifest.codecKey}\nversion: ${manifest.version}',
-                        ),
-                        trailing: OutlinedButton(
-                          onPressed: () =>
-                              context.push('/verification/${manifest.adapterId}'),
-                          child: const Text('开始验证'),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final VerifiedAdapterRecord? record = _findRecord(
+                            records: records,
+                            adapterId: manifest.adapterId,
+                            deviceFingerprint: activeDeviceId,
+                          );
+                          final String verifyLabel = _statusLabel(record);
+                          final String verifyTime = record == null
+                              ? '最近验证：无'
+                              : '最近验证：${record.updatedAt.toLocal().toString().split('.').first}';
+                          return ListTile(
+                            dense: true,
+                            title: Text(manifest.displayName),
+                            subtitle: Text(
+                              'ID: ${manifest.adapterId}\n'
+                              'codec: ${manifest.codecKey}\n'
+                              'version: ${manifest.version}\n'
+                              '状态：$verifyLabel\n'
+                              '$verifyTime',
+                            ),
+                            trailing: OutlinedButton(
+                              onPressed: () =>
+                                  context.push('/verification/${manifest.adapterId}'),
+                              child: const Text('开始验证'),
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),
@@ -479,4 +508,34 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
       'notes': '由 ToyLink AI 表单向导生成，可继续手动调整。',
     };
   }
+}
+
+VerifiedAdapterRecord? _findRecord({
+  required List<VerifiedAdapterRecord> records,
+  required String adapterId,
+  required String? deviceFingerprint,
+}) {
+  if (deviceFingerprint == null || deviceFingerprint.isEmpty) {
+    return null;
+  }
+  for (final record in records) {
+    if (record.adapterId == adapterId &&
+        record.target.deviceFingerprint == deviceFingerprint) {
+      return record;
+    }
+  }
+  return null;
+}
+
+String _statusLabel(VerifiedAdapterRecord? record) {
+  if (record == null) {
+    return '未验证';
+  }
+  return switch (record.status) {
+    AdapterVerificationStatus.verified => '已验证',
+    AdapterVerificationStatus.failed => '验证失败',
+    AdapterVerificationStatus.revoked => '已撤销',
+    AdapterVerificationStatus.needsReverify => '需重新验证',
+    AdapterVerificationStatus.unverified => '未验证',
+  };
 }
