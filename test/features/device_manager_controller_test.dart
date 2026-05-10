@@ -13,6 +13,39 @@ import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart'
 import 'package:toylink_ai/features/device_manager/presentation/controllers/device_manager_controller.dart';
 
 void main() {
+  test('precheckJsonText returns warning when ems max above soft limit', () async {
+    final _InMemoryManifestRepository manifestRepository =
+        _InMemoryManifestRepository();
+    final _InMemoryVerifiedRepository verifiedRepository =
+        _InMemoryVerifiedRepository();
+    final AdapterRegistry registry = AdapterRegistry(
+      adapterManifestRepository: manifestRepository,
+      verifiedAdapterRepository: verifiedRepository,
+    );
+    final AdapterValidator validator = AdapterValidator(
+      verifiedAdapterRepository: verifiedRepository,
+    );
+    final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+      adapterRegistry: registry,
+      adapterValidator: validator,
+    );
+    final ProviderContainer container = ProviderContainer(
+      overrides: [
+        manageAdapterUseCaseProvider.overrideWithValue(useCase),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final DeviceManagerController notifier = container.read(
+      deviceManagerControllerProvider.notifier,
+    );
+    await notifier.precheckJsonText(_manifestJsonText(emsMax: 12));
+
+    final DeviceManagerState state = container.read(deviceManagerControllerProvider);
+    expect(state.successMessage, contains('警告'));
+    expect(state.errorMessage, isNull);
+  });
+
   test('importJsonText sets importedAdapterId on success', () async {
     final _InMemoryManifestRepository manifestRepository =
         _InMemoryManifestRepository();
@@ -126,7 +159,7 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   }
 }
 
-String _manifestJsonText() {
+String _manifestJsonText({int emsMax = 20}) {
   return '''
 {
   "schemaVersion": 1,
@@ -164,7 +197,7 @@ String _manifestJsonText() {
   "ranges": {
     "suckIntensity": {"min": 0, "max": 100},
     "vibeIntensity": {"min": 0, "max": 100},
-    "emsIntensity": {"min": 0, "max": 20},
+    "emsIntensity": {"min": 0, "max": $emsMax},
     "mode": {"min": 1, "max": 4}
   }
 }

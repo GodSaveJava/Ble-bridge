@@ -17,28 +17,32 @@ class DeviceManagerPage extends ConsumerStatefulWidget {
 
 class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   final TextEditingController _jsonController = TextEditingController();
+  late final ProviderSubscription<DeviceManagerState> _importListener;
 
   @override
   void initState() {
     super.initState();
-    ref.listenManual<DeviceManagerState>(deviceManagerControllerProvider, (
-      _,
-      next,
-    ) {
-      final String? adapterId = next.importedAdapterId;
-      if (adapterId == null || adapterId.isEmpty) {
-        return;
-      }
-      ref.read(deviceManagerControllerProvider.notifier).consumeImportedAdapterId();
-      if (!mounted) {
-        return;
-      }
-      context.push('/verification/$adapterId');
-    });
+    _importListener = ref.listenManual<DeviceManagerState>(
+      deviceManagerControllerProvider,
+      (_, next) {
+        final String? adapterId = next.importedAdapterId;
+        if (adapterId == null || adapterId.isEmpty) {
+          return;
+        }
+        ref
+            .read(deviceManagerControllerProvider.notifier)
+            .consumeImportedAdapterId();
+        if (!mounted) {
+          return;
+        }
+        context.push('/verification/$adapterId');
+      },
+    );
   }
 
   @override
   void dispose() {
+    _importListener.close();
     _jsonController.dispose();
     super.dispose();
   }
@@ -46,7 +50,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   Future<void> _openFormWizard() async {
     final Map<String, Object?>? result = await showDialog<Map<String, Object?>>(
       context: context,
-      builder: (context) => const _AdapterWizardDialog(),
+      builder: (_) => const _AdapterWizardDialog(),
     );
     if (result == null) {
       return;
@@ -57,7 +61,6 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   @override
   Widget build(BuildContext context) {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
-
     return Scaffold(
       appBar: AppBar(title: const Text('设备管理')),
       body: ToyLinkBackground(
@@ -76,7 +79,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '你可以粘贴外部逆向工具导出的 JSON，或点击“表单生成”自动创建适配器文件。',
+                      '先点“预检”查看结构与安全风险，再导入。也可用“表单生成”自动创建。',
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -102,6 +105,16 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                                     )
                                     .importJsonText(_jsonController.text),
                           child: Text(state.isImporting ? '导入中...' : '导入'),
+                        ),
+                        OutlinedButton(
+                          onPressed: state.isImporting
+                              ? null
+                              : () => ref
+                                    .read(
+                                      deviceManagerControllerProvider.notifier,
+                                    )
+                                    .precheckJsonText(_jsonController.text),
+                          child: const Text('预检'),
                         ),
                         OutlinedButton(
                           onPressed: _openFormWizard,

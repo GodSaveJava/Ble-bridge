@@ -67,6 +67,47 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
     return const DeviceManagerState();
   }
 
+  Future<void> precheckJsonText(String rawJson) async {
+    if (rawJson.trim().isEmpty) {
+      state = state.copyWith(
+        errorMessage: '请输入适配器 JSON 内容后再预检。',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+      );
+      return;
+    }
+
+    try {
+      final Object decoded = jsonDecode(rawJson);
+      if (decoded is! Map<String, Object?>) {
+        throw const FormatException('适配器文件必须是 JSON 对象。');
+      }
+
+      final AdapterManifest manifest = AdapterManifest.fromJson(decoded);
+      final int emsMax = manifest.ranges.emsIntensity.max;
+      if (emsMax > 8) {
+        state = state.copyWith(
+          successMessage: '预检通过（警告）：EMS 上限为 $emsMax，超过建议软上限 8。',
+          clearError: true,
+          clearImportedAdapterId: true,
+        );
+        return;
+      }
+
+      state = state.copyWith(
+        successMessage: '预检通过：结构与核心安全范围校验成功。',
+        clearError: true,
+        clearImportedAdapterId: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: '预检失败：$error',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+      );
+    }
+  }
+
   Future<void> importJsonText(String rawJson) async {
     if (rawJson.trim().isEmpty) {
       state = state.copyWith(
@@ -91,12 +132,13 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
         throw const FormatException('Adapter file must be a JSON object.');
       }
 
+      AdapterManifest.fromJson(decoded);
       await ref.read(manageAdapterUseCaseProvider).importManifestJson(decoded);
-      final String? importedAdapterId = decoded['adapterId'] as String?;
+
       state = state.copyWith(
         isImporting: false,
         successMessage: '适配器导入成功。',
-        importedAdapterId: importedAdapterId,
+        importedAdapterId: decoded['adapterId'] as String?,
       );
     } catch (error) {
       state = state.copyWith(
