@@ -7,6 +7,7 @@ import '../../features/device_manager/presentation/pages/device_manager_page.dar
 import '../../features/device_manager/presentation/pages/adapter_verification_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/mcp_server/presentation/pages/mcp_page.dart';
+import '../../features/settings/presentation/pages/background_stability_checklist_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 
 class AppRouter {
@@ -20,6 +21,10 @@ class AppRouter {
       GoRoute(path: '/control', builder: (_, _) => const ControlPage()),
       GoRoute(path: '/chat', builder: (_, _) => const ChatPage()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+      GoRoute(
+        path: '/background-checklist',
+        builder: (_, _) => const BackgroundStabilityChecklistPage(),
+      ),
       GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
       GoRoute(
         path: '/device-manager',

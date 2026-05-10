@@ -111,6 +111,11 @@ class HomePage extends ConsumerWidget {
                           },
                           child: const Text('去系统设置'),
                         ),
+                        OutlinedButton(
+                          onPressed: () =>
+                              context.push('/background-checklist'),
+                          child: const Text('验收清单'),
+                        ),
                       ],
                     ),
                     if (fgState.errorMessage != null) ...<Widget>[
