@@ -40,6 +40,10 @@ class AdapterVerificationPage extends ConsumerWidget {
                     const Text(
                       '请先在低强度下逐项测试，再勾选“通过”。建议每次动作不超过 3 秒。',
                     ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '提示：点击“执行”会真实发送 BLE 命令，请确保环境安全。',
+                    ),
                   ],
                 ),
               ),
@@ -54,8 +58,23 @@ class AdapterVerificationPage extends ConsumerWidget {
                         (step) => CheckboxListTile(
                           value: step.passed,
                           title: Text(step.label),
-                          subtitle: const Text('确认该动作结果符合预期后再勾选'),
-                          onChanged: state.isSubmitting
+                          subtitle: const Text('先点“执行”测试，再按真实反馈勾选'),
+                          secondary: OutlinedButton(
+                            onPressed: state.isSubmitting || state.isRunningStep
+                                ? null
+                                : () => ref
+                                      .read(
+                                        adapterVerificationControllerProvider
+                                            .notifier,
+                                      )
+                                      .runStep(step.key),
+                            child:
+                                state.isRunningStep &&
+                                    state.runningStepKey == step.key
+                                ? const Text('执行中...')
+                                : const Text('执行'),
+                          ),
+                          onChanged: state.isSubmitting || state.isRunningStep
                               ? null
                               : (bool? value) {
                                   ref

@@ -11,6 +11,7 @@ import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/adapter_verification_controller.dart';
+import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
 void main() {
   test('submit fails when stop_all is unchecked', () async {
@@ -55,6 +56,53 @@ void main() {
     );
     expect(state.errorMessage, isNotNull);
     expect(state.successMessage, isNull);
+  });
+
+  test('runStep set_suck marks step as passed when command succeeds', () async {
+    final _InMemoryManifestRepository manifestRepository =
+        _InMemoryManifestRepository();
+    final _InMemoryVerifiedRepository verifiedRepository =
+        _InMemoryVerifiedRepository();
+    final AdapterRegistry registry = AdapterRegistry(
+      adapterManifestRepository: manifestRepository,
+      verifiedAdapterRepository: verifiedRepository,
+    );
+    final AdapterValidator validator = AdapterValidator(
+      verifiedAdapterRepository: verifiedRepository,
+    );
+    final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+      adapterRegistry: registry,
+      adapterValidator: validator,
+    );
+    await useCase.importManifestJson(_manifestJson());
+
+    final MockHardwareRepository mockHardwareRepository =
+        MockHardwareRepository();
+    final ProviderContainer container = ProviderContainer(
+      overrides: [
+        manageAdapterUseCaseProvider.overrideWithValue(useCase),
+        hardwareRepositoryProvider.overrideWithValue(mockHardwareRepository),
+      ],
+    );
+    addTearDown(() async {
+      await mockHardwareRepository.dispose();
+      container.dispose();
+    });
+
+    final AdapterVerificationController notifier = container.read(
+      adapterVerificationControllerProvider.notifier,
+    );
+
+    await notifier.runStep('set_suck');
+
+    final AdapterVerificationState state = container.read(
+      adapterVerificationControllerProvider,
+    );
+    final VerificationStepDraft suckStep = state.steps.firstWhere(
+      (VerificationStepDraft step) => step.key == 'set_suck',
+    );
+    expect(suckStep.passed, isTrue);
+    expect(state.errorMessage, isNull);
   });
 }
 

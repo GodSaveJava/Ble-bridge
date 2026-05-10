@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/application_providers.dart';
+import '../../../../application/use_cases/control_device_use_case.dart';
 import '../../../../application/use_cases/manage_adapter_use_case.dart';
 import '../../../../domain/entities/verified_adapter_record.dart';
 
@@ -27,6 +28,8 @@ class VerificationStepDraft {
 class AdapterVerificationState {
   const AdapterVerificationState({
     this.isSubmitting = false,
+    this.isRunningStep = false,
+    this.runningStepKey,
     this.errorMessage,
     this.successMessage,
     this.steps = const <VerificationStepDraft>[
@@ -38,20 +41,29 @@ class AdapterVerificationState {
   });
 
   final bool isSubmitting;
+  final bool isRunningStep;
+  final String? runningStepKey;
   final String? errorMessage;
   final String? successMessage;
   final List<VerificationStepDraft> steps;
 
   AdapterVerificationState copyWith({
     bool? isSubmitting,
+    bool? isRunningStep,
+    String? runningStepKey,
     String? errorMessage,
     String? successMessage,
     List<VerificationStepDraft>? steps,
     bool clearError = false,
     bool clearSuccess = false,
+    bool clearRunningStepKey = false,
   }) {
     return AdapterVerificationState(
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      isRunningStep: isRunningStep ?? this.isRunningStep,
+      runningStepKey: clearRunningStepKey
+          ? null
+          : (runningStepKey ?? this.runningStepKey),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       successMessage: clearSuccess
           ? null
@@ -75,12 +87,55 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
     state = state.copyWith(steps: next, clearError: true, clearSuccess: true);
   }
 
+  Future<void> runStep(String stepKey) async {
+    state = state.copyWith(
+      isRunningStep: true,
+      runningStepKey: stepKey,
+      clearError: true,
+      clearSuccess: true,
+    );
+    try {
+      final ControlDeviceUseCase controlUseCase = ref.read(
+        controlDeviceUseCaseProvider,
+      );
+      switch (stepKey) {
+        case 'set_suck':
+          await controlUseCase.setSuck(intensity: 10, mode: 1);
+          break;
+        case 'set_vibe':
+          await controlUseCase.setVibe(intensity: 10, mode: 1);
+          break;
+        case 'set_ems':
+          await controlUseCase.setEms(intensity: 1, mode: 1);
+          break;
+        case 'stop_all':
+          await controlUseCase.stopAll();
+          break;
+        default:
+          throw ArgumentError('Unsupported step key: $stepKey');
+      }
+      setStepPassed(stepKey: stepKey, passed: true);
+      state = state.copyWith(
+        isRunningStep: false,
+        clearRunningStepKey: true,
+        successMessage: '步骤执行成功，请确认体感后可取消勾选。',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isRunningStep: false,
+        clearRunningStepKey: true,
+        errorMessage: '步骤执行失败：$error',
+      );
+    }
+  }
+
   Future<void> submit({
     required String adapterId,
     required String deviceFingerprint,
   }) async {
     state = state.copyWith(
       isSubmitting: true,
+      clearRunningStepKey: true,
       clearError: true,
       clearSuccess: true,
     );
