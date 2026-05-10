@@ -24,6 +24,17 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
     super.dispose();
   }
 
+  Future<void> _openFormWizard() async {
+    final Map<String, Object?>? result = await showDialog<Map<String, Object?>>(
+      context: context,
+      builder: (context) => const _AdapterWizardDialog(),
+    );
+    if (result == null) {
+      return;
+    }
+    _jsonController.text = const JsonEncoder.withIndent('  ').convert(result);
+  }
+
   @override
   Widget build(BuildContext context) {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
@@ -46,7 +57,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '如果你有外部逆向工具导出的适配器文件，可以直接粘贴后导入。建议先点“填充示例”了解结构。',
+                      '你可以粘贴外部逆向工具导出的 JSON。也可以点击“表单生成”，用向导自动生成基础适配器文件。',
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -72,6 +83,10 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                                     )
                                     .importJsonText(_jsonController.text),
                           child: Text(state.isImporting ? '导入中...' : '导入'),
+                        ),
+                        OutlinedButton(
+                          onPressed: _openFormWizard,
+                          child: const Text('表单生成'),
                         ),
                         OutlinedButton(
                           onPressed: state.adapters.isEmpty
@@ -150,5 +165,156 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
         ),
       ),
     );
+  }
+}
+
+class _AdapterWizardDialog extends StatefulWidget {
+  const _AdapterWizardDialog();
+
+  @override
+  State<_AdapterWizardDialog> createState() => _AdapterWizardDialogState();
+}
+
+class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _adapterId = TextEditingController(text: 'custom.toy.v1');
+  final _displayName = TextEditingController(text: '我的设备适配器');
+  final _blePrefix = TextEditingController(text: 'SOSEXY');
+  final _serviceUuid = TextEditingController(
+    text: '0000fff0-0000-1000-8000-00805f9b34fb',
+  );
+  final _writeUuid = TextEditingController(
+    text: '0000fff3-0000-1000-8000-00805f9b34fb',
+  );
+  final _notifyUuid = TextEditingController(
+    text: '0000fff4-0000-1000-8000-00805f9b34fb',
+  );
+  final _codecKey = TextEditingController(text: 'generic_triple_channel_v1');
+  bool _writeWithoutResponse = true;
+  bool _notifyRequired = false;
+
+  @override
+  void dispose() {
+    _adapterId.dispose();
+    _displayName.dispose();
+    _blePrefix.dispose();
+    _serviceUuid.dispose();
+    _writeUuid.dispose();
+    _notifyUuid.dispose();
+    _codecKey.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('表单生成适配器'),
+      content: SizedBox(
+        width: 520,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _field(_adapterId, 'adapterId', '如 custom.toy.v1'),
+                _field(_displayName, 'displayName', '如 我的设备适配器'),
+                _field(_blePrefix, 'bleNamePrefix', '如 SOSEXY'),
+                _field(_codecKey, 'codecKey', '如 generic_triple_channel_v1'),
+                _field(_serviceUuid, 'serviceUuid', '服务 UUID'),
+                _field(_writeUuid, 'writeCharacteristicUuid', '写入特征 UUID'),
+                _field(_notifyUuid, 'notifyCharacteristicUuid', '通知特征 UUID'),
+                SwitchListTile(
+                  title: const Text('writeWithoutResponse'),
+                  value: _writeWithoutResponse,
+                  onChanged: (value) =>
+                      setState(() => _writeWithoutResponse = value),
+                ),
+                SwitchListTile(
+                  title: const Text('notifyRequired'),
+                  value: _notifyRequired,
+                  onChanged: (value) => setState(() => _notifyRequired = value),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (!_formKey.currentState!.validate()) {
+              return;
+            }
+            Navigator.of(context).pop(_buildManifestJson());
+          },
+          child: const Text('生成'),
+        ),
+      ],
+    );
+  }
+
+  Widget _field(TextEditingController controller, String label, String hint) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label, hintText: hint),
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return '该字段不能为空';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  Map<String, Object?> _buildManifestJson() {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'adapterId': _adapterId.text.trim(),
+      'displayName': _displayName.text.trim(),
+      'protocolKey': 'generic_triple_channel',
+      'version': '1.0.0',
+      'minAppVersion': '1.0.0',
+      'adapterKind': 'codecBacked',
+      'codecKey': _codecKey.text.trim(),
+      'bleNamePrefixes': <String>[_blePrefix.text.trim()],
+      'matching': <String, Object?>{
+        'serviceUuids': <String>[_serviceUuid.text.trim()],
+        'manufacturerDataPattern': null,
+        'priority': 100,
+      },
+      'gatt': <String, Object?>{
+        'serviceUuid': _serviceUuid.text.trim(),
+        'writeCharacteristicUuid': _writeUuid.text.trim(),
+        'notifyCharacteristicUuid': _notifyUuid.text.trim(),
+        'writeWithoutResponse': _writeWithoutResponse,
+      },
+      'connection': <String, Object?>{
+        'requiresBonding': false,
+        'requestMtu': 185,
+        'notifyRequired': _notifyRequired,
+      },
+      'capabilities': <String, Object?>{
+        'supportsSuck': true,
+        'supportsVibe': true,
+        'supportsEms': true,
+        'supportsSetAll': true,
+        'supportsStopAll': true,
+      },
+      'ranges': <String, Object?>{
+        'suckIntensity': <String, Object?>{'min': 0, 'max': 100},
+        'vibeIntensity': <String, Object?>{'min': 0, 'max': 100},
+        'emsIntensity': <String, Object?>{'min': 0, 'max': 20},
+        'mode': <String, Object?>{'min': 1, 'max': 4},
+      },
+      'notes': '由 ToyLink AI 表单向导生成，可继续手动调整。',
+    };
   }
 }
