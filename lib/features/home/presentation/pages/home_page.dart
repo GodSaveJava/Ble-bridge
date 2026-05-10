@@ -164,7 +164,7 @@ class HomePage extends ConsumerWidget {
                               if (!context.mounted) {
                                 return;
                               }
-                              context.go('/control');
+                              context.push('/control');
                             },
                       child: Text(quickStart.isRunning ? '启动中...' : '开始一键启动'),
                     ),
