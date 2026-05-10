@@ -73,6 +73,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
       data: (value) => value,
       orElse: () => const <VerifiedAdapterRecord>[],
     );
+
     return Scaffold(
       appBar: AppBar(title: const Text('设备管理')),
       body: ToyLinkBackground(
@@ -91,7 +92,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '先点“预检”查看结构与安全风险，再导入。也可用“表单生成”自动创建。',
+                      '建议先点“预检”查看结构与安全风险，再导入。也可用“表单生成”自动创建。',
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -190,7 +191,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     if (state.adapters.isEmpty) const Text('暂无适配器，请先导入。'),
                     for (final AdapterManifest manifest in state.adapters)
                       Builder(
-                        builder: (context) {
+                        builder: (_) {
                           final VerifiedAdapterRecord? record = _findRecord(
                             records: records,
                             adapterId: manifest.adapterId,
@@ -200,6 +201,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                           final String verifyTime = record == null
                               ? '最近验证：无'
                               : '最近验证：${record.updatedAt.toLocal().toString().split('.').first}';
+                          final String stepSummary = _stepSummary(record);
                           return ListTile(
                             dense: true,
                             title: Text(manifest.displayName),
@@ -208,7 +210,8 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                               'codec: ${manifest.codecKey}\n'
                               'version: ${manifest.version}\n'
                               '状态：$verifyLabel\n'
-                              '$verifyTime',
+                              '$verifyTime\n'
+                              '步骤：$stepSummary',
                             ),
                             trailing: OutlinedButton(
                               onPressed: () =>
@@ -538,4 +541,14 @@ String _statusLabel(VerifiedAdapterRecord? record) {
     AdapterVerificationStatus.needsReverify => '需重新验证',
     AdapterVerificationStatus.unverified => '未验证',
   };
+}
+
+String _stepSummary(VerifiedAdapterRecord? record) {
+  if (record == null || record.stepResults.isEmpty) {
+    return '无';
+  }
+  return record.stepResults.map((step) {
+    final String status = step.skipped ? '⏭' : (step.passed ? '✅' : '❌');
+    return '${step.stepKey}$status';
+  }).join('  ');
 }
