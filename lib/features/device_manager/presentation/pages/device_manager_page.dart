@@ -19,6 +19,25 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   final TextEditingController _jsonController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    ref.listenManual<DeviceManagerState>(deviceManagerControllerProvider, (
+      _,
+      next,
+    ) {
+      final String? adapterId = next.importedAdapterId;
+      if (adapterId == null || adapterId.isEmpty) {
+        return;
+      }
+      ref.read(deviceManagerControllerProvider.notifier).consumeImportedAdapterId();
+      if (!mounted) {
+        return;
+      }
+      context.push('/verification/$adapterId');
+    });
+  }
+
+  @override
   void dispose() {
     _jsonController.dispose();
     super.dispose();

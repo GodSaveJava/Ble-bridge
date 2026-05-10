@@ -11,20 +11,24 @@ class DeviceManagerState {
     this.isImporting = false,
     this.errorMessage,
     this.successMessage,
+    this.importedAdapterId,
   });
 
   final List<AdapterManifest> adapters;
   final bool isImporting;
   final String? errorMessage;
   final String? successMessage;
+  final String? importedAdapterId;
 
   DeviceManagerState copyWith({
     List<AdapterManifest>? adapters,
     bool? isImporting,
     String? errorMessage,
     String? successMessage,
+    String? importedAdapterId,
     bool clearError = false,
     bool clearSuccess = false,
+    bool clearImportedAdapterId = false,
   }) {
     return DeviceManagerState(
       adapters: adapters ?? this.adapters,
@@ -33,6 +37,9 @@ class DeviceManagerState {
       successMessage: clearSuccess
           ? null
           : (successMessage ?? this.successMessage),
+      importedAdapterId: clearImportedAdapterId
+          ? null
+          : (importedAdapterId ?? this.importedAdapterId),
     );
   }
 }
@@ -41,7 +48,7 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
   @override
   DeviceManagerState build() {
     ref.listen<AsyncValue<List<AdapterManifest>>>(adapterListProvider, (
-      previous,
+      _,
       next,
     ) {
       next.whenData((List<AdapterManifest> adapters) {
@@ -50,8 +57,9 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
       next.whenOrNull(
         error: (Object error, StackTrace stackTrace) {
           state = state.copyWith(
-            errorMessage: 'Failed to load adapter list.',
+            errorMessage: '加载适配器列表失败。',
             clearSuccess: true,
+            clearImportedAdapterId: true,
           );
         },
       );
@@ -65,6 +73,7 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
         isImporting: false,
         errorMessage: '请输入适配器 JSON 内容后再导入。',
         clearSuccess: true,
+        clearImportedAdapterId: true,
       );
       return;
     }
@@ -73,7 +82,9 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
       isImporting: true,
       clearError: true,
       clearSuccess: true,
+      clearImportedAdapterId: true,
     );
+
     try {
       final Object decoded = jsonDecode(rawJson);
       if (decoded is! Map<String, Object?>) {
@@ -81,20 +92,31 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
       }
 
       await ref.read(manageAdapterUseCaseProvider).importManifestJson(decoded);
+      final String? importedAdapterId = decoded['adapterId'] as String?;
       state = state.copyWith(
         isImporting: false,
         successMessage: '适配器导入成功。',
+        importedAdapterId: importedAdapterId,
       );
     } catch (error) {
       state = state.copyWith(
         isImporting: false,
         errorMessage: '适配器导入失败：$error',
+        clearImportedAdapterId: true,
       );
     }
   }
 
   void clearFeedback() {
-    state = state.copyWith(clearError: true, clearSuccess: true);
+    state = state.copyWith(
+      clearError: true,
+      clearSuccess: true,
+      clearImportedAdapterId: true,
+    );
+  }
+
+  void consumeImportedAdapterId() {
+    state = state.copyWith(clearImportedAdapterId: true);
   }
 }
 
