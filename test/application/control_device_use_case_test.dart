@@ -167,6 +167,9 @@ class _RecordingToyDevice implements ToyDevice {
   Stream<DeviceStatus> get statusStream => const Stream<DeviceStatus>.empty();
 
   @override
+  Future<String> getGattFingerprint() async => 'recording-gatt:$id';
+
+  @override
   Set<ToyFeature> get supportedFeatures => <ToyFeature>{
     ToyFeature.suck,
     ToyFeature.vibe,

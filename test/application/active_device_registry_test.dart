@@ -135,6 +135,9 @@ class _FakeToyDevice implements ToyDevice {
   Stream<DeviceStatus> get statusStream => const Stream<DeviceStatus>.empty();
 
   @override
+  Future<String> getGattFingerprint() async => 'fake-gatt:$id';
+
+  @override
   Set<ToyFeature> get supportedFeatures => <ToyFeature>{ToyFeature.suck};
 
   @override

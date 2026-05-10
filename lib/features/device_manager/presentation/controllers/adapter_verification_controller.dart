@@ -147,11 +147,19 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
           )
           .toList();
 
+      String gattFingerprint = 'unknown-gatt';
+      final activeDevice = ref
+          .read(activeDeviceRegistryProvider)
+          .getActiveDeviceOrNull();
+      if (activeDevice != null) {
+        gattFingerprint = await activeDevice.getGattFingerprint();
+      }
+
       await ref.read(manageAdapterUseCaseProvider).markVerificationPassed(
             AdapterVerificationInput(
               adapterId: adapterId,
               deviceFingerprint: deviceFingerprint,
-              gattFingerprint: 'unknown-gatt',
+              gattFingerprint: gattFingerprint,
               appVersion: '1.0.0',
               stepResults: stepResults,
             ),

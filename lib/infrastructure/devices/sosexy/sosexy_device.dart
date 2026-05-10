@@ -65,6 +65,15 @@ class SosexyDevice implements ToyDevice {
   Stream<DeviceStatus> get statusStream => _statusController.stream;
 
   @override
+  Future<String> getGattFingerprint() async {
+    // Deterministic GATT fingerprint for verification binding.
+    return 'svc:${SosexyGattProfile.serviceUuid.toString().toLowerCase()}|'
+        'write:${SosexyGattProfile.writeCharacteristicUuid.toString().toLowerCase()}|'
+        'notify:${SosexyGattProfile.notifyCharacteristicUuid.toString().toLowerCase()}|'
+        'wwo:${SosexyGattProfile.writeWithoutResponse}';
+  }
+
+  @override
   Future<bool> connect(BluetoothDevice device) async {
     _device = device;
     try {

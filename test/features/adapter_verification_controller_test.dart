@@ -104,6 +104,58 @@ void main() {
     expect(suckStep.passed, isTrue);
     expect(state.errorMessage, isNull);
   });
+
+  test('submit writes real gatt fingerprint from active device', () async {
+    final _InMemoryManifestRepository manifestRepository =
+        _InMemoryManifestRepository();
+    final _InMemoryVerifiedRepository verifiedRepository =
+        _InMemoryVerifiedRepository();
+    final AdapterRegistry registry = AdapterRegistry(
+      adapterManifestRepository: manifestRepository,
+      verifiedAdapterRepository: verifiedRepository,
+    );
+    final AdapterValidator validator = AdapterValidator(
+      verifiedAdapterRepository: verifiedRepository,
+    );
+    final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+      adapterRegistry: registry,
+      adapterValidator: validator,
+    );
+    await useCase.importManifestJson(_manifestJson());
+
+    final MockHardwareRepository mockHardwareRepository =
+        MockHardwareRepository();
+    final ProviderContainer container = ProviderContainer(
+      overrides: [
+        manageAdapterUseCaseProvider.overrideWithValue(useCase),
+        hardwareRepositoryProvider.overrideWithValue(mockHardwareRepository),
+      ],
+    );
+    addTearDown(() async {
+      await mockHardwareRepository.dispose();
+      container.dispose();
+    });
+
+    final AdapterVerificationController notifier = container.read(
+      adapterVerificationControllerProvider.notifier,
+    );
+    notifier.setStepPassed(stepKey: 'set_suck', passed: true);
+    notifier.setStepPassed(stepKey: 'set_vibe', passed: true);
+    notifier.setStepPassed(stepKey: 'set_ems', passed: true);
+    notifier.setStepPassed(stepKey: 'stop_all', passed: true);
+
+    await notifier.submit(
+      adapterId: 'generic.triple_channel.v1',
+      deviceFingerprint: 'mock-sosexy-001',
+    );
+
+    final VerifiedAdapterRecord? record = await verifiedRepository.find(
+      adapterId: 'generic.triple_channel.v1',
+      deviceFingerprint: 'mock-sosexy-001',
+    );
+    expect(record, isNotNull);
+    expect(record!.target.gattFingerprint, contains('mock-gatt'));
+  });
 }
 
 class _InMemoryManifestRepository implements AdapterManifestRepository {

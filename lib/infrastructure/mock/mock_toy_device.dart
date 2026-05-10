@@ -54,6 +54,11 @@ class MockToyDevice implements ToyDevice {
   Stream<DeviceStatus> get statusStream => _statusController.stream;
 
   @override
+  Future<String> getGattFingerprint() async {
+    return 'mock-gatt:$bleNamePrefix:$id';
+  }
+
+  @override
   Future<bool> connect(BluetoothDevice device) async {
     _status = _status.copyWith(isConnected: true);
     _statusController.add(_status);

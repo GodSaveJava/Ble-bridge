@@ -16,6 +16,7 @@ abstract class ToyDevice {
   SafetyPolicy get safetyPolicy;
   DeviceConnectionState get connectionState;
   Stream<DeviceStatus> get statusStream;
+  Future<String> getGattFingerprint();
 
   Future<bool> connect(BluetoothDevice device);
   Future<void> disconnect();
