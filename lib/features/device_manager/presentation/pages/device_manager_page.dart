@@ -57,7 +57,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '你可以粘贴外部逆向工具导出的 JSON。也可以点击“表单生成”，用向导自动生成基础适配器文件。',
+                      '你可以粘贴外部逆向工具导出的 JSON，或点击“表单生成”自动创建适配器文件。',
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -177,6 +177,10 @@ class _AdapterWizardDialog extends StatefulWidget {
 
 class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{4,8}(-[0-9a-fA-F]{4}){0,4}$|^[0-9a-fA-F]{32}$',
+  );
+
   final _adapterId = TextEditingController(text: 'custom.toy.v1');
   final _displayName = TextEditingController(text: '我的设备适配器');
   final _blePrefix = TextEditingController(text: 'SOSEXY');
@@ -190,8 +194,18 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
     text: '0000fff4-0000-1000-8000-00805f9b34fb',
   );
   final _codecKey = TextEditingController(text: 'generic_triple_channel_v1');
+  final _priority = TextEditingController(text: '100');
+  final _modeMax = TextEditingController(text: '4');
+  final _emsMax = TextEditingController(text: '20');
+
+  bool _advancedMode = false;
   bool _writeWithoutResponse = true;
   bool _notifyRequired = false;
+  bool _supportsSuck = true;
+  bool _supportsVibe = true;
+  bool _supportsEms = true;
+  bool _supportsSetAll = true;
+  bool _supportsStopAll = true;
 
   @override
   void dispose() {
@@ -202,6 +216,9 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
     _writeUuid.dispose();
     _notifyUuid.dispose();
     _codecKey.dispose();
+    _priority.dispose();
+    _modeMax.dispose();
+    _emsMax.dispose();
     super.dispose();
   }
 
@@ -210,7 +227,7 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
     return AlertDialog(
       title: const Text('表单生成适配器'),
       content: SizedBox(
-        width: 520,
+        width: 560,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -221,20 +238,62 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
                 _field(_displayName, 'displayName', '如 我的设备适配器'),
                 _field(_blePrefix, 'bleNamePrefix', '如 SOSEXY'),
                 _field(_codecKey, 'codecKey', '如 generic_triple_channel_v1'),
-                _field(_serviceUuid, 'serviceUuid', '服务 UUID'),
-                _field(_writeUuid, 'writeCharacteristicUuid', '写入特征 UUID'),
-                _field(_notifyUuid, 'notifyCharacteristicUuid', '通知特征 UUID'),
+                _field(
+                  _serviceUuid,
+                  'serviceUuid',
+                  '服务 UUID',
+                  validator: _uuidValidator,
+                ),
+                _field(
+                  _writeUuid,
+                  'writeCharacteristicUuid',
+                  '写入特征 UUID',
+                  validator: _uuidValidator,
+                ),
+                _field(
+                  _notifyUuid,
+                  'notifyCharacteristicUuid',
+                  '通知特征 UUID',
+                  validator: _uuidValidator,
+                ),
                 SwitchListTile(
-                  title: const Text('writeWithoutResponse'),
+                  title: const Text('写入方式：writeWithoutResponse'),
                   value: _writeWithoutResponse,
                   onChanged: (value) =>
                       setState(() => _writeWithoutResponse = value),
                 ),
                 SwitchListTile(
-                  title: const Text('notifyRequired'),
+                  title: const Text('连接后要求 notify'),
                   value: _notifyRequired,
                   onChanged: (value) => setState(() => _notifyRequired = value),
                 ),
+                const Divider(),
+                SwitchListTile(
+                  title: const Text('开启高级模式'),
+                  subtitle: const Text('配置能力开关、优先级、模式上限、EMS 上限'),
+                  value: _advancedMode,
+                  onChanged: (value) => setState(() => _advancedMode = value),
+                ),
+                if (_advancedMode) ...<Widget>[
+                  _field(_priority, 'matching.priority', '如 100'),
+                  _field(_modeMax, 'ranges.mode.max', '如 4'),
+                  _field(_emsMax, 'ranges.emsIntensity.max', '最大 20'),
+                  _boolSwitch('支持吮吸 supportsSuck', _supportsSuck, (v) {
+                    setState(() => _supportsSuck = v);
+                  }),
+                  _boolSwitch('支持震动 supportsVibe', _supportsVibe, (v) {
+                    setState(() => _supportsVibe = v);
+                  }),
+                  _boolSwitch('支持微电流 supportsEms', _supportsEms, (v) {
+                    setState(() => _supportsEms = v);
+                  }),
+                  _boolSwitch('支持 setAll', _supportsSetAll, (v) {
+                    setState(() => _supportsSetAll = v);
+                  }),
+                  _boolSwitch('支持 stopAll', _supportsStopAll, (v) {
+                    setState(() => _supportsStopAll = v);
+                  }),
+                ],
               ],
             ),
           ),
@@ -245,36 +304,107 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('取消'),
         ),
-        FilledButton(
-          onPressed: () {
-            if (!_formKey.currentState!.validate()) {
-              return;
-            }
-            Navigator.of(context).pop(_buildManifestJson());
-          },
-          child: const Text('生成'),
-        ),
+        FilledButton(onPressed: _onGeneratePressed, child: const Text('生成')),
       ],
     );
   }
 
-  Widget _field(TextEditingController controller, String label, String hint) {
+  Widget _boolSwitch(String label, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile(title: Text(label), value: value, onChanged: onChanged);
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    String hint, {
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         controller: controller,
         decoration: InputDecoration(labelText: label, hintText: hint),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return '该字段不能为空';
-          }
-          return null;
-        },
+        validator:
+            validator ??
+            (value) {
+              if (value == null || value.trim().isEmpty) {
+                return '该字段不能为空';
+              }
+              return null;
+            },
       ),
     );
   }
 
-  Map<String, Object?> _buildManifestJson() {
+  String? _uuidValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'UUID 不能为空';
+    }
+    if (!_uuidRegex.hasMatch(value.trim())) {
+      return 'UUID 格式不正确';
+    }
+    return null;
+  }
+
+  Future<void> _onGeneratePressed() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final int modeMax = int.tryParse(_modeMax.text.trim()) ?? -1;
+    final int emsMax = int.tryParse(_emsMax.text.trim()) ?? -1;
+    final int priority = int.tryParse(_priority.text.trim()) ?? -1;
+
+    if (modeMax < 1) {
+      _showError('模式上限必须 >= 1');
+      return;
+    }
+    if (emsMax < 0 || emsMax > 20) {
+      _showError('EMS 上限必须在 0~20 之间');
+      return;
+    }
+    if (priority < 0) {
+      _showError('priority 不能为负数');
+      return;
+    }
+
+    if (emsMax > 8) {
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('安全提醒'),
+            content: Text(
+              '你设置的 EMS 上限是 $emsMax，超过默认软上限 8。建议仅在充分确认风险后使用。',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('返回修改'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('继续生成'),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pop(_buildManifestJson(modeMax, emsMax, priority));
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Map<String, Object?> _buildManifestJson(int modeMax, int emsMax, int priority) {
     return <String, Object?>{
       'schemaVersion': 1,
       'adapterId': _adapterId.text.trim(),
@@ -288,7 +418,7 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
       'matching': <String, Object?>{
         'serviceUuids': <String>[_serviceUuid.text.trim()],
         'manufacturerDataPattern': null,
-        'priority': 100,
+        'priority': priority,
       },
       'gatt': <String, Object?>{
         'serviceUuid': _serviceUuid.text.trim(),
@@ -302,17 +432,17 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
         'notifyRequired': _notifyRequired,
       },
       'capabilities': <String, Object?>{
-        'supportsSuck': true,
-        'supportsVibe': true,
-        'supportsEms': true,
-        'supportsSetAll': true,
-        'supportsStopAll': true,
+        'supportsSuck': _supportsSuck,
+        'supportsVibe': _supportsVibe,
+        'supportsEms': _supportsEms,
+        'supportsSetAll': _supportsSetAll,
+        'supportsStopAll': _supportsStopAll,
       },
       'ranges': <String, Object?>{
         'suckIntensity': <String, Object?>{'min': 0, 'max': 100},
         'vibeIntensity': <String, Object?>{'min': 0, 'max': 100},
-        'emsIntensity': <String, Object?>{'min': 0, 'max': 20},
-        'mode': <String, Object?>{'min': 1, 'max': 4},
+        'emsIntensity': <String, Object?>{'min': 0, 'max': emsMax},
+        'mode': <String, Object?>{'min': 1, 'max': modeMax},
       },
       'notes': '由 ToyLink AI 表单向导生成，可继续手动调整。',
     };
