@@ -1,28 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/widgets/toylink_background.dart';
+import '../controllers/background_stability_checklist_controller.dart';
 
-class BackgroundStabilityChecklistPage extends StatefulWidget {
+class BackgroundStabilityChecklistPage extends ConsumerWidget {
   const BackgroundStabilityChecklistPage({super.key});
 
   @override
-  State<BackgroundStabilityChecklistPage> createState() =>
-      _BackgroundStabilityChecklistPageState();
-}
-
-class _BackgroundStabilityChecklistPageState
-    extends State<BackgroundStabilityChecklistPage> {
-  bool _lockScreen30Min = false;
-  bool _switchBackgroundAndBack = false;
-  bool _autoReconnectAfterDisconnect = false;
-  bool _mcpCallAvailableInBackground = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool allPassed = _lockScreen30Min &&
-        _switchBackgroundAndBack &&
-        _autoReconnectAfterDisconnect &&
-        _mcpCallAvailableInBackground;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(backgroundChecklistControllerProvider);
+    final checklist = state.checklist;
+    final bool allPassed = checklist.allPassed;
 
     return Scaffold(
       appBar: AppBar(title: const Text('后台稳定性验收清单')),
@@ -43,30 +32,43 @@ class _BackgroundStabilityChecklistPageState
               child: Column(
                 children: <Widget>[
                   CheckboxListTile(
-                    value: _lockScreen30Min,
-                    onChanged: (value) =>
-                        setState(() => _lockScreen30Min = value ?? false),
+                    value: checklist.lockScreen30Min,
+                    onChanged: state.isLoading || state.isSaving
+                        ? null
+                        : (value) => ref
+                              .read(backgroundChecklistControllerProvider.notifier)
+                              .update(lockScreen30Min: value ?? false),
                     title: const Text('锁屏 30 分钟后连接仍保持'),
                   ),
                   CheckboxListTile(
-                    value: _switchBackgroundAndBack,
-                    onChanged: (value) => setState(
-                      () => _switchBackgroundAndBack = value ?? false,
-                    ),
+                    value: checklist.switchBackgroundAndBack,
+                    onChanged: state.isLoading || state.isSaving
+                        ? null
+                        : (value) => ref
+                              .read(backgroundChecklistControllerProvider.notifier)
+                              .update(switchBackgroundAndBack: value ?? false),
                     title: const Text('切后台并返回前台后可继续控制'),
                   ),
                   CheckboxListTile(
-                    value: _autoReconnectAfterDisconnect,
-                    onChanged: (value) => setState(
-                      () => _autoReconnectAfterDisconnect = value ?? false,
-                    ),
+                    value: checklist.autoReconnectAfterDisconnect,
+                    onChanged: state.isLoading || state.isSaving
+                        ? null
+                        : (value) => ref
+                              .read(backgroundChecklistControllerProvider.notifier)
+                              .update(
+                                autoReconnectAfterDisconnect: value ?? false,
+                              ),
                     title: const Text('蓝牙短断后自动重连成功'),
                   ),
                   CheckboxListTile(
-                    value: _mcpCallAvailableInBackground,
-                    onChanged: (value) => setState(
-                      () => _mcpCallAvailableInBackground = value ?? false,
-                    ),
+                    value: checklist.mcpCallAvailableInBackground,
+                    onChanged: state.isLoading || state.isSaving
+                        ? null
+                        : (value) => ref
+                              .read(backgroundChecklistControllerProvider.notifier)
+                              .update(
+                                mcpCallAvailableInBackground: value ?? false,
+                              ),
                     title: const Text('后台状态下 MCP 调用可用'),
                   ),
                 ],
@@ -83,6 +85,42 @@ class _BackgroundStabilityChecklistPageState
                 ),
               ),
             ),
+            if (checklist.lastUpdatedAt != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                '最近保存：${checklist.lastUpdatedAt!.toLocal().toString().split('.').first}',
+              ),
+            ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: <Widget>[
+                OutlinedButton(
+                  onPressed: state.isLoading || state.isSaving
+                      ? null
+                      : () => ref
+                            .read(backgroundChecklistControllerProvider.notifier)
+                            .reset(),
+                  child: const Text('重置清单'),
+                ),
+                OutlinedButton(
+                  onPressed: state.isLoading || state.isSaving
+                      ? null
+                      : () => ref
+                            .read(backgroundChecklistControllerProvider.notifier)
+                            .load(),
+                  child: const Text('重新加载'),
+                ),
+              ],
+            ),
+            if (state.errorMessage != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                state.errorMessage!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
           ],
         ),
       ),

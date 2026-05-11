@@ -46,6 +46,9 @@ void main() {
         verifiedAdapterRepositoryProvider.overrideWith((ref) {
           return ref.watch(defaultVerifiedAdapterRepositoryProvider);
         }),
+        backgroundStabilityChecklistRepositoryProvider.overrideWith((ref) {
+          return ref.watch(defaultBackgroundStabilityChecklistRepositoryProvider);
+        }),
       ],
       child: const ToyLinkApp(),
     ),

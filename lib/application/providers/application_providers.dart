@@ -10,6 +10,7 @@ import '../use_cases/manage_adapter_use_case.dart';
 import '../use_cases/manage_mcp_service_use_case.dart';
 import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
+import '../../domain/repositories/background_stability_checklist_repository.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
@@ -42,6 +43,13 @@ final verifiedAdapterRepositoryProvider = Provider<VerifiedAdapterRepository>((
     'Provide a concrete VerifiedAdapterRepository in infrastructure.',
   );
 });
+
+final backgroundStabilityChecklistRepositoryProvider =
+    Provider<BackgroundStabilityChecklistRepository>((_) {
+      throw UnimplementedError(
+        'Provide a concrete BackgroundStabilityChecklistRepository in infrastructure.',
+      );
+    });
 
 final foregroundConnectionServiceProvider =
     Provider<ForegroundConnectionService>((_) {
