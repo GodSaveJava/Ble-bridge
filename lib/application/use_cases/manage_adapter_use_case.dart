@@ -5,6 +5,7 @@ import '../services/adapter_validator.dart';
 import '../../core/error/failure.dart';
 import '../../domain/entities/adapter_manifest.dart';
 import '../../domain/entities/verified_adapter_record.dart';
+import '../../domain/services/adapter_export_service.dart';
 
 class AdapterVerificationInput {
   const AdapterVerificationInput({
@@ -28,22 +29,59 @@ class ManageAdapterUseCase {
   const ManageAdapterUseCase({
     required AdapterRegistry adapterRegistry,
     required AdapterValidator adapterValidator,
+    required AdapterExportService adapterExportService,
   }) : _adapterRegistry = adapterRegistry,
-       _adapterValidator = adapterValidator;
+       _adapterValidator = adapterValidator,
+       _adapterExportService = adapterExportService;
 
   final AdapterRegistry _adapterRegistry;
   final AdapterValidator _adapterValidator;
+  final AdapterExportService _adapterExportService;
 
   Stream<List<AdapterManifest>> watchAvailableAdapters() {
     return _adapterRegistry.watchAvailableManifests();
   }
 
-  Future<void> importManifestJson(Map<String, Object?> json) {
-    return _adapterRegistry.importManifestJson(json);
+  Future<void> importManifestJson(Map<String, Object?> json) async {
+    final AdapterManifest manifest = AdapterManifest.fromJson(json);
+    await _adapterRegistry.importManifestJson(json);
+    await _adapterValidator.markNeedsReverifyForManifestChange(
+      adapterId: manifest.adapterId,
+      nextManifestHash: _manifestHash(manifest),
+    );
   }
 
   Future<AdapterManifest> requireManifest(String adapterId) {
     return _adapterRegistry.requireManifest(adapterId);
+  }
+
+  Future<void> removeManifest(String adapterId) {
+    return _adapterRegistry.removeManifest(adapterId);
+  }
+
+  Future<String> exportManifestJson(String adapterId) async {
+    final AdapterManifest manifest = await _adapterRegistry.requireManifest(
+      adapterId,
+    );
+    return const JsonEncoder.withIndent('  ').convert(manifest.toJson());
+  }
+
+  Future<String> saveManifestJsonFile(String adapterId) async {
+    final String jsonText = await exportManifestJson(adapterId);
+    return _adapterExportService.saveJson(
+      suggestedFileName: '$adapterId.json',
+      jsonText: jsonText,
+    );
+  }
+
+  Future<void> revokeVerification({
+    required String adapterId,
+    required String deviceFingerprint,
+  }) {
+    return _adapterValidator.revoke(
+      adapterId: adapterId,
+      deviceFingerprint: deviceFingerprint,
+    );
   }
 
   Future<VerifiedAdapterRecord> markVerificationPassed(

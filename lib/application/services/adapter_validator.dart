@@ -87,4 +87,27 @@ class AdapterValidator {
     );
     await _verifiedAdapterRepository.save(revoked);
   }
+
+  Future<void> markNeedsReverifyForManifestChange({
+    required String adapterId,
+    required String nextManifestHash,
+  }) async {
+    final List<VerifiedAdapterRecord> records = await _verifiedAdapterRepository
+        .watchAll()
+        .first;
+    for (final record in records) {
+      if (record.adapterId != adapterId) {
+        continue;
+      }
+      if (record.status != AdapterVerificationStatus.verified) {
+        continue;
+      }
+      if (record.manifestHash == nextManifestHash) {
+        continue;
+      }
+      await _verifiedAdapterRepository.save(
+        record.markNeedsReverify(reason: 'manifest_changed'),
+      );
+    }
+  }
 }

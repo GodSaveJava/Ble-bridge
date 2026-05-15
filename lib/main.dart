@@ -40,6 +40,9 @@ void main() {
         foregroundConnectionServiceProvider.overrideWith((ref) {
           return ref.watch(defaultForegroundConnectionServiceProvider);
         }),
+        adapterExportServiceProvider.overrideWith((ref) {
+          return ref.watch(defaultAdapterExportServiceProvider);
+        }),
         adapterManifestRepositoryProvider.overrideWith((ref) {
           return ref.watch(defaultAdapterManifestRepositoryProvider);
         }),
@@ -47,7 +50,9 @@ void main() {
           return ref.watch(defaultVerifiedAdapterRepositoryProvider);
         }),
         backgroundStabilityChecklistRepositoryProvider.overrideWith((ref) {
-          return ref.watch(defaultBackgroundStabilityChecklistRepositoryProvider);
+          return ref.watch(
+            defaultBackgroundStabilityChecklistRepositoryProvider,
+          );
         }),
       ],
       child: const ToyLinkApp(),

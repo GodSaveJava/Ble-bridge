@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,41 +11,48 @@ import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
+import 'package:toylink_ai/domain/services/adapter_export_service.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/device_manager_controller.dart';
 
 void main() {
-  test('precheckJsonText returns warning when ems max above soft limit', () async {
-    final _InMemoryManifestRepository manifestRepository =
-        _InMemoryManifestRepository();
-    final _InMemoryVerifiedRepository verifiedRepository =
-        _InMemoryVerifiedRepository();
-    final AdapterRegistry registry = AdapterRegistry(
-      adapterManifestRepository: manifestRepository,
-      verifiedAdapterRepository: verifiedRepository,
-    );
-    final AdapterValidator validator = AdapterValidator(
-      verifiedAdapterRepository: verifiedRepository,
-    );
-    final ManageAdapterUseCase useCase = ManageAdapterUseCase(
-      adapterRegistry: registry,
-      adapterValidator: validator,
-    );
-    final ProviderContainer container = ProviderContainer(
-      overrides: [
-        manageAdapterUseCaseProvider.overrideWithValue(useCase),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'precheckJsonText returns warning when ems max above soft limit',
+    () async {
+      final _InMemoryManifestRepository manifestRepository =
+          _InMemoryManifestRepository();
+      final _InMemoryVerifiedRepository verifiedRepository =
+          _InMemoryVerifiedRepository();
+      final AdapterRegistry registry = AdapterRegistry(
+        adapterManifestRepository: manifestRepository,
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final AdapterValidator validator = AdapterValidator(
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final _FakeAdapterExportService exportService =
+          _FakeAdapterExportService();
+      final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+        adapterRegistry: registry,
+        adapterValidator: validator,
+        adapterExportService: exportService,
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: [manageAdapterUseCaseProvider.overrideWithValue(useCase)],
+      );
+      addTearDown(container.dispose);
 
-    final DeviceManagerController notifier = container.read(
-      deviceManagerControllerProvider.notifier,
-    );
-    await notifier.precheckJsonText(_manifestJsonText(emsMax: 12));
+      final DeviceManagerController notifier = container.read(
+        deviceManagerControllerProvider.notifier,
+      );
+      await notifier.precheckJsonText(_manifestJsonText(emsMax: 12));
 
-    final DeviceManagerState state = container.read(deviceManagerControllerProvider);
-    expect(state.successMessage, contains('警告'));
-    expect(state.errorMessage, isNull);
-  });
+      final DeviceManagerState state = container.read(
+        deviceManagerControllerProvider,
+      );
+      expect(state.successMessage, contains('警告'));
+      expect(state.errorMessage, isNull);
+    },
+  );
 
   test('importJsonText sets importedAdapterId on success', () async {
     final _InMemoryManifestRepository manifestRepository =
@@ -58,15 +66,15 @@ void main() {
     final AdapterValidator validator = AdapterValidator(
       verifiedAdapterRepository: verifiedRepository,
     );
+    final _FakeAdapterExportService exportService = _FakeAdapterExportService();
     final ManageAdapterUseCase useCase = ManageAdapterUseCase(
       adapterRegistry: registry,
       adapterValidator: validator,
+      adapterExportService: exportService,
     );
 
     final ProviderContainer container = ProviderContainer(
-      overrides: [
-        manageAdapterUseCaseProvider.overrideWithValue(useCase),
-      ],
+      overrides: [manageAdapterUseCaseProvider.overrideWithValue(useCase)],
     );
     addTearDown(container.dispose);
 
@@ -75,10 +83,227 @@ void main() {
     );
     await notifier.importJsonText(_manifestJsonText());
 
-    final DeviceManagerState state = container.read(deviceManagerControllerProvider);
+    final DeviceManagerState state = container.read(
+      deviceManagerControllerProvider,
+    );
     expect(state.importedAdapterId, 'generic.triple_channel.v1');
     expect(state.errorMessage, isNull);
   });
+
+  test(
+    'exportAdapterJson exposes manifest text for selected adapter',
+    () async {
+      final _InMemoryManifestRepository manifestRepository =
+          _InMemoryManifestRepository();
+      final _InMemoryVerifiedRepository verifiedRepository =
+          _InMemoryVerifiedRepository();
+      final AdapterRegistry registry = AdapterRegistry(
+        adapterManifestRepository: manifestRepository,
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final AdapterValidator validator = AdapterValidator(
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final _FakeAdapterExportService exportService =
+          _FakeAdapterExportService();
+      final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+        adapterRegistry: registry,
+        adapterValidator: validator,
+        adapterExportService: exportService,
+      );
+
+      await useCase.importManifestJson(
+        jsonDecode(_manifestJsonText()) as Map<String, Object?>,
+      );
+
+      final ProviderContainer container = ProviderContainer(
+        overrides: [manageAdapterUseCaseProvider.overrideWithValue(useCase)],
+      );
+      addTearDown(container.dispose);
+
+      final DeviceManagerController notifier = container.read(
+        deviceManagerControllerProvider.notifier,
+      );
+      await notifier.exportAdapterJson('generic.triple_channel.v1');
+
+      final DeviceManagerState state = container.read(
+        deviceManagerControllerProvider,
+      );
+      expect(
+        state.exportedJsonText,
+        contains('"adapterId": "generic.triple_channel.v1"'),
+      );
+      expect(state.successMessage, contains('导出'));
+      expect(state.errorMessage, isNull);
+    },
+  );
+
+  test(
+    'saveAdapterJsonFile exposes saved file path for selected adapter',
+    () async {
+      final _InMemoryManifestRepository manifestRepository =
+          _InMemoryManifestRepository();
+      final _InMemoryVerifiedRepository verifiedRepository =
+          _InMemoryVerifiedRepository();
+      final AdapterRegistry registry = AdapterRegistry(
+        adapterManifestRepository: manifestRepository,
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final AdapterValidator validator = AdapterValidator(
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final _FakeAdapterExportService exportService =
+          _FakeAdapterExportService();
+      final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+        adapterRegistry: registry,
+        adapterValidator: validator,
+        adapterExportService: exportService,
+      );
+
+      await useCase.importManifestJson(
+        jsonDecode(_manifestJsonText()) as Map<String, Object?>,
+      );
+
+      final ProviderContainer container = ProviderContainer(
+        overrides: [manageAdapterUseCaseProvider.overrideWithValue(useCase)],
+      );
+      addTearDown(container.dispose);
+
+      final DeviceManagerController notifier = container.read(
+        deviceManagerControllerProvider.notifier,
+      );
+      await notifier.saveAdapterJsonFile('generic.triple_channel.v1');
+
+      final DeviceManagerState state = container.read(
+        deviceManagerControllerProvider,
+      );
+      expect(
+        state.exportedFilePath,
+        'C:/exports/generic.triple_channel.v1.json',
+      );
+      expect(state.successMessage, contains('保存'));
+      expect(state.errorMessage, isNull);
+    },
+  );
+
+  test(
+    'deleteAdapter removes imported manifest and surfaces success',
+    () async {
+      final _InMemoryManifestRepository manifestRepository =
+          _InMemoryManifestRepository();
+      final _InMemoryVerifiedRepository verifiedRepository =
+          _InMemoryVerifiedRepository();
+      final AdapterRegistry registry = AdapterRegistry(
+        adapterManifestRepository: manifestRepository,
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final AdapterValidator validator = AdapterValidator(
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final _FakeAdapterExportService exportService =
+          _FakeAdapterExportService();
+      final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+        adapterRegistry: registry,
+        adapterValidator: validator,
+        adapterExportService: exportService,
+      );
+
+      await useCase.importManifestJson(
+        jsonDecode(_manifestJsonText()) as Map<String, Object?>,
+      );
+
+      final ProviderContainer container = ProviderContainer(
+        overrides: [manageAdapterUseCaseProvider.overrideWithValue(useCase)],
+      );
+      addTearDown(container.dispose);
+
+      final DeviceManagerController notifier = container.read(
+        deviceManagerControllerProvider.notifier,
+      );
+      await notifier.deleteAdapter('generic.triple_channel.v1');
+
+      final DeviceManagerState state = container.read(
+        deviceManagerControllerProvider,
+      );
+      expect(state.adapters, isEmpty);
+      expect(state.successMessage, contains('删除'));
+      expect(state.errorMessage, isNull);
+    },
+  );
+
+  test(
+    'revokeAdapterVerification marks current device record as revoked',
+    () async {
+      final _InMemoryManifestRepository manifestRepository =
+          _InMemoryManifestRepository();
+      final _InMemoryVerifiedRepository verifiedRepository =
+          _InMemoryVerifiedRepository();
+      final AdapterRegistry registry = AdapterRegistry(
+        adapterManifestRepository: manifestRepository,
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final AdapterValidator validator = AdapterValidator(
+        verifiedAdapterRepository: verifiedRepository,
+      );
+      final _FakeAdapterExportService exportService =
+          _FakeAdapterExportService();
+      final ManageAdapterUseCase useCase = ManageAdapterUseCase(
+        adapterRegistry: registry,
+        adapterValidator: validator,
+        adapterExportService: exportService,
+      );
+
+      await useCase.importManifestJson(
+        jsonDecode(_manifestJsonText()) as Map<String, Object?>,
+      );
+      await useCase.markVerificationPassed(
+        const AdapterVerificationInput(
+          adapterId: 'generic.triple_channel.v1',
+          deviceFingerprint: 'device-a',
+          gattFingerprint: 'gatt-a',
+          appVersion: '1.0.0',
+          stepResults: <VerificationStepResult>[
+            VerificationStepResult(stepKey: 'set_suck', passed: true),
+            VerificationStepResult(stepKey: 'stop_all', passed: true),
+          ],
+        ),
+      );
+
+      final ProviderContainer container = ProviderContainer(
+        overrides: [manageAdapterUseCaseProvider.overrideWithValue(useCase)],
+      );
+      addTearDown(container.dispose);
+
+      final DeviceManagerController notifier = container.read(
+        deviceManagerControllerProvider.notifier,
+      );
+      await notifier.revokeAdapterVerification(
+        adapterId: 'generic.triple_channel.v1',
+        deviceFingerprint: 'device-a',
+      );
+
+      final DeviceManagerState state = container.read(
+        deviceManagerControllerProvider,
+      );
+      final VerifiedAdapterRecord? record = await verifiedRepository.find(
+        adapterId: 'generic.triple_channel.v1',
+        deviceFingerprint: 'device-a',
+      );
+      expect(record?.status, AdapterVerificationStatus.revoked);
+      expect(state.successMessage, contains('撤销'));
+      expect(state.errorMessage, isNull);
+    },
+  );
+}
+
+class _FakeAdapterExportService implements AdapterExportService {
+  @override
+  Future<String> saveJson({
+    required String suggestedFileName,
+    required String jsonText,
+  }) async {
+    return 'C:/exports/$suggestedFileName';
+  }
 }
 
 class _InMemoryManifestRepository implements AdapterManifestRepository {

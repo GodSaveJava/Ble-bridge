@@ -15,6 +15,7 @@ import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
+import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 
@@ -57,6 +58,12 @@ final foregroundConnectionServiceProvider =
         'Provide a concrete ForegroundConnectionService in infrastructure.',
       );
     });
+
+final adapterExportServiceProvider = Provider<AdapterExportService>((_) {
+  throw UnimplementedError(
+    'Provide a concrete AdapterExportService in infrastructure.',
+  );
+});
 
 final safetyGuardProvider = Provider<SafetyGuard>((_) => const SafetyGuard());
 
@@ -122,5 +129,6 @@ final manageAdapterUseCaseProvider = Provider<ManageAdapterUseCase>((ref) {
   return ManageAdapterUseCase(
     adapterRegistry: ref.watch(adapterRegistryProvider),
     adapterValidator: ref.watch(adapterValidatorProvider),
+    adapterExportService: ref.watch(adapterExportServiceProvider),
   );
 });

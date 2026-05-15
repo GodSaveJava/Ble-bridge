@@ -10,6 +10,7 @@ import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
+import 'package:toylink_ai/domain/services/adapter_export_service.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/adapter_verification_controller.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
@@ -29,6 +30,7 @@ void main() {
     final ManageAdapterUseCase useCase = ManageAdapterUseCase(
       adapterRegistry: registry,
       adapterValidator: validator,
+      adapterExportService: const _NoopAdapterExportService(),
     );
     await useCase.importManifestJson(_manifestJson());
 
@@ -73,6 +75,7 @@ void main() {
     final ManageAdapterUseCase useCase = ManageAdapterUseCase(
       adapterRegistry: registry,
       adapterValidator: validator,
+      adapterExportService: const _NoopAdapterExportService(),
     );
     await useCase.importManifestJson(_manifestJson());
 
@@ -120,6 +123,7 @@ void main() {
     final ManageAdapterUseCase useCase = ManageAdapterUseCase(
       adapterRegistry: registry,
       adapterValidator: validator,
+      adapterExportService: const _NoopAdapterExportService(),
     );
     await useCase.importManifestJson(_manifestJson());
 
@@ -156,6 +160,18 @@ void main() {
     expect(record, isNotNull);
     expect(record!.target.gattFingerprint, contains('mock-gatt'));
   });
+}
+
+class _NoopAdapterExportService implements AdapterExportService {
+  const _NoopAdapterExportService();
+
+  @override
+  Future<String> saveJson({
+    required String suggestedFileName,
+    required String jsonText,
+  }) async {
+    return suggestedFileName;
+  }
 }
 
 class _InMemoryManifestRepository implements AdapterManifestRepository {

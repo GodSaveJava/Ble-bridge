@@ -5,6 +5,7 @@ import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
 import '../../domain/repositories/hardware_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
+import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 import '../ble/sosexy_hardware_repository.dart';
@@ -12,6 +13,7 @@ import '../foreground/android_foreground_connection_service.dart';
 import '../mcp/local_mcp_http_service.dart';
 import '../mock/mock_foreground_connection_service.dart';
 import '../mock/mock_hardware_repository.dart';
+import '../storage/local_adapter_export_service.dart';
 import '../storage/shared_prefs_adapter_manifest_repository.dart';
 import '../storage/shared_prefs_background_stability_checklist_repository.dart';
 import '../storage/shared_prefs_verified_adapter_repository.dart';
@@ -47,6 +49,10 @@ final defaultForegroundConnectionServiceProvider =
       }
       return MockForegroundConnectionService();
     });
+
+final defaultAdapterExportServiceProvider = Provider<AdapterExportService>((_) {
+  return const LocalAdapterExportService();
+});
 
 final defaultAdapterManifestRepositoryProvider =
     Provider<AdapterManifestRepository>((ref) {

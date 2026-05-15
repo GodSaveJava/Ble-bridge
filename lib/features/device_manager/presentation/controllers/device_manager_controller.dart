@@ -13,6 +13,8 @@ class DeviceManagerState {
     this.errorMessage,
     this.successMessage,
     this.importedAdapterId,
+    this.exportedJsonText,
+    this.exportedFilePath,
   });
 
   final List<AdapterManifest> adapters;
@@ -20,6 +22,8 @@ class DeviceManagerState {
   final String? errorMessage;
   final String? successMessage;
   final String? importedAdapterId;
+  final String? exportedJsonText;
+  final String? exportedFilePath;
 
   DeviceManagerState copyWith({
     List<AdapterManifest>? adapters,
@@ -27,9 +31,13 @@ class DeviceManagerState {
     String? errorMessage,
     String? successMessage,
     String? importedAdapterId,
+    String? exportedJsonText,
+    String? exportedFilePath,
     bool clearError = false,
     bool clearSuccess = false,
     bool clearImportedAdapterId = false,
+    bool clearExportedJsonText = false,
+    bool clearExportedFilePath = false,
   }) {
     return DeviceManagerState(
       adapters: adapters ?? this.adapters,
@@ -41,6 +49,12 @@ class DeviceManagerState {
       importedAdapterId: clearImportedAdapterId
           ? null
           : (importedAdapterId ?? this.importedAdapterId),
+      exportedJsonText: clearExportedJsonText
+          ? null
+          : (exportedJsonText ?? this.exportedJsonText),
+      exportedFilePath: clearExportedFilePath
+          ? null
+          : (exportedFilePath ?? this.exportedFilePath),
     );
   }
 }
@@ -150,16 +164,114 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
     }
   }
 
+  Future<void> exportAdapterJson(String adapterId) async {
+    try {
+      final String jsonText = await ref
+          .read(manageAdapterUseCaseProvider)
+          .exportManifestJson(adapterId);
+      state = state.copyWith(
+        exportedJsonText: jsonText,
+        successMessage: '适配器 JSON 导出成功，可继续复制或分享。',
+        clearError: true,
+        clearImportedAdapterId: true,
+        clearExportedFilePath: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: '导出适配器失败：$error',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+        clearExportedJsonText: true,
+        clearExportedFilePath: true,
+      );
+    }
+  }
+
+  Future<void> saveAdapterJsonFile(String adapterId) async {
+    try {
+      final String filePath = await ref
+          .read(manageAdapterUseCaseProvider)
+          .saveManifestJsonFile(adapterId);
+      state = state.copyWith(
+        exportedFilePath: filePath,
+        successMessage: '适配器 JSON 已保存到本地文件。',
+        clearError: true,
+        clearImportedAdapterId: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: '保存适配器文件失败：$error',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+        clearExportedFilePath: true,
+      );
+    }
+  }
+
+  Future<void> deleteAdapter(String adapterId) async {
+    try {
+      await ref.read(manageAdapterUseCaseProvider).removeManifest(adapterId);
+      state = state.copyWith(
+        successMessage: '适配器已删除。',
+        clearError: true,
+        clearImportedAdapterId: true,
+        clearExportedJsonText: true,
+        clearExportedFilePath: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: '删除适配器失败：$error',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+      );
+    }
+  }
+
+  Future<void> revokeAdapterVerification({
+    required String adapterId,
+    required String deviceFingerprint,
+  }) async {
+    try {
+      await ref
+          .read(manageAdapterUseCaseProvider)
+          .revokeVerification(
+            adapterId: adapterId,
+            deviceFingerprint: deviceFingerprint,
+          );
+      state = state.copyWith(
+        successMessage: '当前设备的本地验证已撤销。',
+        clearError: true,
+        clearImportedAdapterId: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: '撤销验证失败：$error',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+      );
+    }
+  }
+
   void clearFeedback() {
     state = state.copyWith(
       clearError: true,
       clearSuccess: true,
       clearImportedAdapterId: true,
+      clearExportedJsonText: true,
+      clearExportedFilePath: true,
     );
   }
 
   void consumeImportedAdapterId() {
     state = state.copyWith(clearImportedAdapterId: true);
+  }
+
+  void consumeExportedJsonText() {
+    state = state.copyWith(clearExportedJsonText: true);
+  }
+
+  void consumeExportedFilePath() {
+    state = state.copyWith(clearExportedFilePath: true);
   }
 }
 

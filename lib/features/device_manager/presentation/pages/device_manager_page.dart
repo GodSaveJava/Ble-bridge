@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,6 +21,8 @@ class DeviceManagerPage extends ConsumerStatefulWidget {
 class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   final TextEditingController _jsonController = TextEditingController();
   late final ProviderSubscription<DeviceManagerState> _importListener;
+  late final ProviderSubscription<DeviceManagerState> _exportListener;
+  late final ProviderSubscription<DeviceManagerState> _fileExportListener;
 
   @override
   void initState() {
@@ -40,11 +43,45 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
         context.push('/verification/$adapterId');
       },
     );
+    _exportListener = ref.listenManual<DeviceManagerState>(
+      deviceManagerControllerProvider,
+      (_, next) {
+        final String? exportedJsonText = next.exportedJsonText;
+        if (exportedJsonText == null || exportedJsonText.isEmpty) {
+          return;
+        }
+        _jsonController.text = exportedJsonText;
+        _jsonController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: exportedJsonText.length,
+        );
+        ref
+            .read(deviceManagerControllerProvider.notifier)
+            .consumeExportedJsonText();
+      },
+    );
+    _fileExportListener = ref.listenManual<DeviceManagerState>(
+      deviceManagerControllerProvider,
+      (_, next) {
+        final String? exportedFilePath = next.exportedFilePath;
+        if (exportedFilePath == null || exportedFilePath.isEmpty || !mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('文件已保存：$exportedFilePath')));
+        ref
+            .read(deviceManagerControllerProvider.notifier)
+            .consumeExportedFilePath();
+      },
+    );
   }
 
   @override
   void dispose() {
     _importListener.close();
+    _exportListener.close();
+    _fileExportListener.close();
     _jsonController.dispose();
     super.dispose();
   }
@@ -91,9 +128,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '建议先点“预检”查看结构与安全风险，再导入。也可用“表单生成”自动创建。',
-                    ),
+                    const Text('建议先点“预检”查看结构与安全风险，再导入。也可用“表单生成”自动创建。'),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _jsonController,
@@ -137,13 +172,33 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                           onPressed: state.adapters.isEmpty
                               ? null
                               : () {
-                                  final Map<String, Object?> sample =
-                                      state.adapters.first.toJson();
-                                  _jsonController.text = const JsonEncoder
-                                      .withIndent('  ')
-                                      .convert(sample);
+                                  final Map<String, Object?> sample = state
+                                      .adapters
+                                      .first
+                                      .toJson();
+                                  _jsonController.text =
+                                      const JsonEncoder.withIndent(
+                                        '  ',
+                                      ).convert(sample);
                                 },
                           child: const Text('填充示例'),
+                        ),
+                        OutlinedButton(
+                          onPressed: () async {
+                            if (_jsonController.text.trim().isEmpty) {
+                              return;
+                            }
+                            await Clipboard.setData(
+                              ClipboardData(text: _jsonController.text),
+                            );
+                            if (!context.mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('JSON 已复制到剪贴板')),
+                            );
+                          },
+                          child: const Text('复制 JSON'),
                         ),
                         OutlinedButton(
                           onPressed: () {
@@ -213,10 +268,144 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                               '$verifyTime\n'
                               '步骤：$stepSummary',
                             ),
-                            trailing: OutlinedButton(
-                              onPressed: () =>
-                                  context.push('/verification/${manifest.adapterId}'),
-                              child: const Text('开始验证'),
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (String value) async {
+                                if (value == 'verify') {
+                                  context.push(
+                                    '/verification/${manifest.adapterId}',
+                                  );
+                                  return;
+                                }
+                                if (value == 'export') {
+                                  await ref
+                                      .read(
+                                        deviceManagerControllerProvider
+                                            .notifier,
+                                      )
+                                      .exportAdapterJson(manifest.adapterId);
+                                  return;
+                                }
+                                if (value == 'save_file') {
+                                  await ref
+                                      .read(
+                                        deviceManagerControllerProvider
+                                            .notifier,
+                                      )
+                                      .saveAdapterJsonFile(manifest.adapterId);
+                                  return;
+                                }
+                                if (value == 'revoke') {
+                                  if (activeDeviceId == null ||
+                                      activeDeviceId.isEmpty) {
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('请先连接设备后再撤销本地验证'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  final bool?
+                                  confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: const Text('撤销当前设备验证'),
+                                        content: Text(
+                                          '这会把 ${manifest.displayName} 在当前设备上的本地验证状态标记为“已撤销”，后续需要重新验证后才能继续信任使用。',
+                                        ),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () => Navigator.of(
+                                              context,
+                                            ).pop(false),
+                                            child: const Text('取消'),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(true),
+                                            child: const Text('确认撤销'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                  if (confirmed != true) {
+                                    return;
+                                  }
+                                  await ref
+                                      .read(
+                                        deviceManagerControllerProvider
+                                            .notifier,
+                                      )
+                                      .revokeAdapterVerification(
+                                        adapterId: manifest.adapterId,
+                                        deviceFingerprint: activeDeviceId,
+                                      );
+                                  return;
+                                }
+                                if (value == 'delete') {
+                                  final bool?
+                                  confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        title: const Text('删除适配器'),
+                                        content: Text(
+                                          '这会删除 ${manifest.displayName} 的本地适配器定义。已保存的导出文件不会被删除。',
+                                        ),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () => Navigator.of(
+                                              context,
+                                            ).pop(false),
+                                            child: const Text('取消'),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(true),
+                                            child: const Text('确认删除'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                  if (confirmed != true) {
+                                    return;
+                                  }
+                                  await ref
+                                      .read(
+                                        deviceManagerControllerProvider
+                                            .notifier,
+                                      )
+                                      .deleteAdapter(manifest.adapterId);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) =>
+                                  const <PopupMenuEntry<String>>[
+                                    PopupMenuItem<String>(
+                                      value: 'verify',
+                                      child: Text('开始验证'),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'export',
+                                      child: Text('导出 JSON'),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'save_file',
+                                      child: Text('保存到本地文件'),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'revoke',
+                                      child: Text('撤销当前设备验证'),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'delete',
+                                      child: Text('删除适配器'),
+                                    ),
+                                  ],
                             ),
                           );
                         },
@@ -374,7 +563,11 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
   }
 
   Widget _boolSwitch(String label, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile(title: Text(label), value: value, onChanged: onChanged);
+    return SwitchListTile(
+      title: Text(label),
+      value: value,
+      onChanged: onChanged,
+    );
   }
 
   Widget _field(
@@ -437,9 +630,7 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
         builder: (context) {
           return AlertDialog(
             title: const Text('安全提醒'),
-            content: Text(
-              '你设置的 EMS 上限是 $emsMax，超过默认软上限 8。建议仅在充分确认风险后使用。',
-            ),
+            content: Text('你设置的 EMS 上限是 $emsMax，超过默认软上限 8。建议仅在充分确认风险后使用。'),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -465,10 +656,16 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Map<String, Object?> _buildManifestJson(int modeMax, int emsMax, int priority) {
+  Map<String, Object?> _buildManifestJson(
+    int modeMax,
+    int emsMax,
+    int priority,
+  ) {
     return <String, Object?>{
       'schemaVersion': 1,
       'adapterId': _adapterId.text.trim(),
@@ -547,8 +744,10 @@ String _stepSummary(VerifiedAdapterRecord? record) {
   if (record == null || record.stepResults.isEmpty) {
     return '无';
   }
-  return record.stepResults.map((step) {
-    final String status = step.skipped ? '⏭' : (step.passed ? '✅' : '❌');
-    return '${step.stepKey}$status';
-  }).join('  ');
+  return record.stepResults
+      .map((step) {
+        final String status = step.skipped ? '⏭' : (step.passed ? '✅' : '❌');
+        return '${step.stepKey}$status';
+      })
+      .join('  ');
 }

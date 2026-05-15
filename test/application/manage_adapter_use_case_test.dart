@@ -9,16 +9,19 @@ import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
+import 'package:toylink_ai/domain/services/adapter_export_service.dart';
 
 void main() {
   group('ManageAdapterUseCase', () {
     late _InMemoryManifestRepository manifestRepository;
     late _InMemoryVerifiedRepository verifiedRepository;
+    late _FakeAdapterExportService exportService;
     late ManageAdapterUseCase useCase;
 
     setUp(() {
       manifestRepository = _InMemoryManifestRepository();
       verifiedRepository = _InMemoryVerifiedRepository();
+      exportService = _FakeAdapterExportService();
       final AdapterRegistry registry = AdapterRegistry(
         adapterManifestRepository: manifestRepository,
         verifiedAdapterRepository: verifiedRepository,
@@ -29,6 +32,7 @@ void main() {
       useCase = ManageAdapterUseCase(
         adapterRegistry: registry,
         adapterValidator: validator,
+        adapterExportService: exportService,
       );
     });
 
@@ -66,7 +70,131 @@ void main() {
         ),
       );
     });
+
+    test(
+      'exportManifestJson returns formatted manifest without verification data',
+      () async {
+        await useCase.importManifestJson(_manifestJson());
+
+        final String exported = await useCase.exportManifestJson(
+          'generic.triple_channel.v1',
+        );
+
+        expect(exported, contains('"adapterId": "generic.triple_channel.v1"'));
+        expect(exported, contains('"codecKey": "generic_triple_channel_v1"'));
+        expect(exported, isNot(contains('verified')));
+        expect(exported.split('\n').length, greaterThan(5));
+      },
+    );
+
+    test(
+      'saveManifestJsonFile writes exported manifest through export service',
+      () async {
+        await useCase.importManifestJson(_manifestJson());
+
+        final String savedPath = await useCase.saveManifestJsonFile(
+          'generic.triple_channel.v1',
+        );
+
+        expect(savedPath, 'C:/exports/generic.triple_channel.v1.json');
+        expect(
+          exportService.savedJson,
+          contains('"adapterId": "generic.triple_channel.v1"'),
+        );
+        expect(
+          exportService.suggestedFileName,
+          'generic.triple_channel.v1.json',
+        );
+      },
+    );
+
+    test('removeManifest removes adapter from available stream', () async {
+      await useCase.importManifestJson(_manifestJson());
+
+      await useCase.removeManifest('generic.triple_channel.v1');
+
+      final List<AdapterManifest> manifests = await useCase
+          .watchAvailableAdapters()
+          .first;
+      expect(manifests, isEmpty);
+    });
+
+    test(
+      'revokeVerification marks current verified record as revoked',
+      () async {
+        await useCase.importManifestJson(_manifestJson());
+        await useCase.markVerificationPassed(
+          const AdapterVerificationInput(
+            adapterId: 'generic.triple_channel.v1',
+            deviceFingerprint: 'device-a',
+            gattFingerprint: 'gatt-a',
+            appVersion: '1.0.0',
+            stepResults: <VerificationStepResult>[
+              VerificationStepResult(stepKey: 'set_suck', passed: true),
+              VerificationStepResult(stepKey: 'stop_all', passed: true),
+            ],
+          ),
+        );
+
+        await useCase.revokeVerification(
+          adapterId: 'generic.triple_channel.v1',
+          deviceFingerprint: 'device-a',
+        );
+
+        final VerifiedAdapterRecord? record = await verifiedRepository.find(
+          adapterId: 'generic.triple_channel.v1',
+          deviceFingerprint: 'device-a',
+        );
+        expect(record, isNotNull);
+        expect(record!.status, AdapterVerificationStatus.revoked);
+        expect(record.revokedReason, 'revoked_by_user');
+      },
+    );
+
+    test(
+      'importing changed manifest marks verified records as needsReverify',
+      () async {
+        await useCase.importManifestJson(_manifestJson());
+        await useCase.markVerificationPassed(
+          const AdapterVerificationInput(
+            adapterId: 'generic.triple_channel.v1',
+            deviceFingerprint: 'device-a',
+            gattFingerprint: 'gatt-a',
+            appVersion: '1.0.0',
+            stepResults: <VerificationStepResult>[
+              VerificationStepResult(stepKey: 'set_suck', passed: true),
+              VerificationStepResult(stepKey: 'stop_all', passed: true),
+            ],
+          ),
+        );
+
+        await useCase.importManifestJson(_manifestJson(version: '1.1.0'));
+
+        final VerifiedAdapterRecord? record = await verifiedRepository.find(
+          adapterId: 'generic.triple_channel.v1',
+          deviceFingerprint: 'device-a',
+        );
+        expect(record, isNotNull);
+        expect(record!.status, AdapterVerificationStatus.needsReverify);
+        expect(record.revokedReason, 'manifest_changed');
+      },
+    );
   });
+}
+
+class _FakeAdapterExportService implements AdapterExportService {
+  String? savedJson;
+  String? suggestedFileName;
+
+  @override
+  Future<String> saveJson({
+    required String suggestedFileName,
+    required String jsonText,
+  }) async {
+    this.suggestedFileName = suggestedFileName;
+    savedJson = jsonText;
+    return 'C:/exports/$suggestedFileName';
+  }
 }
 
 class _InMemoryManifestRepository implements AdapterManifestRepository {
@@ -147,13 +275,13 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   }
 }
 
-Map<String, Object?> _manifestJson() {
+Map<String, Object?> _manifestJson({String version = '1.0.0'}) {
   return <String, Object?>{
     'schemaVersion': 1,
     'adapterId': 'generic.triple_channel.v1',
     'displayName': 'Generic Triple Channel',
     'protocolKey': 'generic_triple_channel',
-    'version': '1.0.0',
+    'version': version,
     'minAppVersion': '1.0.0',
     'adapterKind': 'codecBacked',
     'codecKey': 'generic_triple_channel_v1',
