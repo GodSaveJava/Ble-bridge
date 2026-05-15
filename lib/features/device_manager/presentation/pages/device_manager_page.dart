@@ -21,6 +21,7 @@ class DeviceManagerPage extends ConsumerStatefulWidget {
 class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   final TextEditingController _jsonController = TextEditingController();
   late final ProviderSubscription<DeviceManagerState> _importListener;
+  late final ProviderSubscription<DeviceManagerState> _pickFileListener;
   late final ProviderSubscription<DeviceManagerState> _exportListener;
   late final ProviderSubscription<DeviceManagerState> _fileExportListener;
 
@@ -41,6 +42,23 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
           return;
         }
         context.push('/verification/$adapterId');
+      },
+    );
+    _pickFileListener = ref.listenManual<DeviceManagerState>(
+      deviceManagerControllerProvider,
+      (_, next) {
+        final String? pickedJsonText = next.pickedJsonText;
+        if (pickedJsonText == null || pickedJsonText.isEmpty) {
+          return;
+        }
+        _jsonController.text = pickedJsonText;
+        _jsonController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: pickedJsonText.length,
+        );
+        ref
+            .read(deviceManagerControllerProvider.notifier)
+            .consumePickedJsonText();
       },
     );
     _exportListener = ref.listenManual<DeviceManagerState>(
@@ -80,6 +98,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   @override
   void dispose() {
     _importListener.close();
+    _pickFileListener.close();
     _exportListener.close();
     _fileExportListener.close();
     _jsonController.dispose();
@@ -153,6 +172,18 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                                     )
                                     .importJsonText(_jsonController.text),
                           child: Text(state.isImporting ? '导入中...' : '导入'),
+                        ),
+                        OutlinedButton(
+                          onPressed: state.isPickingFile
+                              ? null
+                              : () => ref
+                                    .read(
+                                      deviceManagerControllerProvider.notifier,
+                                    )
+                                    .pickJsonFile(),
+                          child: Text(
+                            state.isPickingFile ? '读取文件中...' : '选择本地文件',
+                          ),
                         ),
                         OutlinedButton(
                           onPressed: state.isImporting

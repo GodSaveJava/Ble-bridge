@@ -16,6 +16,7 @@ import '../../domain/entities/toy_device_info.dart';
 import '../../domain/repositories/hardware_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
 import '../../domain/services/adapter_export_service.dart';
+import '../../domain/services/adapter_import_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 
@@ -62,6 +63,12 @@ final foregroundConnectionServiceProvider =
 final adapterExportServiceProvider = Provider<AdapterExportService>((_) {
   throw UnimplementedError(
     'Provide a concrete AdapterExportService in infrastructure.',
+  );
+});
+
+final adapterImportServiceProvider = Provider<AdapterImportService>((_) {
+  throw UnimplementedError(
+    'Provide a concrete AdapterImportService in infrastructure.',
   );
 });
 

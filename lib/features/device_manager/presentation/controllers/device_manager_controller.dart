@@ -10,38 +10,46 @@ class DeviceManagerState {
   const DeviceManagerState({
     this.adapters = const <AdapterManifest>[],
     this.isImporting = false,
+    this.isPickingFile = false,
     this.errorMessage,
     this.successMessage,
     this.importedAdapterId,
     this.exportedJsonText,
     this.exportedFilePath,
+    this.pickedJsonText,
   });
 
   final List<AdapterManifest> adapters;
   final bool isImporting;
+  final bool isPickingFile;
   final String? errorMessage;
   final String? successMessage;
   final String? importedAdapterId;
   final String? exportedJsonText;
   final String? exportedFilePath;
+  final String? pickedJsonText;
 
   DeviceManagerState copyWith({
     List<AdapterManifest>? adapters,
     bool? isImporting,
+    bool? isPickingFile,
     String? errorMessage,
     String? successMessage,
     String? importedAdapterId,
     String? exportedJsonText,
     String? exportedFilePath,
+    String? pickedJsonText,
     bool clearError = false,
     bool clearSuccess = false,
     bool clearImportedAdapterId = false,
     bool clearExportedJsonText = false,
     bool clearExportedFilePath = false,
+    bool clearPickedJsonText = false,
   }) {
     return DeviceManagerState(
       adapters: adapters ?? this.adapters,
       isImporting: isImporting ?? this.isImporting,
+      isPickingFile: isPickingFile ?? this.isPickingFile,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       successMessage: clearSuccess
           ? null
@@ -55,6 +63,9 @@ class DeviceManagerState {
       exportedFilePath: clearExportedFilePath
           ? null
           : (exportedFilePath ?? this.exportedFilePath),
+      pickedJsonText: clearPickedJsonText
+          ? null
+          : (pickedJsonText ?? this.pickedJsonText),
     );
   }
 }
@@ -164,6 +175,43 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
     }
   }
 
+  Future<void> pickJsonFile() async {
+    state = state.copyWith(
+      isPickingFile: true,
+      clearError: true,
+      clearSuccess: true,
+      clearPickedJsonText: true,
+    );
+
+    try {
+      final String? jsonText = await ref
+          .read(adapterImportServiceProvider)
+          .pickJsonText();
+      if (jsonText == null || jsonText.trim().isEmpty) {
+        state = state.copyWith(
+          isPickingFile: false,
+          successMessage: '已取消选择文件。',
+          clearError: true,
+        );
+        return;
+      }
+
+      state = state.copyWith(
+        isPickingFile: false,
+        pickedJsonText: jsonText,
+        successMessage: '已读取本地 JSON 文件，可继续预检或导入。',
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isPickingFile: false,
+        errorMessage: '读取本地文件失败：$error',
+        clearSuccess: true,
+        clearPickedJsonText: true,
+      );
+    }
+  }
+
   Future<void> exportAdapterJson(String adapterId) async {
     try {
       final String jsonText = await ref
@@ -259,6 +307,7 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
       clearImportedAdapterId: true,
       clearExportedJsonText: true,
       clearExportedFilePath: true,
+      clearPickedJsonText: true,
     );
   }
 
@@ -272,6 +321,10 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
 
   void consumeExportedFilePath() {
     state = state.copyWith(clearExportedFilePath: true);
+  }
+
+  void consumePickedJsonText() {
+    state = state.copyWith(clearPickedJsonText: true);
   }
 }
 

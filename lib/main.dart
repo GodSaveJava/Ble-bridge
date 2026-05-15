@@ -43,6 +43,9 @@ void main() {
         adapterExportServiceProvider.overrideWith((ref) {
           return ref.watch(defaultAdapterExportServiceProvider);
         }),
+        adapterImportServiceProvider.overrideWith((ref) {
+          return ref.watch(defaultAdapterImportServiceProvider);
+        }),
         adapterManifestRepositoryProvider.overrideWith((ref) {
           return ref.watch(defaultAdapterManifestRepositoryProvider);
         }),
