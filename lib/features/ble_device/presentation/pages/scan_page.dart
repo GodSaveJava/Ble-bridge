@@ -96,8 +96,12 @@ class ScanPage extends ConsumerWidget {
                             await ref
                                 .read(scanControllerProvider.notifier)
                                 .connect(device);
-                            if (context.mounted) {
-                              context.go('/control');
+                            final latestState = ref.read(
+                              scanControllerProvider,
+                            );
+                            if (context.mounted &&
+                                latestState.connectedDeviceId == device.id) {
+                              context.push('/control');
                             }
                           },
                     child: Text(

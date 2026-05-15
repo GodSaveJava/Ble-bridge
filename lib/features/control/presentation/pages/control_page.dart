@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/device_status.dart';
@@ -14,76 +15,97 @@ class ControlPage extends ConsumerWidget {
     final state = ref.watch(controlPanelControllerProvider);
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('手动控制')),
-      body: ToyLinkBackground(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            _StatusCard(activeStatus: activeStatus),
-            const SizedBox(height: 16),
-            _ChannelSlider(
-              title: '吮吸强度',
-              value: state.suck.toDouble(),
-              max: 100,
-              onChanged: state.isBusy
-                  ? null
-                  : (value) => ref
-                        .read(controlPanelControllerProvider.notifier)
-                        .setSuck(value.round()),
-            ),
-            const SizedBox(height: 16),
-            _ChannelSlider(
-              title: '震动强度',
-              value: state.vibe.toDouble(),
-              max: 100,
-              onChanged: state.isBusy
-                  ? null
-                  : (value) => ref
-                        .read(controlPanelControllerProvider.notifier)
-                        .setVibe(value.round()),
-            ),
-            const SizedBox(height: 16),
-            _ChannelSlider(
-              title: '微电流强度',
-              value: state.ems.toDouble(),
-              max: 20,
-              onChanged: state.isBusy
-                  ? null
-                  : (value) => ref
-                        .read(controlPanelControllerProvider.notifier)
-                        .setEms(value.round()),
-            ),
-            if (state.requiresEmsConfirmation) ...<Widget>[
-              const SizedBox(height: 12),
-              const Text(
-                '当前微电流超过建议值，需要你在本机再次确认后才可执行。',
-                style: TextStyle(color: Colors.orange),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        context.go('/home');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              context.go('/home');
+            },
+          ),
+          title: const Text('手动控制'),
+        ),
+        body: ToyLinkBackground(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: <Widget>[
+              _StatusCard(activeStatus: activeStatus),
+              const SizedBox(height: 16),
+              _ChannelSlider(
+                title: '吮吸强度',
+                value: state.suck.toDouble(),
+                max: 100,
+                onChanged: state.isBusy
+                    ? null
+                    : (value) => ref
+                          .read(controlPanelControllerProvider.notifier)
+                          .setSuck(value.round()),
+              ),
+              const SizedBox(height: 16),
+              _ChannelSlider(
+                title: '震动强度',
+                value: state.vibe.toDouble(),
+                max: 100,
+                onChanged: state.isBusy
+                    ? null
+                    : (value) => ref
+                          .read(controlPanelControllerProvider.notifier)
+                          .setVibe(value.round()),
+              ),
+              const SizedBox(height: 16),
+              _ChannelSlider(
+                title: '微电流强度',
+                value: state.ems.toDouble(),
+                max: 20,
+                onChanged: state.isBusy
+                    ? null
+                    : (value) => ref
+                          .read(controlPanelControllerProvider.notifier)
+                          .setEms(value.round()),
+              ),
+              if (state.requiresEmsConfirmation) ...<Widget>[
+                const SizedBox(height: 12),
+                const Text(
+                  '当前微电流超过建议值，需要你在本机再次确认后才可执行。',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ],
+              if (state.errorMessage != null) ...<Widget>[
+                const SizedBox(height: 12),
+                Text(
+                  state.errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                TextButton(
+                  onPressed: () => ref
+                      .read(controlPanelControllerProvider.notifier)
+                      .clearError(),
+                  child: const Text('知道了'),
+                ),
+              ],
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: state.isBusy
+                    ? null
+                    : () => ref
+                          .read(controlPanelControllerProvider.notifier)
+                          .stopAll(),
+                child: Text(state.isBusy ? '执行中...' : '一键停止'),
               ),
             ],
-            if (state.errorMessage != null) ...<Widget>[
-              const SizedBox(height: 12),
-              Text(
-                state.errorMessage!,
-                style: const TextStyle(color: Colors.red),
-              ),
-              TextButton(
-                onPressed: () => ref
-                    .read(controlPanelControllerProvider.notifier)
-                    .clearError(),
-                child: const Text('知道了'),
-              ),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: state.isBusy
-                  ? null
-                  : () => ref
-                        .read(controlPanelControllerProvider.notifier)
-                        .stopAll(),
-              child: Text(state.isBusy ? '执行中...' : '一键停止'),
-            ),
-          ],
+          ),
         ),
       ),
     );
