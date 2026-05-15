@@ -8,12 +8,24 @@ import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/control_panel_controller.dart';
 
 class ControlPage extends ConsumerWidget {
-  const ControlPage({super.key});
+  const ControlPage({super.key, this.returnPath, this.returnLabel});
+
+  final String? returnPath;
+  final String? returnLabel;
+
+  void _handleBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(returnPath ?? '/home');
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(controlPanelControllerProvider);
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
+    final String resolvedReturnLabel = returnLabel ?? '返回首页';
 
     return PopScope(
       canPop: context.canPop(),
@@ -21,19 +33,13 @@ class ControlPage extends ConsumerWidget {
         if (didPop) {
           return;
         }
-        context.go('/home');
+        context.go(returnPath ?? '/home');
       },
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-                return;
-              }
-              context.go('/home');
-            },
+            onPressed: () => _handleBack(context),
           ),
           title: const Text('手动控制'),
         ),
@@ -41,6 +47,23 @@ class ControlPage extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(child: Text('当前页面支持直接$resolvedReturnLabel')),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => _handleBack(context),
+                        icon: const Icon(Icons.arrow_back),
+                        label: Text(resolvedReturnLabel),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               _StatusCard(activeStatus: activeStatus),
               const SizedBox(height: 16),
               _ChannelSlider(

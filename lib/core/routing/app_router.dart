@@ -18,7 +18,13 @@ class AppRouter {
       GoRoute(path: '/', redirect: (_, _) => '/home'),
       GoRoute(path: '/home', builder: (_, _) => const HomePage()),
       GoRoute(path: '/scan', builder: (_, _) => const ScanPage()),
-      GoRoute(path: '/control', builder: (_, _) => const ControlPage()),
+      GoRoute(
+        path: '/control',
+        builder: (_, state) => ControlPage(
+          returnPath: state.uri.queryParameters['returnTo'],
+          returnLabel: state.uri.queryParameters['returnLabel'],
+        ),
+      ),
       GoRoute(path: '/chat', builder: (_, _) => const ChatPage()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
       GoRoute(

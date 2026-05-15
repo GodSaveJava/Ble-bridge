@@ -20,9 +20,8 @@ class HomePage extends ConsumerWidget {
     final fgState = ref.watch(foregroundServiceControllerProvider);
 
     final String deviceSubtitle = activeStatus.maybeWhen(
-      data: (status) => status.isConnected
-          ? '已连接设备：${status.deviceId}'
-          : '当前没有已连接设备',
+      data: (status) =>
+          status.isConnected ? '已连接设备：${status.deviceId}' : '当前没有已连接设备',
       orElse: () => '当前没有已连接设备',
     );
 
@@ -75,9 +74,7 @@ class HomePage extends ConsumerWidget {
                         '最近刷新：${fgState.lastRefreshedAt!.hour.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.minute.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.second.toString().padLeft(2, '0')}',
                       ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '如果切后台后连接容易断开，请在系统设置中关闭电池优化并允许自启动。',
-                    ),
+                    const Text('如果切后台后连接容易断开，请在系统设置中关闭电池优化并允许自启动。'),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 10,
@@ -164,7 +161,9 @@ class HomePage extends ConsumerWidget {
                               if (!context.mounted) {
                                 return;
                               }
-                              context.push('/control');
+                              context.push(
+                                '/control?returnTo=%2Fhome&returnLabel=%E8%BF%94%E5%9B%9E%E9%A6%96%E9%A1%B5',
+                              );
                             },
                       child: Text(quickStart.isRunning ? '启动中...' : '开始一键启动'),
                     ),
@@ -192,14 +191,22 @@ class HomePage extends ConsumerWidget {
                 ),
                 _QuickNavButton(
                   label: '手动控制',
-                  onTap: () => context.push('/control'),
+                  onTap: () => context.push(
+                    '/control?returnTo=%2Fhome&returnLabel=%E8%BF%94%E5%9B%9E%E9%A6%96%E9%A1%B5',
+                  ),
                 ),
                 _QuickNavButton(
                   label: '设备管理',
                   onTap: () => context.push('/device-manager'),
                 ),
-                _QuickNavButton(label: '聊天', onTap: () => context.push('/chat')),
-                _QuickNavButton(label: '设置', onTap: () => context.push('/settings')),
+                _QuickNavButton(
+                  label: '聊天',
+                  onTap: () => context.push('/chat'),
+                ),
+                _QuickNavButton(
+                  label: '设置',
+                  onTap: () => context.push('/settings'),
+                ),
               ],
             ),
           ],

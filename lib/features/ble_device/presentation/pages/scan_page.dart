@@ -101,7 +101,9 @@ class ScanPage extends ConsumerWidget {
                             );
                             if (context.mounted &&
                                 latestState.connectedDeviceId == device.id) {
-                              context.push('/control');
+                              context.push(
+                                '/control?returnTo=%2Fscan&returnLabel=%E8%BF%94%E5%9B%9E%E6%89%AB%E6%8F%8F%E9%A1%B5',
+                              );
                             }
                           },
                     child: Text(
