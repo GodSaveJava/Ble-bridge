@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../application/providers/application_providers.dart';
+import '../../../../domain/entities/active_adapter_binding.dart';
 import '../../../../domain/entities/adapter_manifest.dart';
 import '../../../../domain/entities/verified_adapter_record.dart';
 import '../../../../shared/widgets/toylink_background.dart';
@@ -120,6 +121,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   Widget build(BuildContext context) {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
     final recordsAsync = ref.watch(verifiedAdapterRecordsProvider);
+    final bindingsAsync = ref.watch(activeAdapterBindingsProvider);
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
     final String? activeDeviceId = activeStatus.maybeWhen(
       data: (status) => status.deviceId,
@@ -129,6 +131,25 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
       data: (value) => value,
       orElse: () => const <VerifiedAdapterRecord>[],
     );
+    final List<ActiveAdapterBinding> bindings = bindingsAsync.maybeWhen(
+      data: (value) => value,
+      orElse: () => const <ActiveAdapterBinding>[],
+    );
+    final ActiveAdapterBinding? currentBinding = _findBinding(
+      bindings: bindings,
+      deviceFingerprint: activeDeviceId,
+    );
+    final AdapterManifest? currentBindingManifest = _findManifest(
+      manifests: state.adapters,
+      adapterId: currentBinding?.adapterId,
+    );
+    final VerifiedAdapterRecord? currentBindingRecord = currentBinding == null
+        ? null
+        : _findRecord(
+            records: records,
+            adapterId: currentBinding.adapterId,
+            deviceFingerprint: activeDeviceId,
+          );
 
     return Scaffold(
       appBar: AppBar(title: const Text('设备管理')),
@@ -263,6 +284,88 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
               ),
             ),
             const SizedBox(height: 12),
+            if (activeDeviceId != null &&
+                activeDeviceId.isNotEmpty &&
+                state.adapters.isNotEmpty) ...<Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        '快速切换当前设备适配器',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('当前设备：$activeDeviceId'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: state.adapters.map((
+                          AdapterManifest manifest,
+                        ) {
+                          final bool isBoundToCurrentDevice =
+                              currentBinding?.adapterId == manifest.adapterId;
+                          if (isBoundToCurrentDevice) {
+                            return FilledButton.tonal(
+                              onPressed: null,
+                              child: Text('当前：${manifest.displayName}'),
+                            );
+                          }
+                          return OutlinedButton(
+                            onPressed: () async {
+                              await ref
+                                  .read(
+                                    deviceManagerControllerProvider.notifier,
+                                  )
+                                  .bindAdapterForCurrentDevice(
+                                    adapterId: manifest.adapterId,
+                                    deviceFingerprint: activeDeviceId,
+                                  );
+                            },
+                            child: Text('切换到：${manifest.displayName}'),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      '当前设备适配器',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('当前连接设备：${activeDeviceId ?? '未连接设备'}'),
+                    const SizedBox(height: 4),
+                    Text(
+                      '当前适配器：${currentBindingManifest?.displayName ?? currentBinding?.adapterId ?? '尚未指定'}',
+                    ),
+                    const SizedBox(height: 4),
+                    Text('验证状态：${_statusLabel(currentBindingRecord)}'),
+                    const SizedBox(height: 8),
+                    Text(
+                      activeDeviceId == null || activeDeviceId.isEmpty
+                          ? '请先连接设备，然后再指定当前设备使用的适配器。'
+                          : currentBinding == null
+                          ? '当前设备还没有绑定适配器，可在下方列表中选择“设为当前设备适配器”。'
+                          : '当前设备后续会优先使用这份适配器执行 MCP 控制和验证检查。',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -278,6 +381,8 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     for (final AdapterManifest manifest in state.adapters)
                       Builder(
                         builder: (_) {
+                          final bool isCurrentBinding =
+                              currentBinding?.adapterId == manifest.adapterId;
                           final VerifiedAdapterRecord? record = _findRecord(
                             records: records,
                             adapterId: manifest.adapterId,
@@ -290,11 +395,39 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                           final String stepSummary = _stepSummary(record);
                           return ListTile(
                             dense: true,
-                            title: Text(manifest.displayName),
+                            title: Row(
+                              children: <Widget>[
+                                Expanded(child: Text(manifest.displayName)),
+                                if (isCurrentBinding)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '当前设备',
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                             subtitle: Text(
                               'ID: ${manifest.adapterId}\n'
                               'codec: ${manifest.codecKey}\n'
                               'version: ${manifest.version}\n'
+                              '当前绑定：${isCurrentBinding ? '是' : '否'}\n'
                               '状态：$verifyLabel\n'
                               '$verifyTime\n'
                               '步骤：$stepSummary',
@@ -305,6 +438,30 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                                   context.push(
                                     '/verification/${manifest.adapterId}',
                                   );
+                                  return;
+                                }
+                                if (value == 'bind_current') {
+                                  if (activeDeviceId == null ||
+                                      activeDeviceId.isEmpty) {
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('请先连接设备，再设置当前适配器。'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  await ref
+                                      .read(
+                                        deviceManagerControllerProvider
+                                            .notifier,
+                                      )
+                                      .bindAdapterForCurrentDevice(
+                                        adapterId: manifest.adapterId,
+                                        deviceFingerprint: activeDeviceId,
+                                      );
                                   return;
                                 }
                                 if (value == 'export') {
@@ -739,6 +896,36 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
       'notes': '由 ToyLink AI 表单向导生成，可继续手动调整。',
     };
   }
+}
+
+ActiveAdapterBinding? _findBinding({
+  required List<ActiveAdapterBinding> bindings,
+  required String? deviceFingerprint,
+}) {
+  if (deviceFingerprint == null || deviceFingerprint.isEmpty) {
+    return null;
+  }
+  for (final binding in bindings) {
+    if (binding.deviceFingerprint == deviceFingerprint) {
+      return binding;
+    }
+  }
+  return null;
+}
+
+AdapterManifest? _findManifest({
+  required List<AdapterManifest> manifests,
+  required String? adapterId,
+}) {
+  if (adapterId == null || adapterId.isEmpty) {
+    return null;
+  }
+  for (final manifest in manifests) {
+    if (manifest.adapterId == adapterId) {
+      return manifest;
+    }
+  }
+  return null;
 }
 
 VerifiedAdapterRecord? _findRecord({

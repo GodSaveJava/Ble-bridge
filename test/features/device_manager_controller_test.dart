@@ -212,6 +212,33 @@ void main() {
       expect(state.errorMessage, isNull);
     },
   );
+  test('bindAdapterForCurrentDevice stores active device binding', () async {
+    final _InMemoryActiveBindingRepository activeBindingRepository =
+        _InMemoryActiveBindingRepository();
+    final ProviderContainer container = _buildContainer(
+      activeBindingRepository: activeBindingRepository,
+    );
+    addTearDown(container.dispose);
+    await _importDefaultManifest(container);
+
+    final DeviceManagerController notifier = container.read(
+      deviceManagerControllerProvider.notifier,
+    );
+    await notifier.bindAdapterForCurrentDevice(
+      adapterId: 'generic.triple_channel.v1',
+      deviceFingerprint: 'device-a',
+    );
+
+    final DeviceManagerState state = container.read(
+      deviceManagerControllerProvider,
+    );
+    final ActiveAdapterBinding? binding = await activeBindingRepository
+        .findByDeviceFingerprint('device-a');
+    expect(binding, isNotNull);
+    expect(binding!.adapterId, 'generic.triple_channel.v1');
+    expect(state.successMessage, contains('切换'));
+    expect(state.errorMessage, isNull);
+  });
 }
 
 ProviderContainer _buildContainer({

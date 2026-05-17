@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/application_providers.dart';
+import '../../../../domain/entities/active_adapter_binding.dart';
 import '../../../../domain/entities/adapter_manifest.dart';
 import '../../../../domain/entities/verified_adapter_record.dart';
 
@@ -300,6 +301,31 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
     }
   }
 
+  Future<void> bindAdapterForCurrentDevice({
+    required String adapterId,
+    required String deviceFingerprint,
+  }) async {
+    try {
+      await ref
+          .read(manageAdapterUseCaseProvider)
+          .bindAdapterToDevice(
+            adapterId: adapterId,
+            deviceFingerprint: deviceFingerprint,
+          );
+      state = state.copyWith(
+        successMessage: '已将当前设备切换到所选适配器。',
+        clearError: true,
+        clearImportedAdapterId: true,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: '切换当前设备适配器失败：$error',
+        clearSuccess: true,
+        clearImportedAdapterId: true,
+      );
+    }
+  }
+
   void clearFeedback() {
     state = state.copyWith(
       clearError: true,
@@ -335,6 +361,11 @@ final adapterListProvider = StreamProvider<List<AdapterManifest>>((ref) {
 final verifiedAdapterRecordsProvider =
     StreamProvider<List<VerifiedAdapterRecord>>((ref) {
       return ref.read(verifiedAdapterRepositoryProvider).watchAll();
+    });
+
+final activeAdapterBindingsProvider =
+    StreamProvider<List<ActiveAdapterBinding>>((ref) {
+      return ref.read(manageAdapterUseCaseProvider).watchDeviceBindings();
     });
 
 final deviceManagerControllerProvider =

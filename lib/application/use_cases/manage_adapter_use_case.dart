@@ -145,6 +145,21 @@ class ManageAdapterUseCase {
     return _adapterRegistry.getBindingForDevice(deviceFingerprint);
   }
 
+  Stream<List<ActiveAdapterBinding>> watchDeviceBindings() {
+    return _adapterRegistry.watchBindings();
+  }
+
+  Future<void> bindAdapterToDevice({
+    required String adapterId,
+    required String deviceFingerprint,
+  }) async {
+    await _adapterRegistry.requireManifest(adapterId);
+    await _adapterRegistry.bindAdapterToDevice(
+      adapterId: adapterId,
+      deviceFingerprint: deviceFingerprint,
+    );
+  }
+
   String _manifestHash(AdapterManifest manifest) {
     return base64Url.encode(utf8.encode(jsonEncode(manifest.toJson())));
   }
