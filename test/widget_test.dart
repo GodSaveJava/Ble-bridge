@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/app.dart';
@@ -33,5 +33,6 @@ void main() {
     expect(find.text('ToyLink AI'), findsOneWidget);
     expect(find.text('设备状态'), findsOneWidget);
     expect(find.text('MCP 服务'), findsOneWidget);
+    expect(find.text('查看适配器状态'), findsOneWidget);
   });
 }

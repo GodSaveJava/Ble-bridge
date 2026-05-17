@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/active_device_adapter_readiness.dart';
 import '../services/adapter_registry.dart';
 import '../services/adapter_validator.dart';
 import '../services/mcp_control_authorization_service.dart';
@@ -13,8 +14,11 @@ import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
+import '../../domain/entities/active_adapter_binding.dart';
+import '../../domain/entities/adapter_manifest.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
+import '../../domain/entities/verified_adapter_record.dart';
 import '../../domain/repositories/hardware_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
 import '../../domain/services/adapter_export_service.dart';
@@ -95,6 +99,138 @@ final activeDeviceStatusStreamProvider = StreamProvider<DeviceStatus>((ref) {
   return ref.watch(activeDeviceRegistryProvider).statusStream;
 });
 
+final availableAdapterManifestsStreamProvider =
+    StreamProvider<List<AdapterManifest>>((ref) {
+      return ref.watch(manageAdapterUseCaseProvider).watchAvailableAdapters();
+    });
+
+final verifiedAdapterRecordsStreamProvider =
+    StreamProvider<List<VerifiedAdapterRecord>>((ref) {
+      return ref.watch(verifiedAdapterRepositoryProvider).watchAll();
+    });
+
+final activeAdapterBindingsStreamProvider =
+    StreamProvider<List<ActiveAdapterBinding>>((ref) {
+      return ref.watch(manageAdapterUseCaseProvider).watchDeviceBindings();
+    });
+
+final activeDeviceAdapterReadinessProvider =
+    Provider<AsyncValue<ActiveDeviceAdapterReadiness>>((ref) {
+      final activeStatusAsync = ref.watch(activeDeviceStatusStreamProvider);
+      final manifestsAsync = ref.watch(availableAdapterManifestsStreamProvider);
+      final recordsAsync = ref.watch(verifiedAdapterRecordsStreamProvider);
+      final bindingsAsync = ref.watch(activeAdapterBindingsStreamProvider);
+
+      if (activeStatusAsync.hasError) {
+        return AsyncError<ActiveDeviceAdapterReadiness>(
+          activeStatusAsync.error!,
+          activeStatusAsync.stackTrace!,
+        );
+      }
+      if (manifestsAsync.hasError) {
+        return AsyncError<ActiveDeviceAdapterReadiness>(
+          manifestsAsync.error!,
+          manifestsAsync.stackTrace!,
+        );
+      }
+      if (recordsAsync.hasError) {
+        return AsyncError<ActiveDeviceAdapterReadiness>(
+          recordsAsync.error!,
+          recordsAsync.stackTrace!,
+        );
+      }
+      if (bindingsAsync.hasError) {
+        return AsyncError<ActiveDeviceAdapterReadiness>(
+          bindingsAsync.error!,
+          bindingsAsync.stackTrace!,
+        );
+      }
+
+      if (activeStatusAsync is! AsyncData<DeviceStatus> ||
+          manifestsAsync is! AsyncData<List<AdapterManifest>> ||
+          recordsAsync is! AsyncData<List<VerifiedAdapterRecord>> ||
+          bindingsAsync is! AsyncData<List<ActiveAdapterBinding>>) {
+        return const AsyncLoading<ActiveDeviceAdapterReadiness>();
+      }
+
+      final DeviceStatus status = activeStatusAsync.value;
+      final List<AdapterManifest> manifests = manifestsAsync.value;
+      final List<VerifiedAdapterRecord> records = recordsAsync.value;
+      final List<ActiveAdapterBinding> bindings = bindingsAsync.value;
+
+      if (!status.isConnected || status.deviceId.isEmpty) {
+        return const AsyncData<ActiveDeviceAdapterReadiness>(
+          ActiveDeviceAdapterReadiness(
+            state: ActiveDeviceAdapterReadinessState.noDevice,
+          ),
+        );
+      }
+
+      final ActiveAdapterBinding? binding = _findActiveBinding(
+        bindings: bindings,
+        deviceId: status.deviceId,
+      );
+      if (binding == null) {
+        return AsyncData<ActiveDeviceAdapterReadiness>(
+          ActiveDeviceAdapterReadiness(
+            state: ActiveDeviceAdapterReadinessState.noBinding,
+            deviceId: status.deviceId,
+          ),
+        );
+      }
+
+      final AdapterManifest? manifest = _findAdapterManifest(
+        manifests: manifests,
+        adapterId: binding.adapterId,
+      );
+      if (manifest == null) {
+        return AsyncData<ActiveDeviceAdapterReadiness>(
+          ActiveDeviceAdapterReadiness(
+            state: ActiveDeviceAdapterReadinessState.bindingMissing,
+            deviceId: status.deviceId,
+            adapterId: binding.adapterId,
+          ),
+        );
+      }
+
+      final VerifiedAdapterRecord? record = _findVerifiedRecord(
+        records: records,
+        adapterId: binding.adapterId,
+        deviceId: status.deviceId,
+      );
+      if (record == null) {
+        return AsyncData<ActiveDeviceAdapterReadiness>(
+          ActiveDeviceAdapterReadiness(
+            state: ActiveDeviceAdapterReadinessState.unverified,
+            deviceId: status.deviceId,
+            adapterId: binding.adapterId,
+            adapterDisplayName: manifest.displayName,
+          ),
+        );
+      }
+
+      return AsyncData<ActiveDeviceAdapterReadiness>(
+        ActiveDeviceAdapterReadiness(
+          state: switch (record.status) {
+            AdapterVerificationStatus.verified =>
+              ActiveDeviceAdapterReadinessState.verified,
+            AdapterVerificationStatus.revoked =>
+              ActiveDeviceAdapterReadinessState.revoked,
+            AdapterVerificationStatus.needsReverify =>
+              ActiveDeviceAdapterReadinessState.needsReverify,
+            AdapterVerificationStatus.failed =>
+              ActiveDeviceAdapterReadinessState.verificationFailed,
+            AdapterVerificationStatus.unverified =>
+              ActiveDeviceAdapterReadinessState.unverified,
+          },
+          deviceId: status.deviceId,
+          adapterId: binding.adapterId,
+          adapterDisplayName: manifest.displayName,
+          verificationStatus: record.status,
+        ),
+      );
+    });
+
 final controlDeviceUseCaseProvider = Provider<ControlDeviceUseCase>((ref) {
   return ControlDeviceUseCase(
     activeDeviceRegistry: ref.watch(activeDeviceRegistryProvider),
@@ -162,3 +298,41 @@ final manageAdapterUseCaseProvider = Provider<ManageAdapterUseCase>((ref) {
     adapterExportService: ref.watch(adapterExportServiceProvider),
   );
 });
+
+ActiveAdapterBinding? _findActiveBinding({
+  required List<ActiveAdapterBinding> bindings,
+  required String deviceId,
+}) {
+  for (final ActiveAdapterBinding binding in bindings) {
+    if (binding.deviceFingerprint == deviceId) {
+      return binding;
+    }
+  }
+  return null;
+}
+
+AdapterManifest? _findAdapterManifest({
+  required List<AdapterManifest> manifests,
+  required String adapterId,
+}) {
+  for (final AdapterManifest manifest in manifests) {
+    if (manifest.adapterId == adapterId) {
+      return manifest;
+    }
+  }
+  return null;
+}
+
+VerifiedAdapterRecord? _findVerifiedRecord({
+  required List<VerifiedAdapterRecord> records,
+  required String adapterId,
+  required String deviceId,
+}) {
+  for (final VerifiedAdapterRecord record in records) {
+    if (record.adapterId == adapterId &&
+        record.target.deviceFingerprint == deviceId) {
+      return record;
+    }
+  }
+  return null;
+}
