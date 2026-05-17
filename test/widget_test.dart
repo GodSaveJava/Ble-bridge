@@ -19,6 +19,9 @@ void main() {
           adapterManifestRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultAdapterManifestRepositoryProvider);
           }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),

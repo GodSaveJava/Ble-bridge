@@ -5,8 +5,10 @@ import 'package:toylink_ai/application/services/adapter_registry.dart';
 import 'package:toylink_ai/application/services/adapter_validator.dart';
 import 'package:toylink_ai/application/use_cases/manage_adapter_use_case.dart';
 import 'package:toylink_ai/core/error/failure.dart';
+import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/domain/services/adapter_export_service.dart';
@@ -15,16 +17,19 @@ void main() {
   group('ManageAdapterUseCase', () {
     late _InMemoryManifestRepository manifestRepository;
     late _InMemoryVerifiedRepository verifiedRepository;
+    late _InMemoryActiveBindingRepository activeBindingRepository;
     late _FakeAdapterExportService exportService;
     late ManageAdapterUseCase useCase;
 
     setUp(() {
       manifestRepository = _InMemoryManifestRepository();
       verifiedRepository = _InMemoryVerifiedRepository();
+      activeBindingRepository = _InMemoryActiveBindingRepository();
       exportService = _FakeAdapterExportService();
       final AdapterRegistry registry = AdapterRegistry(
         adapterManifestRepository: manifestRepository,
         verifiedAdapterRepository: verifiedRepository,
+        activeAdapterBindingRepository: activeBindingRepository,
       );
       final AdapterValidator validator = AdapterValidator(
         verifiedAdapterRepository: verifiedRepository,
@@ -120,6 +125,31 @@ void main() {
     });
 
     test(
+      'markVerificationPassed automatically binds adapter to current device',
+      () async {
+        await useCase.importManifestJson(_manifestJson());
+
+        await useCase.markVerificationPassed(
+          const AdapterVerificationInput(
+            adapterId: 'generic.triple_channel.v1',
+            deviceFingerprint: 'device-a',
+            gattFingerprint: 'gatt-a',
+            appVersion: '1.0.0',
+            stepResults: <VerificationStepResult>[
+              VerificationStepResult(stepKey: 'set_suck', passed: true),
+              VerificationStepResult(stepKey: 'stop_all', passed: true),
+            ],
+          ),
+        );
+
+        final ActiveAdapterBinding? binding = await useCase
+            .getBoundAdapterForDevice('device-a');
+        expect(binding, isNotNull);
+        expect(binding!.adapterId, 'generic.triple_channel.v1');
+      },
+    );
+
+    test(
       'revokeVerification marks current verified record as revoked',
       () async {
         await useCase.importManifestJson(_manifestJson());
@@ -148,6 +178,10 @@ void main() {
         expect(record, isNotNull);
         expect(record!.status, AdapterVerificationStatus.revoked);
         expect(record.revokedReason, 'revoked_by_user');
+
+        final ActiveAdapterBinding? binding = await useCase
+            .getBoundAdapterForDevice('device-a');
+        expect(binding, isNull);
       },
     );
 
@@ -271,6 +305,39 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   @override
   Stream<List<VerifiedAdapterRecord>> watchAll() async* {
     yield _records.values.toList();
+    yield* _controller.stream;
+  }
+}
+
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
+  final Map<String, ActiveAdapterBinding> _bindings =
+      <String, ActiveAdapterBinding>{};
+  final StreamController<List<ActiveAdapterBinding>> _controller =
+      StreamController<List<ActiveAdapterBinding>>.broadcast();
+
+  @override
+  Future<ActiveAdapterBinding?> findByDeviceFingerprint(
+    String deviceFingerprint,
+  ) async {
+    return _bindings[deviceFingerprint];
+  }
+
+  @override
+  Future<void> removeByDeviceFingerprint(String deviceFingerprint) async {
+    _bindings.remove(deviceFingerprint);
+    _controller.add(_bindings.values.toList());
+  }
+
+  @override
+  Future<void> save(ActiveAdapterBinding binding) async {
+    _bindings[binding.deviceFingerprint] = binding;
+    _controller.add(_bindings.values.toList());
+  }
+
+  @override
+  Stream<List<ActiveAdapterBinding>> watchAll() async* {
+    yield _bindings.values.toList();
     yield* _controller.stream;
   }
 }

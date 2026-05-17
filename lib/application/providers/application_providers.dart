@@ -11,6 +11,7 @@ import '../use_cases/manage_adapter_use_case.dart';
 import '../use_cases/manage_mcp_service_use_case.dart';
 import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
+import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
 import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
@@ -38,6 +39,13 @@ final adapterManifestRepositoryProvider = Provider<AdapterManifestRepository>((
     'Provide a concrete AdapterManifestRepository in infrastructure.',
   );
 });
+
+final activeAdapterBindingRepositoryProvider =
+    Provider<ActiveAdapterBindingRepository>((_) {
+      throw UnimplementedError(
+        'Provide a concrete ActiveAdapterBindingRepository in infrastructure.',
+      );
+    });
 
 final verifiedAdapterRepositoryProvider = Provider<VerifiedAdapterRepository>((
   _,
@@ -98,7 +106,7 @@ final mcpControlAuthorizationServiceProvider =
     Provider<McpControlAuthorizationService>((ref) {
       return McpControlAuthorizationService(
         activeDeviceRegistry: ref.watch(activeDeviceRegistryProvider),
-        verifiedAdapterRepository: ref.watch(verifiedAdapterRepositoryProvider),
+        adapterRegistry: ref.watch(adapterRegistryProvider),
       );
     });
 
@@ -135,6 +143,9 @@ final adapterRegistryProvider = Provider<AdapterRegistry>((ref) {
   return AdapterRegistry(
     adapterManifestRepository: ref.watch(adapterManifestRepositoryProvider),
     verifiedAdapterRepository: ref.watch(verifiedAdapterRepositoryProvider),
+    activeAdapterBindingRepository: ref.watch(
+      activeAdapterBindingRepositoryProvider,
+    ),
   );
 });
 

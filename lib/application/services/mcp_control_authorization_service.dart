@@ -1,7 +1,8 @@
 import '../../core/error/failure.dart';
+import '../../domain/entities/active_adapter_binding.dart';
 import '../../domain/entities/verified_adapter_record.dart';
-import '../../domain/repositories/verified_adapter_repository.dart';
 import '../registry/active_device_registry.dart';
+import 'adapter_registry.dart';
 
 /// Centralizes the MCP-side permission check for hardware control tools.
 ///
@@ -13,12 +14,12 @@ import '../registry/active_device_registry.dart';
 class McpControlAuthorizationService {
   const McpControlAuthorizationService({
     required ActiveDeviceRegistry activeDeviceRegistry,
-    required VerifiedAdapterRepository verifiedAdapterRepository,
+    required AdapterRegistry adapterRegistry,
   }) : _activeDeviceRegistry = activeDeviceRegistry,
-       _verifiedAdapterRepository = verifiedAdapterRepository;
+       _adapterRegistry = adapterRegistry;
 
   final ActiveDeviceRegistry _activeDeviceRegistry;
-  final VerifiedAdapterRepository _verifiedAdapterRepository;
+  final AdapterRegistry _adapterRegistry;
 
   Future<void> ensureToolAllowed(String toolName) async {
     if (_isAlwaysAllowed(toolName) || !_requiresVerifiedAdapter(toolName)) {
@@ -28,15 +29,37 @@ class McpControlAuthorizationService {
     final String deviceFingerprint = _activeDeviceRegistry
         .requireActiveDevice()
         .id;
-    final List<VerifiedAdapterRecord> records = await _verifiedAdapterRepository
-        .watchAll()
-        .first;
-    final List<VerifiedAdapterRecord> deviceRecords = records
-        .where(
-          (VerifiedAdapterRecord record) =>
-              record.target.deviceFingerprint == deviceFingerprint,
-        )
-        .toList();
+    final ActiveAdapterBinding? binding = await _adapterRegistry
+        .getBindingForDevice(deviceFingerprint);
+    if (binding != null) {
+      final VerifiedAdapterRecord? record = await _adapterRegistry
+          .getVerificationRecord(
+            adapterId: binding.adapterId,
+            deviceFingerprint: deviceFingerprint,
+          );
+      if (record != null) {
+        _throwIfRecordBlocks(
+          toolName: toolName,
+          deviceFingerprint: deviceFingerprint,
+          record: record,
+        );
+        if (record.status == AdapterVerificationStatus.verified) {
+          return;
+        }
+      } else {
+        throw Failure.adapterNotVerified(
+          message: 'The bound adapter has not completed verification.',
+          details: <String, Object?>{
+            'tool': toolName,
+            'deviceFingerprint': deviceFingerprint,
+            'adapterId': binding.adapterId,
+          },
+        );
+      }
+    }
+
+    final List<VerifiedAdapterRecord> deviceRecords = await _adapterRegistry
+        .getVerificationRecordsForDevice(deviceFingerprint);
 
     if (deviceRecords.any(
       (VerifiedAdapterRecord record) =>
@@ -52,13 +75,10 @@ class McpControlAuthorizationService {
       ],
     );
     if (revokedRecord != null) {
-      throw Failure.adapterRevoked(
-        message: 'The active device adapter verification was revoked.',
-        details: _details(
-          toolName: toolName,
-          deviceFingerprint: deviceFingerprint,
-          record: revokedRecord,
-        ),
+      _throwIfRecordBlocks(
+        toolName: toolName,
+        deviceFingerprint: deviceFingerprint,
+        record: revokedRecord,
       );
     }
 
@@ -70,14 +90,10 @@ class McpControlAuthorizationService {
       ],
     );
     if (failedRecord != null) {
-      throw Failure.adapterVerificationFailed(
-        message:
-            'The active device adapter must be verified again before AI control.',
-        details: _details(
-          toolName: toolName,
-          deviceFingerprint: deviceFingerprint,
-          record: failedRecord,
-        ),
+      _throwIfRecordBlocks(
+        toolName: toolName,
+        deviceFingerprint: deviceFingerprint,
+        record: failedRecord,
       );
     }
 
@@ -97,6 +113,35 @@ class McpControlAuthorizationService {
       'set_suck' || 'set_vibe' || 'set_ems' || 'set_all' => true,
       _ => false,
     };
+  }
+
+  void _throwIfRecordBlocks({
+    required String toolName,
+    required String deviceFingerprint,
+    required VerifiedAdapterRecord record,
+  }) {
+    if (record.status == AdapterVerificationStatus.revoked) {
+      throw Failure.adapterRevoked(
+        message: 'The active device adapter verification was revoked.',
+        details: _details(
+          toolName: toolName,
+          deviceFingerprint: deviceFingerprint,
+          record: record,
+        ),
+      );
+    }
+    if (record.status == AdapterVerificationStatus.failed ||
+        record.status == AdapterVerificationStatus.needsReverify) {
+      throw Failure.adapterVerificationFailed(
+        message:
+            'The active device adapter must be verified again before AI control.',
+        details: _details(
+          toolName: toolName,
+          deviceFingerprint: deviceFingerprint,
+          record: record,
+        ),
+      );
+    }
   }
 
   VerifiedAdapterRecord? _latestMatchingRecord(

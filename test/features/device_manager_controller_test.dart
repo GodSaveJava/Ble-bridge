@@ -7,8 +7,10 @@ import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/application/services/adapter_registry.dart';
 import 'package:toylink_ai/application/services/adapter_validator.dart';
 import 'package:toylink_ai/application/use_cases/manage_adapter_use_case.dart';
+import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/domain/services/adapter_export_service.dart';
@@ -216,14 +218,18 @@ ProviderContainer _buildContainer({
   AdapterImportService importService = const _FakeAdapterImportService(),
   _InMemoryManifestRepository? manifestRepository,
   _InMemoryVerifiedRepository? verifiedRepository,
+  _InMemoryActiveBindingRepository? activeBindingRepository,
 }) {
   final _InMemoryManifestRepository resolvedManifestRepository =
       manifestRepository ?? _InMemoryManifestRepository();
   final _InMemoryVerifiedRepository resolvedVerifiedRepository =
       verifiedRepository ?? _InMemoryVerifiedRepository();
+  final _InMemoryActiveBindingRepository resolvedActiveBindingRepository =
+      activeBindingRepository ?? _InMemoryActiveBindingRepository();
   final AdapterRegistry registry = AdapterRegistry(
     adapterManifestRepository: resolvedManifestRepository,
     verifiedAdapterRepository: resolvedVerifiedRepository,
+    activeAdapterBindingRepository: resolvedActiveBindingRepository,
   );
   final AdapterValidator validator = AdapterValidator(
     verifiedAdapterRepository: resolvedVerifiedRepository,
@@ -345,6 +351,39 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   @override
   Stream<List<VerifiedAdapterRecord>> watchAll() async* {
     yield _records.values.toList();
+    yield* _controller.stream;
+  }
+}
+
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
+  final Map<String, ActiveAdapterBinding> _bindings =
+      <String, ActiveAdapterBinding>{};
+  final StreamController<List<ActiveAdapterBinding>> _controller =
+      StreamController<List<ActiveAdapterBinding>>.broadcast();
+
+  @override
+  Future<ActiveAdapterBinding?> findByDeviceFingerprint(
+    String deviceFingerprint,
+  ) async {
+    return _bindings[deviceFingerprint];
+  }
+
+  @override
+  Future<void> removeByDeviceFingerprint(String deviceFingerprint) async {
+    _bindings.remove(deviceFingerprint);
+    _controller.add(_bindings.values.toList());
+  }
+
+  @override
+  Future<void> save(ActiveAdapterBinding binding) async {
+    _bindings[binding.deviceFingerprint] = binding;
+    _controller.add(_bindings.values.toList());
+  }
+
+  @override
+  Stream<List<ActiveAdapterBinding>> watchAll() async* {
+    yield _bindings.values.toList();
     yield* _controller.stream;
   }
 }

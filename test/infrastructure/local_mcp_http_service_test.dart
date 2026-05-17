@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:toylink_ai/application/providers/application_providers.dart';
+import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
+import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
+import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/infrastructure/mcp/local_mcp_http_service.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
@@ -18,12 +22,18 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(
               records: <VerifiedAdapterRecord>[
                 _record(status: AdapterVerificationStatus.verified),
               ],
             ),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
           ),
         ],
       );
@@ -68,12 +78,18 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(
               records: <VerifiedAdapterRecord>[
                 _record(status: AdapterVerificationStatus.verified),
               ],
             ),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
           ),
         ],
       );
@@ -116,8 +132,14 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
           ),
         ],
       );
@@ -155,12 +177,18 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(
               records: <VerifiedAdapterRecord>[
                 _record(status: AdapterVerificationStatus.verified),
               ],
             ),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
           ),
         ],
       );
@@ -207,8 +235,14 @@ void main() {
             hardwareRepositoryProvider.overrideWith(
               (_) => MockHardwareRepository(),
             ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
             verifiedAdapterRepositoryProvider.overrideWith(
               (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
             ),
           ],
         );
@@ -299,6 +333,56 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
           existing.target.deviceFingerprint == record.target.deviceFingerprint,
     );
     _records.add(record);
+  }
+}
+
+class _InMemoryManifestRepository implements AdapterManifestRepository {
+  @override
+  Future<AdapterManifest?> findById(String adapterId) async => null;
+
+  @override
+  Future<void> remove(String adapterId) async {}
+
+  @override
+  Future<void> save(AdapterManifest manifest) async {}
+
+  @override
+  Stream<List<AdapterManifest>> watchAll() async* {
+    yield const <AdapterManifest>[];
+  }
+}
+
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
+  _InMemoryActiveBindingRepository({
+    List<ActiveAdapterBinding> bindings = const <ActiveAdapterBinding>[],
+  }) : _bindings = <String, ActiveAdapterBinding>{
+         for (final ActiveAdapterBinding binding in bindings)
+           binding.deviceFingerprint: binding,
+       };
+
+  final Map<String, ActiveAdapterBinding> _bindings;
+
+  @override
+  Future<ActiveAdapterBinding?> findByDeviceFingerprint(
+    String deviceFingerprint,
+  ) async {
+    return _bindings[deviceFingerprint];
+  }
+
+  @override
+  Future<void> removeByDeviceFingerprint(String deviceFingerprint) async {
+    _bindings.remove(deviceFingerprint);
+  }
+
+  @override
+  Future<void> save(ActiveAdapterBinding binding) async {
+    _bindings[binding.deviceFingerprint] = binding;
+  }
+
+  @override
+  Stream<List<ActiveAdapterBinding>> watchAll() async* {
+    yield _bindings.values.toList();
   }
 }
 

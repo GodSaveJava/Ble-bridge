@@ -5,9 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/domain/devices/toy_device.dart';
+import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
+import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
 import 'package:toylink_ai/domain/entities/toy_device_info.dart';
+import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
+import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/hardware_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
@@ -20,12 +24,18 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(
               records: <VerifiedAdapterRecord>[
                 _record(status: AdapterVerificationStatus.verified),
               ],
             ),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
           ),
         ],
       );
@@ -49,8 +59,14 @@ void main() {
             hardwareRepositoryProvider.overrideWith(
               (_) => MockHardwareRepository(),
             ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
             verifiedAdapterRepositoryProvider.overrideWith(
               (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
             ),
           ],
         );
@@ -73,10 +89,28 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(
               records: <VerifiedAdapterRecord>[
                 _record(status: AdapterVerificationStatus.revoked),
+                _record(
+                  adapterId: 'adapter.sosexy.verified',
+                  status: AdapterVerificationStatus.verified,
+                ),
+              ],
+            ),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(
+              bindings: <ActiveAdapterBinding>[
+                ActiveAdapterBinding(
+                  deviceFingerprint: 'mock-sosexy-001',
+                  adapterId: 'adapter.sosexy.demo',
+                  boundAt: _boundAt,
+                ),
               ],
             ),
           ),
@@ -94,14 +128,60 @@ void main() {
       expect(result.errorCode, 'adapter_revoked');
     });
 
+    test(
+      'falls back to legacy verified record when no binding exists',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith(
+              (_) => MockHardwareRepository(),
+            ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
+            verifiedAdapterRepositoryProvider.overrideWith(
+              (_) => _InMemoryVerifiedRepository(
+                records: <VerifiedAdapterRecord>[
+                  _record(
+                    adapterId: 'adapter.sosexy.verified',
+                    status: AdapterVerificationStatus.verified,
+                  ),
+                  _record(status: AdapterVerificationStatus.revoked),
+                ],
+              ),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = container.read(mcpToolRouterProvider);
+        final result = await router.callTool(
+          'set_vibe',
+          arguments: <String, Object?>{'intensity': 20, 'mode': 1},
+        );
+
+        expect(result.ok, isTrue);
+        expect(result.data?['vibeIntensity'], 20);
+      },
+    );
+
     test('allows stop_all without verified adapter record', () async {
       final container = ProviderContainer(
         overrides: [
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
           verifiedAdapterRepositoryProvider.overrideWith(
             (_) => _InMemoryVerifiedRepository(),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
           ),
         ],
       );
@@ -124,12 +204,18 @@ void main() {
             hardwareRepositoryProvider.overrideWith(
               (_) => MockHardwareRepository(),
             ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
             verifiedAdapterRepositoryProvider.overrideWith(
               (_) => _InMemoryVerifiedRepository(
                 records: <VerifiedAdapterRecord>[
                   _record(status: AdapterVerificationStatus.verified),
                 ],
               ),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
             ),
           ],
         );
@@ -154,8 +240,14 @@ void main() {
             hardwareRepositoryProvider.overrideWith(
               (_) => _NoActiveHardwareRepo(),
             ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
             verifiedAdapterRepositoryProvider.overrideWith(
               (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
             ),
           ],
         );
@@ -196,6 +288,22 @@ class _NoActiveHardwareRepo implements HardwareRepository {
   @override
   Stream<List<ToyDeviceInfo>> watchDiscoveredDevices() =>
       _scanController.stream;
+}
+
+class _InMemoryManifestRepository implements AdapterManifestRepository {
+  @override
+  Future<AdapterManifest?> findById(String adapterId) async => null;
+
+  @override
+  Future<void> remove(String adapterId) async {}
+
+  @override
+  Future<void> save(AdapterManifest manifest) async {}
+
+  @override
+  Stream<List<AdapterManifest>> watchAll() async* {
+    yield const <AdapterManifest>[];
+  }
 }
 
 class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
@@ -247,10 +355,49 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   }
 }
 
-VerifiedAdapterRecord _record({required AdapterVerificationStatus status}) {
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
+  _InMemoryActiveBindingRepository({
+    List<ActiveAdapterBinding> bindings = const <ActiveAdapterBinding>[],
+  }) : _bindings = <String, ActiveAdapterBinding>{
+         for (final ActiveAdapterBinding binding in bindings)
+           binding.deviceFingerprint: binding,
+       };
+
+  final Map<String, ActiveAdapterBinding> _bindings;
+
+  @override
+  Future<ActiveAdapterBinding?> findByDeviceFingerprint(
+    String deviceFingerprint,
+  ) async {
+    return _bindings[deviceFingerprint];
+  }
+
+  @override
+  Future<void> removeByDeviceFingerprint(String deviceFingerprint) async {
+    _bindings.remove(deviceFingerprint);
+  }
+
+  @override
+  Future<void> save(ActiveAdapterBinding binding) async {
+    _bindings[binding.deviceFingerprint] = binding;
+  }
+
+  @override
+  Stream<List<ActiveAdapterBinding>> watchAll() async* {
+    yield _bindings.values.toList();
+  }
+}
+
+final DateTime _boundAt = DateTime(2026, 5, 18, 15);
+
+VerifiedAdapterRecord _record({
+  required AdapterVerificationStatus status,
+  String adapterId = 'adapter.sosexy.demo',
+}) {
   return VerifiedAdapterRecord(
     manifestHash: 'hash-1',
-    adapterId: 'adapter.sosexy.demo',
+    adapterId: adapterId,
     adapterVersion: '1.0.0',
     status: status,
     updatedAt: DateTime(2026, 5, 18, 12),

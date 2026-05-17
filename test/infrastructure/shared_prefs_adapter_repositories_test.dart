@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/infrastructure/storage/shared_prefs_adapter_manifest_repository.dart';
+import 'package:toylink_ai/infrastructure/storage/shared_prefs_active_adapter_binding_repository.dart';
 import 'package:toylink_ai/infrastructure/storage/shared_prefs_verified_adapter_repository.dart';
 
 void main() {
@@ -76,6 +78,34 @@ void main() {
 
       expect(loaded, isNotNull);
       expect(loaded!.status, AdapterVerificationStatus.verified);
+    });
+  });
+
+  group('SharedPrefsActiveAdapterBindingRepository', () {
+    late SharedPrefsActiveAdapterBindingRepository repository;
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      repository = SharedPrefsActiveAdapterBindingRepository();
+    });
+
+    tearDown(() async {
+      await repository.dispose();
+    });
+
+    test('saves and retrieves device binding', () async {
+      final ActiveAdapterBinding binding = ActiveAdapterBinding(
+        deviceFingerprint: 'device-1',
+        adapterId: 'adapter-1',
+        boundAt: DateTime(2026, 5, 18, 16),
+      );
+
+      await repository.save(binding);
+      final ActiveAdapterBinding? loaded = await repository
+          .findByDeviceFingerprint('device-1');
+
+      expect(loaded, isNotNull);
+      expect(loaded!.adapterId, 'adapter-1');
     });
   });
 }

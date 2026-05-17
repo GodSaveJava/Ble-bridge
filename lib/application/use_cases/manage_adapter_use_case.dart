@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../services/adapter_registry.dart';
 import '../services/adapter_validator.dart';
 import '../../core/error/failure.dart';
+import '../../domain/entities/active_adapter_binding.dart';
 import '../../domain/entities/adapter_manifest.dart';
 import '../../domain/entities/verified_adapter_record.dart';
 import '../../domain/services/adapter_export_service.dart';
@@ -77,11 +78,16 @@ class ManageAdapterUseCase {
   Future<void> revokeVerification({
     required String adapterId,
     required String deviceFingerprint,
-  }) {
-    return _adapterValidator.revoke(
+  }) async {
+    await _adapterValidator.revoke(
       adapterId: adapterId,
       deviceFingerprint: deviceFingerprint,
     );
+    final ActiveAdapterBinding? binding = await _adapterRegistry
+        .getBindingForDevice(deviceFingerprint);
+    if (binding?.adapterId == adapterId) {
+      await _adapterRegistry.clearBindingForDevice(deviceFingerprint);
+    }
   }
 
   Future<VerifiedAdapterRecord> markVerificationPassed(
@@ -105,7 +111,7 @@ class ManageAdapterUseCase {
       );
     }
 
-    return _adapterValidator.markVerified(
+    final VerifiedAdapterRecord record = await _adapterValidator.markVerified(
       manifest: manifest,
       manifestHash: _manifestHash(manifest),
       appVersion: input.appVersion,
@@ -116,6 +122,11 @@ class ManageAdapterUseCase {
       ),
       stepResults: input.stepResults,
     );
+    await _adapterRegistry.bindAdapterToDevice(
+      adapterId: input.adapterId,
+      deviceFingerprint: input.deviceFingerprint,
+    );
+    return record;
   }
 
   Future<bool> isAdapterVerifiedForDevice({
@@ -126,6 +137,12 @@ class ManageAdapterUseCase {
       adapterId: adapterId,
       deviceFingerprint: deviceFingerprint,
     );
+  }
+
+  Future<ActiveAdapterBinding?> getBoundAdapterForDevice(
+    String deviceFingerprint,
+  ) {
+    return _adapterRegistry.getBindingForDevice(deviceFingerprint);
   }
 
   String _manifestHash(AdapterManifest manifest) {
