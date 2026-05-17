@@ -1,6 +1,7 @@
 import '../../core/error/failure.dart';
 import '../../domain/entities/control_command.dart';
 import '../../domain/entities/device_status.dart';
+import '../services/mcp_control_authorization_service.dart';
 import '../use_cases/control_device_use_case.dart';
 
 class McpToolResult {
@@ -18,10 +19,14 @@ class McpToolResult {
 }
 
 class McpToolRouter {
-  const McpToolRouter({required ControlDeviceUseCase controlDeviceUseCase})
-    : _controlDeviceUseCase = controlDeviceUseCase;
+  const McpToolRouter({
+    required ControlDeviceUseCase controlDeviceUseCase,
+    required McpControlAuthorizationService mcpControlAuthorizationService,
+  }) : _controlDeviceUseCase = controlDeviceUseCase,
+       _mcpControlAuthorizationService = mcpControlAuthorizationService;
 
   final ControlDeviceUseCase _controlDeviceUseCase;
+  final McpControlAuthorizationService _mcpControlAuthorizationService;
 
   Future<McpToolResult> callTool(
     String name, {
@@ -30,6 +35,7 @@ class McpToolRouter {
     try {
       switch (name) {
         case 'set_suck':
+          await _mcpControlAuthorizationService.ensureToolAllowed(name);
           return _ok(
             await _controlDeviceUseCase.setSuck(
               intensity: _requiredInt(arguments, 'intensity'),
@@ -38,6 +44,7 @@ class McpToolRouter {
             ),
           );
         case 'set_vibe':
+          await _mcpControlAuthorizationService.ensureToolAllowed(name);
           return _ok(
             await _controlDeviceUseCase.setVibe(
               intensity: _requiredInt(arguments, 'intensity'),
@@ -46,6 +53,7 @@ class McpToolRouter {
             ),
           );
         case 'set_ems':
+          await _mcpControlAuthorizationService.ensureToolAllowed(name);
           return _ok(
             await _controlDeviceUseCase.setEms(
               intensity: _requiredInt(arguments, 'intensity'),
@@ -54,6 +62,7 @@ class McpToolRouter {
             ),
           );
         case 'set_all':
+          await _mcpControlAuthorizationService.ensureToolAllowed(name);
           return _ok(
             await _controlDeviceUseCase.setAll(
               suck: _optionalInt(arguments, 'suck', defaultValue: 0),

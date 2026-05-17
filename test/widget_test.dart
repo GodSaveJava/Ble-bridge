@@ -16,6 +16,12 @@ void main() {
           mcpServiceProvider.overrideWith((ref) {
             return ref.watch(defaultMcpServiceProvider);
           }),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
         ],
         child: const ToyLinkApp(),
       ),

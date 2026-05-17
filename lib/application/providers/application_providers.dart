@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/adapter_registry.dart';
 import '../services/adapter_validator.dart';
+import '../services/mcp_control_authorization_service.dart';
 import '../mcp/mcp_tool_router.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
@@ -93,6 +94,14 @@ final controlDeviceUseCaseProvider = Provider<ControlDeviceUseCase>((ref) {
   );
 });
 
+final mcpControlAuthorizationServiceProvider =
+    Provider<McpControlAuthorizationService>((ref) {
+      return McpControlAuthorizationService(
+        activeDeviceRegistry: ref.watch(activeDeviceRegistryProvider),
+        verifiedAdapterRepository: ref.watch(verifiedAdapterRepositoryProvider),
+      );
+    });
+
 final manageActiveDeviceUseCaseProvider = Provider<ManageActiveDeviceUseCase>((
   ref,
 ) {
@@ -116,6 +125,9 @@ final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((
 final mcpToolRouterProvider = Provider<McpToolRouter>((ref) {
   return McpToolRouter(
     controlDeviceUseCase: ref.watch(controlDeviceUseCaseProvider),
+    mcpControlAuthorizationService: ref.watch(
+      mcpControlAuthorizationServiceProvider,
+    ),
   );
 });
 

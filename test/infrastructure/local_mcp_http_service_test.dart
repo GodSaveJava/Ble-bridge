@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:toylink_ai/application/providers/application_providers.dart';
+import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/infrastructure/mcp/local_mcp_http_service.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
@@ -15,6 +17,13 @@ void main() {
         overrides: [
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
+          ),
+          verifiedAdapterRepositoryProvider.overrideWith(
+            (_) => _InMemoryVerifiedRepository(
+              records: <VerifiedAdapterRecord>[
+                _record(status: AdapterVerificationStatus.verified),
+              ],
+            ),
           ),
         ],
       );
@@ -59,6 +68,13 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          verifiedAdapterRepositoryProvider.overrideWith(
+            (_) => _InMemoryVerifiedRepository(
+              records: <VerifiedAdapterRecord>[
+                _record(status: AdapterVerificationStatus.verified),
+              ],
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -100,6 +116,9 @@ void main() {
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
           ),
+          verifiedAdapterRepositoryProvider.overrideWith(
+            (_) => _InMemoryVerifiedRepository(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -135,6 +154,13 @@ void main() {
         overrides: [
           hardwareRepositoryProvider.overrideWith(
             (_) => MockHardwareRepository(),
+          ),
+          verifiedAdapterRepositoryProvider.overrideWith(
+            (_) => _InMemoryVerifiedRepository(
+              records: <VerifiedAdapterRecord>[
+                _record(status: AdapterVerificationStatus.verified),
+              ],
+            ),
           ),
         ],
       );
@@ -172,5 +198,127 @@ void main() {
       expect(json['ok'], true);
       expect((json['status'] as Map<String, dynamic>)['vibeIntensity'], 40);
     });
+
+    test(
+      'returns adapter_not_verified for control tool without verification',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith(
+              (_) => MockHardwareRepository(),
+            ),
+            verifiedAdapterRepositoryProvider.overrideWith(
+              (_) => _InMemoryVerifiedRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = container.read(mcpToolRouterProvider);
+        final service = LocalMcpHttpService(
+          toolRouter: router,
+          host: '127.0.0.1',
+          port: 8875,
+        );
+        addTearDown(service.stop);
+
+        await service.start();
+
+        final client = HttpClient();
+        addTearDown(client.close);
+
+        final request = await client.postUrl(
+          Uri.parse('http://127.0.0.1:8875/mcp/tool'),
+        );
+        request.headers.contentType = ContentType.json;
+        request.write(
+          jsonEncode(<String, Object?>{
+            'name': 'set_suck',
+            'arguments': <String, Object?>{'intensity': 25, 'mode': 1},
+          }),
+        );
+        final response = await request.close();
+        final body = await utf8.decodeStream(response);
+        final Map<String, dynamic> json =
+            jsonDecode(body) as Map<String, dynamic>;
+
+        expect(response.statusCode, HttpStatus.badRequest);
+        expect(json['ok'], false);
+        expect(
+          (json['error'] as Map<String, dynamic>)['code'],
+          'adapter_not_verified',
+        );
+      },
+    );
   });
+}
+
+class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
+  _InMemoryVerifiedRepository({
+    List<VerifiedAdapterRecord> records = const <VerifiedAdapterRecord>[],
+  }) : _records = List<VerifiedAdapterRecord>.from(records);
+
+  final List<VerifiedAdapterRecord> _records;
+
+  @override
+  Stream<List<VerifiedAdapterRecord>> watchAll() async* {
+    yield List<VerifiedAdapterRecord>.from(_records);
+  }
+
+  @override
+  Future<VerifiedAdapterRecord?> find({
+    required String adapterId,
+    required String deviceFingerprint,
+  }) async {
+    for (final VerifiedAdapterRecord record in _records) {
+      if (record.adapterId == adapterId &&
+          record.target.deviceFingerprint == deviceFingerprint) {
+        return record;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> remove({
+    required String adapterId,
+    required String deviceFingerprint,
+  }) async {
+    _records.removeWhere(
+      (VerifiedAdapterRecord record) =>
+          record.adapterId == adapterId &&
+          record.target.deviceFingerprint == deviceFingerprint,
+    );
+  }
+
+  @override
+  Future<void> save(VerifiedAdapterRecord record) async {
+    _records.removeWhere(
+      (VerifiedAdapterRecord existing) =>
+          existing.adapterId == record.adapterId &&
+          existing.target.deviceFingerprint == record.target.deviceFingerprint,
+    );
+    _records.add(record);
+  }
+}
+
+VerifiedAdapterRecord _record({required AdapterVerificationStatus status}) {
+  return VerifiedAdapterRecord(
+    manifestHash: 'hash-1',
+    adapterId: 'adapter.sosexy.demo',
+    adapterVersion: '1.0.0',
+    status: status,
+    updatedAt: DateTime(2026, 5, 18, 12),
+    verifiedByAppVersion: '1.0.0',
+    target: const VerifiedTarget(
+      deviceFingerprint: 'mock-sosexy-001',
+      gattFingerprint: 'gatt:demo',
+    ),
+    stepResults: const <VerificationStepResult>[
+      VerificationStepResult(stepKey: 'stop_all', passed: true),
+    ],
+    revokedReason: status == AdapterVerificationStatus.revoked
+        ? 'revoked for test'
+        : null,
+  );
 }
