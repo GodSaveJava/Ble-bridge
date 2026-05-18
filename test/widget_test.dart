@@ -9,6 +9,7 @@ import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/features/device_manager/presentation/controllers/adapter_verification_controller.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/device_manager_controller.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/device_manager_page.dart';
@@ -146,6 +147,34 @@ void main() {
     expect(find.text(_kStartLowIntensityTest), findsAtLeastNWidgets(1));
     expect(find.text(_kVerificationLockedHint), findsOneWidget);
   });
+
+  testWidgets(
+    'verification page shows next actions after verification passes',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeDeviceStatusStreamProvider.overrideWith(
+              (_) => Stream<DeviceStatus>.value(
+                _deviceStatus(deviceId: 'device-a', isConnected: true),
+              ),
+            ),
+            adapterVerificationControllerProvider.overrideWith(
+              _VerifiedAdapterVerificationController.new,
+            ),
+          ],
+          child: const MaterialApp(
+            home: AdapterVerificationPage(
+              adapterId: 'generic.triple_channel.v1',
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text(_kGoStartMcp), findsOneWidget);
+      expect(find.text(_kConfirmInManualControl), findsOneWidget);
+    },
+  );
 
   testWidgets('device manager page shows recommended template guidance', (
     WidgetTester tester,
@@ -438,6 +467,21 @@ AdapterRecommendation _demoRecommendation() {
   );
 }
 
+class _VerifiedAdapterVerificationController
+    extends AdapterVerificationController {
+  @override
+  AdapterVerificationState build() {
+    const AdapterVerificationState base = AdapterVerificationState(
+      successMessage: '验证已通过，可以启用 AI 控制。',
+    );
+    return base.copyWith(
+      steps: base.steps
+          .map((VerificationStepDraft step) => step.copyWith(passed: true))
+          .toList(),
+    );
+  }
+}
+
 const String _kDeviceStatus = '\u8bbe\u5907\u72b6\u6001';
 const String _kMcpService = 'MCP \u670d\u52a1';
 const String _kViewAdapterStatus = '\u67e5\u770b\u9002\u914d\u5668\u72b6\u6001';
@@ -448,6 +492,9 @@ const String _kStopAllFirstStep =
     '\u5148\u786e\u8ba4\u4e00\u952e\u505c\u6b62\u6b63\u5e38';
 const String _kStartLowIntensityTest =
     '\u5f00\u59cb\u4f4e\u5f3a\u5ea6\u6d4b\u8bd5';
+const String _kGoStartMcp = '\u53bb\u542f\u52a8 MCP';
+const String _kConfirmInManualControl =
+    '\u5148\u8fdb\u5165\u624b\u52a8\u63a7\u5236\u786e\u8ba4';
 const String _kVerificationLockedHint =
     '\u5168\u90e8\u6b65\u9aa4\u90fd\u786e\u8ba4\u901a\u8fc7\u540e\uff0c\u624d\u80fd\u542f\u7528 AI \u63a7\u5236\u3002';
 const String _kSystemRecommendedTemplate =

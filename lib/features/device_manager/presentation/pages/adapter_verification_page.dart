@@ -64,6 +64,57 @@ class AdapterVerificationPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
+            if (state.successMessage != null) ...<Widget>[
+              Card(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '验证已完成',
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '这份适配器已经通过本机低强度验证。现在可以去启动 MCP，让 AI 通过工具调用控制；也可以先进入手动控制再确认一次。',
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: <Widget>[
+                          FilledButton(
+                            onPressed: () => context.push('/mcp'),
+                            child: const Text('去启动 MCP'),
+                          ),
+                          OutlinedButton(
+                            onPressed: hasConnectedDevice
+                                ? () => context.push(
+                                    '/control?returnTo=%2Fdevice-manager&returnLabel=%E8%BF%94%E5%9B%9E%E8%AE%BE%E5%A4%87%E7%AE%A1%E7%90%86',
+                                  )
+                                : null,
+                            child: const Text('先进入手动控制确认'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
