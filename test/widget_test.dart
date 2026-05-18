@@ -142,6 +142,8 @@ void main() {
     );
 
     expect(find.text(_kVerificationGuide), findsOneWidget);
+    expect(find.text(_kStopAllFirstStep), findsOneWidget);
+    expect(find.text(_kStartLowIntensityTest), findsAtLeastNWidgets(1));
     expect(find.text(_kVerificationLockedHint), findsOneWidget);
   });
 
@@ -442,6 +444,10 @@ const String _kViewAdapterStatus = '\u67e5\u770b\u9002\u914d\u5668\u72b6\u6001';
 const String _kGoBindAdapter = '\u53bb\u7ed1\u5b9a\u9002\u914d\u5668';
 const String _kGoReverify = '\u53bb\u91cd\u65b0\u9a8c\u8bc1';
 const String _kVerificationGuide = '\u9a8c\u8bc1\u8bf4\u660e';
+const String _kStopAllFirstStep =
+    '\u5148\u786e\u8ba4\u4e00\u952e\u505c\u6b62\u6b63\u5e38';
+const String _kStartLowIntensityTest =
+    '\u5f00\u59cb\u4f4e\u5f3a\u5ea6\u6d4b\u8bd5';
 const String _kVerificationLockedHint =
     '\u5168\u90e8\u6b65\u9aa4\u90fd\u786e\u8ba4\u901a\u8fc7\u540e\uff0c\u624d\u80fd\u542f\u7528 AI \u63a7\u5236\u3002';
 const String _kSystemRecommendedTemplate =

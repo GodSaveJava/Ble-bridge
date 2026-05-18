@@ -40,28 +40,28 @@ class AdapterVerificationState {
     this.successMessage,
     this.steps = const <VerificationStepDraft>[
       VerificationStepDraft(
+        key: 'stop_all',
+        label: '先确认一键停止正常',
+        description: '先发送停止命令，确认设备能立即停下。这一步是安全底线。',
+        safetyHint: '如果停止无效，请不要继续后面的测试。',
+      ),
+      VerificationStepDraft(
         key: 'set_suck',
-        label: '测试吸吮',
-        description: '以模式 1、强度 10 测试吸吮是否与预期一致。',
-        safetyHint: '如体感不对，请不要勾选通过。',
+        label: '轻微吸力测试',
+        description: '使用模式 1、强度 10，短暂确认吸力反应是否正确。',
+        safetyHint: '每次测试建议不超过 3 秒；如果反应不对，请取消勾选。',
       ),
       VerificationStepDraft(
         key: 'set_vibe',
-        label: '测试震动',
-        description: '以模式 1、强度 10 测试震动是否与预期一致。',
-        safetyHint: '如功能错位，请停止并更换适配器。',
+        label: '轻微震动测试',
+        description: '使用模式 1、强度 10，短暂确认震动反应是否正确。',
+        safetyHint: '如果功能错位，请先停止，再返回设备管理切换模板。',
       ),
       VerificationStepDraft(
         key: 'set_ems',
-        label: '测试微电流',
-        description: '仅用模式 1、强度 1 做低强度测试。',
-        safetyHint: '如有不适请立即停止，不要继续提高强度。',
-      ),
-      VerificationStepDraft(
-        key: 'stop_all',
-        label: '测试一键停止',
-        description: '确认 stop_all 能立即停止所有通道。',
-        safetyHint: '这一步必须可靠通过，才能允许 AI 控制。',
+        label: '微电流低强度测试（请谨慎）',
+        description: '仅使用模式 1、强度 1 做短暂测试，不做高强度尝试。',
+        safetyHint: '如有任何不适，请立即停止，不要继续提高强度。',
       ),
     ],
   });
@@ -156,7 +156,8 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
       state = state.copyWith(
         isRunningStep: false,
         clearRunningStepKey: true,
-        successMessage: '已执行“${executedStep.label}”。请根据真实体感确认是否保留勾选。',
+        successMessage:
+            '已执行“${executedStep.label}”。如果反应正确，请保留勾选；如果不对，请取消勾选并立即停止。',
       );
     } catch (error) {
       state = state.copyWith(

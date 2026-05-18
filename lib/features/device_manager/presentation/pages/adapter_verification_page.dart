@@ -47,9 +47,9 @@ class AdapterVerificationPage extends ConsumerWidget {
                     const SizedBox(height: 6),
                     Text('当前设备标识：$deviceFingerprint'),
                     const SizedBox(height: 8),
-                    const Text('请在低强度下按顺序测试，每次动作建议不超过 3 秒。'),
+                    const Text('请按顺序做低强度测试，每次动作建议不超过 3 秒。'),
                     const SizedBox(height: 6),
-                    const Text('点击“执行”会真实发送 BLE 控制命令，请确认环境安全。'),
+                    const Text('点击“开始低强度测试”会真实发送 BLE 控制命令，请确认环境安全。'),
                     if (!hasConnectedDevice) ...<Widget>[
                       const SizedBox(height: 8),
                       Text(
@@ -126,7 +126,9 @@ class AdapterVerificationPage extends ConsumerWidget {
                                         .notifier,
                                   )
                                   .runStep(step.key),
-                        child: Text(isRunningCurrentStep ? '执行中...' : '执行'),
+                        child: Text(
+                          isRunningCurrentStep ? '测试中...' : '开始低强度测试',
+                        ),
                       ),
                       leading: Checkbox(
                         value: step.passed,
@@ -162,7 +164,7 @@ class AdapterVerificationPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text('1. 不要勾选通过。'),
-                    const Text('2. 先执行“测试一键停止”，确认设备已经停下。'),
+                    const Text('2. 先执行“先确认一键停止正常”，确认设备已经停下。'),
                     const Text('3. 返回设备管理，尝试切换适配器或重新导入文件。'),
                     const Text('4. 如果是微电流异常，请立即停止，不要继续尝试。'),
                   ],

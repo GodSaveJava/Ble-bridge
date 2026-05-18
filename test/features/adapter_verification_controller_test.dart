@@ -23,6 +23,8 @@ void main() {
     expect(state.completedCount, 0);
     expect(state.canSubmit, isFalse);
     expect(state.steps, hasLength(4));
+    expect(state.steps.first.key, 'stop_all');
+    expect(state.steps.first.label, '先确认一键停止正常');
   });
 
   test('submit fails when stop_all is unchecked', () async {
