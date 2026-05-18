@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
@@ -21,6 +22,11 @@ class McpPage extends ConsumerWidget {
     final String controlSubtitle = readinessAsync.maybeWhen(
       data: (readiness) => _mcpControlSubtitle(readiness, state.isRunning),
       orElse: () => '正在同步当前设备与适配器验证状态。',
+    );
+    final List<_McpAction> controlActions = readinessAsync.maybeWhen(
+      data: (readiness) =>
+          _buildMcpActions(readiness: readiness, mcpRunning: state.isRunning),
+      orElse: () => const <_McpAction>[],
     );
 
     return Scaffold(
@@ -98,6 +104,25 @@ class McpPage extends ConsumerWidget {
                         ),
                       ),
                     ],
+                    if (controlActions.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: <Widget>[
+                          for (final _McpAction action in controlActions)
+                            action.isPrimary
+                                ? FilledButton(
+                                    onPressed: () => context.push(action.route),
+                                    child: Text(action.label),
+                                  )
+                                : OutlinedButton(
+                                    onPressed: () => context.push(action.route),
+                                    child: Text(action.label),
+                                  ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -126,6 +151,87 @@ class McpPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _McpAction {
+  const _McpAction({
+    required this.label,
+    required this.route,
+    this.isPrimary = false,
+  });
+
+  final String label;
+  final String route;
+  final bool isPrimary;
+}
+
+List<_McpAction> _buildMcpActions({
+  required ActiveDeviceAdapterReadiness readiness,
+  required bool mcpRunning,
+}) {
+  final String? adapterId = readiness.adapterId;
+  switch (readiness.state) {
+    case ActiveDeviceAdapterReadinessState.noDevice:
+      return const <_McpAction>[
+        _McpAction(label: '去连接设备', route: '/scan', isPrimary: true),
+      ];
+    case ActiveDeviceAdapterReadinessState.noBinding:
+      return const <_McpAction>[
+        _McpAction(label: '去绑定适配器', route: '/device-manager', isPrimary: true),
+      ];
+    case ActiveDeviceAdapterReadinessState.bindingMissing:
+      return const <_McpAction>[
+        _McpAction(
+          label: '去重新选择适配器',
+          route: '/device-manager',
+          isPrimary: true,
+        ),
+      ];
+    case ActiveDeviceAdapterReadinessState.unverified:
+      return <_McpAction>[
+        if (adapterId != null && adapterId.isNotEmpty)
+          _McpAction(
+            label: '去开始验证',
+            route: '/verification/$adapterId',
+            isPrimary: true,
+          )
+        else
+          const _McpAction(
+            label: '去设备管理',
+            route: '/device-manager',
+            isPrimary: true,
+          ),
+      ];
+    case ActiveDeviceAdapterReadinessState.verified:
+      if (mcpRunning) {
+        return const <_McpAction>[
+          _McpAction(
+            label: '进入手动控制',
+            route:
+                '/control?returnTo=%2Fmcp&returnLabel=%E8%BF%94%E5%9B%9E%20MCP',
+            isPrimary: true,
+          ),
+        ];
+      }
+      return const <_McpAction>[];
+    case ActiveDeviceAdapterReadinessState.revoked:
+    case ActiveDeviceAdapterReadinessState.needsReverify:
+    case ActiveDeviceAdapterReadinessState.verificationFailed:
+      return <_McpAction>[
+        if (adapterId != null && adapterId.isNotEmpty)
+          _McpAction(
+            label: '去重新验证',
+            route: '/verification/$adapterId',
+            isPrimary: true,
+          )
+        else
+          const _McpAction(
+            label: '去设备管理',
+            route: '/device-manager',
+            isPrimary: true,
+          ),
+      ];
   }
 }
 

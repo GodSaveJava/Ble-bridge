@@ -36,6 +36,13 @@ class HomePage extends ConsumerWidget {
           _homeReadinessSubtitle(readiness, mcpState.isRunning),
       orElse: () => '正在同步当前设备、适配器和验证状态。',
     );
+    final List<_HomeAction> readinessActions = readinessAsync.maybeWhen(
+      data: (readiness) => _buildHomeActions(
+        readiness: readiness,
+        mcpRunning: mcpState.isRunning,
+      ),
+      orElse: () => const <_HomeAction>[],
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('ToyLink AI')),
@@ -99,6 +106,16 @@ class HomePage extends ConsumerWidget {
                           onPressed: () => context.push('/device-manager'),
                           child: const Text('查看适配器状态'),
                         ),
+                        for (final _HomeAction action in readinessActions)
+                          action.isPrimary
+                              ? FilledButton(
+                                  onPressed: () => context.push(action.route),
+                                  child: Text(action.label),
+                                )
+                              : OutlinedButton(
+                                  onPressed: () => context.push(action.route),
+                                  child: Text(action.label),
+                                ),
                       ],
                     ),
                   ],
@@ -277,6 +294,89 @@ class _QuickNavButton extends StatelessWidget {
       width: 156,
       child: OutlinedButton(onPressed: onTap, child: Text(label)),
     );
+  }
+}
+
+class _HomeAction {
+  const _HomeAction({
+    required this.label,
+    required this.route,
+    this.isPrimary = false,
+  });
+
+  final String label;
+  final String route;
+  final bool isPrimary;
+}
+
+List<_HomeAction> _buildHomeActions({
+  required ActiveDeviceAdapterReadiness readiness,
+  required bool mcpRunning,
+}) {
+  final String? adapterId = readiness.adapterId;
+  switch (readiness.state) {
+    case ActiveDeviceAdapterReadinessState.noDevice:
+      return const <_HomeAction>[
+        _HomeAction(label: '去连接设备', route: '/scan', isPrimary: true),
+      ];
+    case ActiveDeviceAdapterReadinessState.noBinding:
+      return const <_HomeAction>[
+        _HomeAction(label: '去绑定适配器', route: '/device-manager', isPrimary: true),
+      ];
+    case ActiveDeviceAdapterReadinessState.bindingMissing:
+      return const <_HomeAction>[
+        _HomeAction(
+          label: '去重新选择适配器',
+          route: '/device-manager',
+          isPrimary: true,
+        ),
+      ];
+    case ActiveDeviceAdapterReadinessState.unverified:
+      return <_HomeAction>[
+        if (adapterId != null && adapterId.isNotEmpty)
+          _HomeAction(
+            label: '去开始验证',
+            route: '/verification/$adapterId',
+            isPrimary: true,
+          )
+        else
+          const _HomeAction(
+            label: '去设备管理',
+            route: '/device-manager',
+            isPrimary: true,
+          ),
+      ];
+    case ActiveDeviceAdapterReadinessState.verified:
+      if (mcpRunning) {
+        return const <_HomeAction>[
+          _HomeAction(
+            label: '进入手动控制',
+            route:
+                '/control?returnTo=%2Fhome&returnLabel=%E8%BF%94%E5%9B%9E%E9%A6%96%E9%A1%B5',
+            isPrimary: true,
+          ),
+        ];
+      }
+      return const <_HomeAction>[
+        _HomeAction(label: '去启动 MCP', route: '/mcp', isPrimary: true),
+      ];
+    case ActiveDeviceAdapterReadinessState.revoked:
+    case ActiveDeviceAdapterReadinessState.needsReverify:
+    case ActiveDeviceAdapterReadinessState.verificationFailed:
+      return <_HomeAction>[
+        if (adapterId != null && adapterId.isNotEmpty)
+          _HomeAction(
+            label: '去重新验证',
+            route: '/verification/$adapterId',
+            isPrimary: true,
+          )
+        else
+          const _HomeAction(
+            label: '去设备管理',
+            route: '/device-manager',
+            isPrimary: true,
+          ),
+      ];
   }
 }
 

@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:toylink_ai/application/models/active_device_adapter_readiness.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/app.dart';
+import 'package:toylink_ai/features/home/presentation/pages/home_page.dart';
+import 'package:toylink_ai/features/mcp_server/presentation/pages/mcp_page.dart';
 import 'package:toylink_ai/infrastructure/providers/infrastructure_providers.dart';
 
 void main() {
@@ -34,5 +38,81 @@ void main() {
     expect(find.text('设备状态'), findsOneWidget);
     expect(find.text('MCP 服务'), findsOneWidget);
     expect(find.text('查看适配器状态'), findsOneWidget);
+  });
+
+  testWidgets('home page shows binding action when adapter is not bound', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultMcpServiceProvider);
+          }),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.noBinding,
+                deviceId: 'device-a',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: HomePage()),
+      ),
+    );
+
+    expect(find.text('去绑定适配器'), findsOneWidget);
+  });
+
+  testWidgets('mcp page shows reverify action when adapter needs reverify', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultMcpServiceProvider);
+          }),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.needsReverify,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: 'Generic Triple Channel',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    expect(find.text('去重新验证'), findsOneWidget);
   });
 }
