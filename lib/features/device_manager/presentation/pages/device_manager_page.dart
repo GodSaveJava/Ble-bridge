@@ -29,6 +29,8 @@ enum _GuidanceAction {
   goMcp,
 }
 
+enum _WizardStepState { done, current, locked }
+
 class _DeviceManagerGuidance {
   const _DeviceManagerGuidance({
     required this.title,
@@ -147,6 +149,186 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
       return;
     }
     _jsonController.text = const JsonEncoder.withIndent('  ').convert(result);
+  }
+
+  Widget _buildAdapterWizardCard({
+    required String? activeDeviceId,
+    required ActiveAdapterBinding? currentBinding,
+    required AdapterManifest? currentBindingManifest,
+    required VerifiedAdapterRecord? currentBindingRecord,
+    required AdapterRecommendation? recommendedAdapter,
+  }) {
+    final bool hasDevice = activeDeviceId != null && activeDeviceId.isNotEmpty;
+    final bool hasBinding = currentBinding != null;
+    final bool isVerified =
+        currentBindingRecord?.status == AdapterVerificationStatus.verified;
+    final String selectedAdapterName =
+        currentBindingManifest?.displayName ??
+        recommendedAdapter?.manifest.displayName ??
+        '系统推荐模板';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text('适配向导', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            const Text(
+              '不用理解 UUID 或协议细节。按下面 4 步走：先连接设备，再选择模板，低强度验证通过后，才允许 AI 控制。',
+            ),
+            const SizedBox(height: 12),
+            _wizardStepTile(
+              context: context,
+              title: '第 1 步：连接设备',
+              description: hasDevice ? '已连接设备：$activeDeviceId' : '先扫描并连接你的玩具。',
+              state: hasDevice
+                  ? _WizardStepState.done
+                  : _WizardStepState.current,
+            ),
+            _wizardStepTile(
+              context: context,
+              title: '第 2 步：选择适配模板',
+              description: hasBinding
+                  ? '当前使用：$selectedAdapterName'
+                  : '系统会优先推荐更适合当前设备的模板。',
+              state: hasBinding
+                  ? _WizardStepState.done
+                  : hasDevice
+                  ? _WizardStepState.current
+                  : _WizardStepState.locked,
+            ),
+            _wizardStepTile(
+              context: context,
+              title: '第 3 步：低强度验证',
+              description: isVerified
+                  ? '当前设备已经通过本机验证。'
+                  : '用低强度确认停止、吮吸、震动和微电流是否符合预期。',
+              state: isVerified
+                  ? _WizardStepState.done
+                  : hasBinding
+                  ? _WizardStepState.current
+                  : _WizardStepState.locked,
+            ),
+            _wizardStepTile(
+              context: context,
+              title: '第 4 步：启用 AI 控制',
+              description: isVerified
+                  ? '可以进入 MCP 页面，把控制权交给 AI 工具调用。'
+                  : '验证通过前，AI 控制会被安全拦截。',
+              state: isVerified
+                  ? _WizardStepState.current
+                  : _WizardStepState.locked,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                if (!hasDevice)
+                  FilledButton(
+                    onPressed: () => context.push('/scan'),
+                    child: const Text('去连接设备'),
+                  )
+                else if (!hasBinding && recommendedAdapter != null)
+                  FilledButton.tonal(
+                    onPressed: () async {
+                      await ref
+                          .read(deviceManagerControllerProvider.notifier)
+                          .bindAdapterForCurrentDevice(
+                            adapterId: recommendedAdapter.manifest.adapterId,
+                            deviceFingerprint: activeDeviceId,
+                          );
+                    },
+                    child: Text(
+                      '使用推荐模板：${recommendedAdapter.manifest.displayName}',
+                    ),
+                  )
+                else if (hasBinding && !isVerified)
+                  FilledButton(
+                    onPressed: () => context.push(
+                      '/verification/${currentBinding.adapterId}',
+                    ),
+                    child: const Text('开始低强度验证'),
+                  )
+                else
+                  FilledButton(
+                    onPressed: () => context.push('/mcp'),
+                    child: const Text('查看 MCP 状态'),
+                  ),
+                OutlinedButton(
+                  onPressed: _openFormWizard,
+                  child: const Text('高级：手动创建模板'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _wizardStepTile({
+    required BuildContext context,
+    required String title,
+    required String description,
+    required _WizardStepState state,
+  }) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final Color stateColor = switch (state) {
+      _WizardStepState.done => Colors.green,
+      _WizardStepState.current => colorScheme.primary,
+      _WizardStepState.locked => colorScheme.outline,
+    };
+    final IconData icon = switch (state) {
+      _WizardStepState.done => Icons.check_circle,
+      _WizardStepState.current => Icons.radio_button_checked,
+      _WizardStepState.locked => Icons.lock_outline,
+    };
+    final String status = switch (state) {
+      _WizardStepState.done => '已完成',
+      _WizardStepState.current => '当前步骤',
+      _WizardStepState.locked => '待完成',
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: stateColor, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: stateColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(description),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildGuidanceActionButton({
@@ -555,6 +737,14 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 12),
+            _buildAdapterWizardCard(
+              activeDeviceId: activeDeviceId,
+              currentBinding: currentBinding,
+              currentBindingManifest: currentBindingManifest,
+              currentBindingRecord: currentBindingRecord,
+              recommendedAdapter: recommendedAdapter,
             ),
             const SizedBox(height: 12),
             if (recommendations.isNotEmpty) ...<Widget>[

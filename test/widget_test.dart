@@ -198,7 +198,20 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await tester.scrollUntilVisible(
+      find.text(_kAdapterWizardTitle),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kAdapterWizardTitle), findsOneWidget);
+    expect(find.text(_kWizardVerifyStep), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(_kSystemRecommendedTemplate),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
 
     expect(find.text(_kSystemRecommendedTemplate), findsOneWidget);
@@ -433,6 +446,9 @@ const String _kVerificationLockedHint =
     '\u5168\u90e8\u6b65\u9aa4\u90fd\u786e\u8ba4\u901a\u8fc7\u540e\uff0c\u624d\u80fd\u542f\u7528 AI \u63a7\u5236\u3002';
 const String _kSystemRecommendedTemplate =
     '\u7cfb\u7edf\u63a8\u8350\u6a21\u677f';
+const String _kAdapterWizardTitle = '\u9002\u914d\u5411\u5bfc';
+const String _kWizardVerifyStep =
+    '\u7b2c 3 \u6b65\uff1a\u4f4e\u5f3a\u5ea6\u9a8c\u8bc1';
 const String _kOfficialTemplate = '\u5b98\u65b9\u6a21\u677f';
 const String _kPreferThisTemplate =
     '\u4f18\u5148\u4f7f\u7528\u8fd9\u4efd\u6a21\u677f';
