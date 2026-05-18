@@ -204,6 +204,7 @@ void main() {
     expect(find.text(_kSystemRecommendedTemplate), findsOneWidget);
     expect(find.text(_kPreferThisTemplate), findsOneWidget);
     expect(find.text(_kBindRecommendedTemplate), findsOneWidget);
+    expect(find.text(_kPendingVerificationExplanation), findsOneWidget);
   });
 
   testWidgets('device manager page guides users to connect a device first', (
@@ -264,6 +265,7 @@ void main() {
 
     expect(find.text(_kNextStepSuggestion), findsOneWidget);
     expect(find.text(_kGoConnectDevice), findsOneWidget);
+    expect(find.text(_kConnectThenBindHint), findsOneWidget);
   });
 
   testWidgets('device manager page guides reverify and template switch', (
@@ -346,6 +348,8 @@ void main() {
 
     expect(find.text(_kReverifyCurrentTemplate), findsOneWidget);
     expect(find.text(_kSwitchToRecommendedTemplate), findsOneWidget);
+    expect(find.text(_kNeedsReverifyExplanation), findsOneWidget);
+    expect(find.text(_kNeedsReverifyHint), findsOneWidget);
   });
 }
 
@@ -436,3 +440,11 @@ const String _kReverifyCurrentTemplate =
     '\u91cd\u65b0\u9a8c\u8bc1\u5f53\u524d\u6a21\u677f';
 const String _kSwitchToRecommendedTemplate =
     '\u6539\u7528\u63a8\u8350\u6a21\u677f';
+const String _kPendingVerificationExplanation =
+    '\u8fd9\u4efd\u9002\u914d\u5668\u8fd8\u6ca1\u5728\u5f53\u524d\u8bbe\u5907\u4e0a\u505a\u8fc7\u672c\u673a\u9a8c\u8bc1\u3002';
+const String _kConnectThenBindHint =
+    '\u5148\u8fde\u63a5\u8bbe\u5907\uff0c\u518d\u7ed1\u5b9a\u6216\u9a8c\u8bc1\u9002\u914d\u5668\u3002';
+const String _kNeedsReverifyExplanation =
+    '\u8fd9\u4efd\u9002\u914d\u5668\u4e4b\u524d\u53ef\u7528\uff0c\u4f46\u56e0\u4e3a\u6a21\u677f\u5185\u5bb9\u6216\u9a8c\u8bc1\u6761\u4ef6\u53d8\u5316\uff0c\u73b0\u5728\u9700\u8981\u91cd\u65b0\u786e\u8ba4\u4e00\u6b21\u3002\u539f\u56e0\uff1a\u9002\u914d\u5668\u5185\u5bb9\u53d1\u751f\u53d8\u5316\u3002';
+const String _kNeedsReverifyHint =
+    '\u5148\u91cd\u65b0\u9a8c\u8bc1\uff1b\u5982\u679c\u53cd\u5e94\u548c\u4e4b\u524d\u4e0d\u4e00\u81f4\uff0c\u518d\u6539\u7528\u63a8\u8350\u6a21\u677f\u3002';

@@ -232,6 +232,69 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
     }
   }
 
+  String _statusExplanation(VerifiedAdapterRecord? record) {
+    if (record == null ||
+        record.status == AdapterVerificationStatus.unverified) {
+      return '这份适配器还没在当前设备上做过本机验证。';
+    }
+
+    return switch (record.status) {
+      AdapterVerificationStatus.verified =>
+        '这份适配器已经在当前设备上验证通过，可以继续用于 MCP 和 AI 控制。',
+      AdapterVerificationStatus.failed =>
+        '上次验证没有通过，通常表示当前模板和设备反应不一致，或测试步骤里有项目失败。',
+      AdapterVerificationStatus.revoked =>
+        '这份适配器的本机信任已被撤销，系统会继续拦住 AI 控制，直到重新验证通过。',
+      AdapterVerificationStatus.needsReverify =>
+        '这份适配器之前可用，但因为模板内容或验证条件变化，现在需要重新确认一次。${_statusReasonSuffix(record)}',
+      AdapterVerificationStatus.unverified => '这份适配器还没在当前设备上做过本机验证。',
+    };
+  }
+
+  String _statusActionHint(
+    VerifiedAdapterRecord? record, {
+    required bool hasActiveDevice,
+    required bool isCurrentBinding,
+  }) {
+    if (!hasActiveDevice) {
+      return '先连接设备，再绑定或验证适配器。';
+    }
+    if (!isCurrentBinding) {
+      return '如果想让当前设备使用这份模板，先把它设为当前设备适配器。';
+    }
+    if (record == null ||
+        record.status == AdapterVerificationStatus.unverified) {
+      return '先做低强度验证，确认吸吮、震动和停止都符合预期。';
+    }
+
+    return switch (record.status) {
+      AdapterVerificationStatus.verified => '可以回首页启动 MCP，或者先进入手动控制再确认一次。',
+      AdapterVerificationStatus.failed => '先进入手动控制做低强度排查；如果反应不对，再改用推荐模板。',
+      AdapterVerificationStatus.revoked => '需要重新验证后，系统才会恢复 MCP 和 AI 控制权限。',
+      AdapterVerificationStatus.needsReverify => '先重新验证；如果反应和之前不一致，再改用推荐模板。',
+      AdapterVerificationStatus.unverified => '先做低强度验证，确认吸吮、震动和停止都符合预期。',
+    };
+  }
+
+  String _statusReasonSuffix(VerifiedAdapterRecord record) {
+    final String? reason = record.revokedReason;
+    if (reason == null || reason.trim().isEmpty) {
+      return '';
+    }
+    return '原因：${_humanizeVerificationReason(reason)}';
+  }
+
+  String _humanizeVerificationReason(String reason) {
+    final String normalized = reason.trim().toLowerCase();
+    if (normalized == 'manifest changed') {
+      return '适配器内容发生变化。';
+    }
+    if (normalized == 'manual revoke') {
+      return '这份适配器被手动撤销信任。';
+    }
+    return reason;
+  }
+
   @override
   Widget build(BuildContext context) {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
@@ -276,6 +339,14 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
     final AdapterRecommendation? recommendedAdapter = recommendations.isEmpty
         ? null
         : recommendations.first;
+    final String currentStatusExplanation = _statusExplanation(
+      currentBindingRecord,
+    );
+    final String currentStatusActionHint = _statusActionHint(
+      currentBindingRecord,
+      hasActiveDevice: activeDeviceId != null && activeDeviceId.isNotEmpty,
+      isCurrentBinding: currentBinding != null,
+    );
     final _DeviceManagerGuidance guidance;
     if (activeDeviceId == null || activeDeviceId.isEmpty) {
       guidance = const _DeviceManagerGuidance(
@@ -676,6 +747,10 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                     ),
                     const SizedBox(height: 4),
                     Text('验证状态：${_statusLabel(currentBindingRecord)}'),
+                    const SizedBox(height: 6),
+                    Text(currentStatusExplanation),
+                    const SizedBox(height: 4),
+                    Text(currentStatusActionHint),
                     const SizedBox(height: 8),
                     Text(
                       activeDeviceId == null || activeDeviceId.isEmpty
@@ -748,6 +823,16 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                               ? '最近验证：无'
                               : '最近验证：${record.updatedAt.toLocal().toString().split('.').first}';
                           final String stepSummary = _stepSummary(record);
+                          final String verifyExplanation = _statusExplanation(
+                            record,
+                          );
+                          final String actionHint = _statusActionHint(
+                            record,
+                            hasActiveDevice:
+                                activeDeviceId != null &&
+                                activeDeviceId.isNotEmpty,
+                            isCurrentBinding: isCurrentBinding,
+                          );
                           return ListTile(
                             dense: true,
                             title: Row(
@@ -785,7 +870,9 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                               '当前绑定：${isCurrentBinding ? '是' : '否'}\n'
                               '状态：$verifyLabel\n'
                               '$verifyTime\n'
-                              '步骤：$stepSummary',
+                              '步骤：$stepSummary\n'
+                              '说明：$verifyExplanation\n'
+                              '建议：$actionHint',
                             ),
                             trailing: PopupMenuButton<String>(
                               onSelected: (String value) async {
