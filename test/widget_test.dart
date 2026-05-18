@@ -433,13 +433,14 @@ const String _kSystemRecommendedTemplate =
     '\u7cfb\u7edf\u63a8\u8350\u6a21\u677f';
 const String _kPreferThisTemplate =
     '\u4f18\u5148\u4f7f\u7528\u8fd9\u4efd\u6a21\u677f';
-const String _kBindRecommendedTemplate = '\u7ed1\u5b9a\u63a8\u8350\u6a21\u677f';
+const String _kBindRecommendedTemplate =
+    '\u7ed1\u5b9a\u63a8\u8350\u6a21\u677f\uff1a\u901a\u7528\u4e09\u901a\u9053\u6a21\u677f';
 const String _kNextStepSuggestion = '\u4e0b\u4e00\u6b65\u5efa\u8bae';
 const String _kGoConnectDevice = '\u53bb\u8fde\u63a5\u8bbe\u5907';
 const String _kReverifyCurrentTemplate =
     '\u91cd\u65b0\u9a8c\u8bc1\u5f53\u524d\u6a21\u677f';
 const String _kSwitchToRecommendedTemplate =
-    '\u6539\u7528\u63a8\u8350\u6a21\u677f';
+    '\u6539\u7528\u63a8\u8350\u6a21\u677f\uff1a\u901a\u7528\u4e09\u901a\u9053\u6a21\u677f';
 const String _kPendingVerificationExplanation =
     '\u8fd9\u4efd\u9002\u914d\u5668\u8fd8\u6ca1\u5728\u5f53\u524d\u8bbe\u5907\u4e0a\u505a\u8fc7\u672c\u673a\u9a8c\u8bc1\u3002';
 const String _kConnectThenBindHint =

@@ -169,6 +169,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
             activeDeviceId.isEmpty) {
           return const SizedBox.shrink();
         }
+        final String recommendedName = recommendedAdapter.manifest.displayName;
         return FilledButton.tonal(
           onPressed: () async {
             await ref
@@ -178,7 +179,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                   deviceFingerprint: activeDeviceId,
                 );
           },
-          child: const Text('绑定推荐模板'),
+          child: Text('绑定推荐模板：$recommendedName'),
         );
       case _GuidanceAction.verifyCurrent:
         final String? adapterId =
@@ -194,11 +195,12 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
         if (recommendedAdapter == null) {
           return const SizedBox.shrink();
         }
+        final String recommendedName = recommendedAdapter.manifest.displayName;
         return OutlinedButton(
           onPressed: () => context.push(
             '/verification/${recommendedAdapter.manifest.adapterId}',
           ),
-          child: const Text('开始验证推荐模板'),
+          child: Text('验证推荐模板：$recommendedName'),
         );
       case _GuidanceAction.switchToRecommended:
         if (recommendedAdapter == null ||
@@ -206,6 +208,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
             activeDeviceId.isEmpty) {
           return const SizedBox.shrink();
         }
+        final String recommendedName = recommendedAdapter.manifest.displayName;
         return OutlinedButton(
           onPressed: () async {
             await ref
@@ -215,7 +218,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                   deviceFingerprint: activeDeviceId,
                 );
           },
-          child: const Text('改用推荐模板'),
+          child: Text('改用推荐模板：$recommendedName'),
         );
       case _GuidanceAction.goControl:
         return OutlinedButton(
