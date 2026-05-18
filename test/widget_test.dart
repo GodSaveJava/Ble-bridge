@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/application/models/active_device_adapter_readiness.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/app.dart';
+import 'package:toylink_ai/domain/entities/device_status.dart';
+import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
 import 'package:toylink_ai/features/home/presentation/pages/home_page.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/mcp_page.dart';
 import 'package:toylink_ai/infrastructure/providers/infrastructure_providers.dart';
@@ -114,5 +116,37 @@ void main() {
     );
 
     expect(find.text('去重新验证'), findsOneWidget);
+  });
+
+  testWidgets('verification page shows beginner guidance and locked submit', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activeDeviceStatusStreamProvider.overrideWith(
+            (_) => Stream<DeviceStatus>.value(
+              DeviceStatus(
+                deviceId: 'device-a',
+                isConnected: true,
+                suckIntensity: 0,
+                vibeIntensity: 0,
+                emsIntensity: 0,
+                suckMode: 1,
+                vibeMode: 1,
+                emsMode: 1,
+                lastUpdatedAt: DateTime(2026),
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: AdapterVerificationPage(adapterId: 'generic.triple_channel.v1'),
+        ),
+      ),
+    );
+
+    expect(find.text('验证说明'), findsOneWidget);
+    expect(find.text('全部步骤都确认通过后，才能启用 AI 控制。'), findsOneWidget);
   });
 }

@@ -17,6 +17,14 @@ import 'package:toylink_ai/features/device_manager/presentation/controllers/adap
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
 void main() {
+  test('initial state keeps submit locked until all steps are confirmed', () {
+    const AdapterVerificationState state = AdapterVerificationState();
+
+    expect(state.completedCount, 0);
+    expect(state.canSubmit, isFalse);
+    expect(state.steps, hasLength(4));
+  });
+
   test('submit fails when stop_all is unchecked', () async {
     final _InMemoryManifestRepository manifestRepository =
         _InMemoryManifestRepository();

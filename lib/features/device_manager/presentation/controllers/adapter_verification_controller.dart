@@ -9,17 +9,23 @@ class VerificationStepDraft {
   const VerificationStepDraft({
     required this.key,
     required this.label,
+    required this.description,
+    required this.safetyHint,
     this.passed = false,
   });
 
   final String key;
   final String label;
+  final String description;
+  final String safetyHint;
   final bool passed;
 
   VerificationStepDraft copyWith({bool? passed}) {
     return VerificationStepDraft(
       key: key,
       label: label,
+      description: description,
+      safetyHint: safetyHint,
       passed: passed ?? this.passed,
     );
   }
@@ -33,10 +39,30 @@ class AdapterVerificationState {
     this.errorMessage,
     this.successMessage,
     this.steps = const <VerificationStepDraft>[
-      VerificationStepDraft(key: 'set_suck', label: '吮吸强度 10（模式 1）'),
-      VerificationStepDraft(key: 'set_vibe', label: '震动强度 10（模式 1）'),
-      VerificationStepDraft(key: 'set_ems', label: '微电流强度 1（模式 1）'),
-      VerificationStepDraft(key: 'stop_all', label: '一键停止 stop_all'),
+      VerificationStepDraft(
+        key: 'set_suck',
+        label: '测试吸吮',
+        description: '以模式 1、强度 10 测试吸吮是否与预期一致。',
+        safetyHint: '如体感不对，请不要勾选通过。',
+      ),
+      VerificationStepDraft(
+        key: 'set_vibe',
+        label: '测试震动',
+        description: '以模式 1、强度 10 测试震动是否与预期一致。',
+        safetyHint: '如功能错位，请停止并更换适配器。',
+      ),
+      VerificationStepDraft(
+        key: 'set_ems',
+        label: '测试微电流',
+        description: '仅用模式 1、强度 1 做低强度测试。',
+        safetyHint: '如有不适请立即停止，不要继续提高强度。',
+      ),
+      VerificationStepDraft(
+        key: 'stop_all',
+        label: '测试一键停止',
+        description: '确认 stop_all 能立即停止所有通道。',
+        safetyHint: '这一步必须可靠通过，才能允许 AI 控制。',
+      ),
     ],
   });
 
@@ -46,6 +72,13 @@ class AdapterVerificationState {
   final String? errorMessage;
   final String? successMessage;
   final List<VerificationStepDraft> steps;
+
+  int get completedCount =>
+      steps.where((VerificationStepDraft step) => step.passed).length;
+
+  bool get canSubmit =>
+      steps.isNotEmpty &&
+      steps.every((VerificationStepDraft step) => step.passed);
 
   AdapterVerificationState copyWith({
     bool? isSubmitting,
@@ -114,11 +147,16 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
         default:
           throw ArgumentError('Unsupported step key: $stepKey');
       }
+
+      final VerificationStepDraft executedStep = state.steps.firstWhere(
+        (VerificationStepDraft step) => step.key == stepKey,
+      );
+
       setStepPassed(stepKey: stepKey, passed: true);
       state = state.copyWith(
         isRunningStep: false,
         clearRunningStepKey: true,
-        successMessage: '步骤执行成功，请确认体感后可取消勾选。',
+        successMessage: '已执行“${executedStep.label}”。请根据真实体感确认是否保留勾选。',
       );
     } catch (error) {
       state = state.copyWith(
@@ -155,7 +193,9 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
         gattFingerprint = await activeDevice.getGattFingerprint();
       }
 
-      await ref.read(manageAdapterUseCaseProvider).markVerificationPassed(
+      await ref
+          .read(manageAdapterUseCaseProvider)
+          .markVerificationPassed(
             AdapterVerificationInput(
               adapterId: adapterId,
               deviceFingerprint: deviceFingerprint,
@@ -167,7 +207,7 @@ class AdapterVerificationController extends Notifier<AdapterVerificationState> {
 
       state = state.copyWith(
         isSubmitting: false,
-        successMessage: '验证已通过：该适配器可用于 MCP 控制。',
+        successMessage: '验证已通过：这份适配器现在可以用于 MCP 控制。',
       );
     } catch (error) {
       state = state.copyWith(isSubmitting: false, errorMessage: '验证失败：$error');
