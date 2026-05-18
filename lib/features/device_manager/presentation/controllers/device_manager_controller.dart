@@ -329,7 +329,7 @@ class DeviceManagerController extends Notifier<DeviceManagerState> {
             deviceFingerprint: deviceFingerprint,
           );
       state = state.copyWith(
-        successMessage: '已将当前设备切换到所选适配器。',
+        successMessage: '已将当前设备切换到所选适配器。模板已绑定，下一步请进行低强度验证。',
         clearError: true,
         clearImportedAdapterId: true,
       );

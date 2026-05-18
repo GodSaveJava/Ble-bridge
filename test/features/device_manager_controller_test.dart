@@ -241,6 +241,7 @@ void main() {
         .findByDeviceFingerprint('device-a');
     expect(binding, isNotNull);
     expect(binding!.adapterId, 'generic.triple_channel.v1');
+    expect(state.successMessage, contains('请进行低强度验证'));
     expect(state.successMessage, contains('切换'));
     expect(state.errorMessage, isNull);
   });
