@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/application/models/active_device_adapter_readiness.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/app.dart';
+import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
@@ -41,9 +42,9 @@ void main() {
     );
 
     expect(find.text('ToyLink AI'), findsOneWidget);
-    expect(find.text('设备状态'), findsOneWidget);
-    expect(find.text('MCP 服务'), findsOneWidget);
-    expect(find.text('查看适配器状态'), findsOneWidget);
+    expect(find.text(_kDeviceStatus), findsOneWidget);
+    expect(find.text(_kMcpService), findsOneWidget);
+    expect(find.text(_kViewAdapterStatus), findsOneWidget);
   });
 
   testWidgets('home page shows binding action when adapter is not bound', (
@@ -80,7 +81,7 @@ void main() {
       ),
     );
 
-    expect(find.text('去绑定适配器'), findsOneWidget);
+    expect(find.text(_kGoBindAdapter), findsOneWidget);
   });
 
   testWidgets('mcp page shows reverify action when adapter needs reverify', (
@@ -119,7 +120,7 @@ void main() {
       ),
     );
 
-    expect(find.text('去重新验证'), findsOneWidget);
+    expect(find.text(_kGoReverify), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -130,17 +131,7 @@ void main() {
         overrides: [
           activeDeviceStatusStreamProvider.overrideWith(
             (_) => Stream<DeviceStatus>.value(
-              DeviceStatus(
-                deviceId: 'device-a',
-                isConnected: true,
-                suckIntensity: 0,
-                vibeIntensity: 0,
-                emsIntensity: 0,
-                suckMode: 1,
-                vibeMode: 1,
-                emsMode: 1,
-                lastUpdatedAt: DateTime(2026),
-              ),
+              _deviceStatus(deviceId: 'device-a', isConnected: true),
             ),
           ),
         ],
@@ -150,9 +141,10 @@ void main() {
       ),
     );
 
-    expect(find.text('验证说明'), findsOneWidget);
-    expect(find.text('全部步骤都确认通过后，才能启用 AI 控制。'), findsOneWidget);
+    expect(find.text(_kVerificationGuide), findsOneWidget);
+    expect(find.text(_kVerificationLockedHint), findsOneWidget);
   });
+
   testWidgets('device manager page shows recommended template guidance', (
     WidgetTester tester,
   ) async {
@@ -185,19 +177,19 @@ void main() {
               <AdapterRecommendation>[_demoRecommendation()],
             ),
           ),
+          verifiedAdapterRecordsProvider.overrideWith(
+            (_) => Stream<List<VerifiedAdapterRecord>>.value(
+              const <VerifiedAdapterRecord>[],
+            ),
+          ),
+          activeAdapterBindingsProvider.overrideWith(
+            (_) => Stream<List<ActiveAdapterBinding>>.value(
+              const <ActiveAdapterBinding>[],
+            ),
+          ),
           activeDeviceStatusStreamProvider.overrideWith(
             (_) => Stream<DeviceStatus>.value(
-              DeviceStatus(
-                deviceId: 'mock-sosexy-001',
-                isConnected: true,
-                suckIntensity: 0,
-                vibeIntensity: 0,
-                emsIntensity: 0,
-                suckMode: 1,
-                vibeMode: 1,
-                emsMode: 1,
-                lastUpdatedAt: DateTime(2026),
-              ),
+              _deviceStatus(deviceId: 'mock-sosexy-001', isConnected: true),
             ),
           ),
         ],
@@ -206,10 +198,172 @@ void main() {
     );
 
     await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
 
-    expect(find.text('系统推荐模板'), findsOneWidget);
-    expect(find.text('优先使用这份模板'), findsOneWidget);
+    expect(find.text(_kSystemRecommendedTemplate), findsOneWidget);
+    expect(find.text(_kPreferThisTemplate), findsOneWidget);
+    expect(find.text(_kBindRecommendedTemplate), findsOneWidget);
   });
+
+  testWidgets('device manager page guides users to connect a device first', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultMcpServiceProvider);
+          }),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          adapterExportServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterExportServiceProvider);
+          }),
+          adapterImportServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterImportServiceProvider);
+          }),
+          activeAdapterRecommendationsProvider.overrideWith(
+            (_) => AsyncData<List<AdapterRecommendation>>(
+              <AdapterRecommendation>[_demoRecommendation()],
+            ),
+          ),
+          verifiedAdapterRecordsProvider.overrideWith(
+            (_) => Stream<List<VerifiedAdapterRecord>>.value(
+              const <VerifiedAdapterRecord>[],
+            ),
+          ),
+          activeAdapterBindingsProvider.overrideWith(
+            (_) => Stream<List<ActiveAdapterBinding>>.value(
+              const <ActiveAdapterBinding>[],
+            ),
+          ),
+          activeDeviceStatusStreamProvider.overrideWith(
+            (_) => Stream<DeviceStatus>.value(
+              _deviceStatus(deviceId: '', isConnected: false),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: DeviceManagerPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kNextStepSuggestion), findsOneWidget);
+    expect(find.text(_kGoConnectDevice), findsOneWidget);
+  });
+
+  testWidgets('device manager page guides reverify and template switch', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultMcpServiceProvider);
+          }),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          adapterExportServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterExportServiceProvider);
+          }),
+          adapterImportServiceProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterImportServiceProvider);
+          }),
+          activeAdapterRecommendationsProvider.overrideWith(
+            (_) => AsyncData<List<AdapterRecommendation>>(
+              <AdapterRecommendation>[_demoRecommendation()],
+            ),
+          ),
+          activeAdapterBindingsProvider.overrideWith(
+            (_) =>
+                Stream<List<ActiveAdapterBinding>>.value(<ActiveAdapterBinding>[
+                  ActiveAdapterBinding(
+                    deviceFingerprint: 'mock-sosexy-001',
+                    adapterId: 'generic.triple_channel.v1',
+                    boundAt: DateTime(2026),
+                  ),
+                ]),
+          ),
+          verifiedAdapterRecordsProvider.overrideWith(
+            (_) => Stream<List<VerifiedAdapterRecord>>.value(
+              <VerifiedAdapterRecord>[
+                VerifiedAdapterRecord(
+                  manifestHash: 'manifest-hash-1',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterVersion: '1.0.0',
+                  status: AdapterVerificationStatus.needsReverify,
+                  updatedAt: DateTime(2026),
+                  verifiedByAppVersion: '1.0.0',
+                  target: const VerifiedTarget(
+                    deviceFingerprint: 'mock-sosexy-001',
+                    gattFingerprint: 'fff0/fff3/fff4',
+                  ),
+                  stepResults: const <VerificationStepResult>[
+                    VerificationStepResult(stepKey: 'suck', passed: true),
+                  ],
+                  revokedReason: 'manifest changed',
+                ),
+              ],
+            ),
+          ),
+          activeDeviceStatusStreamProvider.overrideWith(
+            (_) => Stream<DeviceStatus>.value(
+              _deviceStatus(deviceId: 'mock-sosexy-001', isConnected: true),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: DeviceManagerPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kReverifyCurrentTemplate), findsOneWidget);
+    expect(find.text(_kSwitchToRecommendedTemplate), findsOneWidget);
+  });
+}
+
+DeviceStatus _deviceStatus({
+  required String deviceId,
+  required bool isConnected,
+}) {
+  return DeviceStatus(
+    deviceId: deviceId,
+    isConnected: isConnected,
+    suckIntensity: 0,
+    vibeIntensity: 0,
+    emsIntensity: 0,
+    suckMode: 1,
+    vibeMode: 1,
+    emsMode: 1,
+    lastUpdatedAt: DateTime(2026),
+  );
 }
 
 AdapterRecommendation _demoRecommendation() {
@@ -217,7 +371,7 @@ AdapterRecommendation _demoRecommendation() {
     manifest: const AdapterManifest(
       schemaVersion: 1,
       adapterId: 'generic.triple_channel.v1',
-      displayName: '通用三通道模板',
+      displayName: '\u901a\u7528\u4e09\u901a\u9053\u6a21\u677f',
       protocolKey: 'generic_triple_channel',
       version: '1.0.0',
       minAppVersion: '1.0.0',
@@ -253,9 +407,32 @@ AdapterRecommendation _demoRecommendation() {
         mode: IntRange(min: 1, max: 4),
       ),
     ),
-    reasons: const <String>['设备前缀与模板匹配：SOSEXY', '导入后仍需在本机完成低强度验证'],
+    reasons: const <String>[
+      '\u8bbe\u5907\u524d\u7f00\u4e0e\u6a21\u677f\u5339\u914d\uff1aSOSEXY',
+      '\u5bfc\u5165\u540e\u4ecd\u9700\u5728\u672c\u673a\u5b8c\u6210\u4f4e\u5f3a\u5ea6\u9a8c\u8bc1',
+    ],
     score: 999,
     isCurrentBinding: false,
     verificationStatus: AdapterVerificationStatus.unverified,
   );
 }
+
+const String _kDeviceStatus = '\u8bbe\u5907\u72b6\u6001';
+const String _kMcpService = 'MCP \u670d\u52a1';
+const String _kViewAdapterStatus = '\u67e5\u770b\u9002\u914d\u5668\u72b6\u6001';
+const String _kGoBindAdapter = '\u53bb\u7ed1\u5b9a\u9002\u914d\u5668';
+const String _kGoReverify = '\u53bb\u91cd\u65b0\u9a8c\u8bc1';
+const String _kVerificationGuide = '\u9a8c\u8bc1\u8bf4\u660e';
+const String _kVerificationLockedHint =
+    '\u5168\u90e8\u6b65\u9aa4\u90fd\u786e\u8ba4\u901a\u8fc7\u540e\uff0c\u624d\u80fd\u542f\u7528 AI \u63a7\u5236\u3002';
+const String _kSystemRecommendedTemplate =
+    '\u7cfb\u7edf\u63a8\u8350\u6a21\u677f';
+const String _kPreferThisTemplate =
+    '\u4f18\u5148\u4f7f\u7528\u8fd9\u4efd\u6a21\u677f';
+const String _kBindRecommendedTemplate = '\u7ed1\u5b9a\u63a8\u8350\u6a21\u677f';
+const String _kNextStepSuggestion = '\u4e0b\u4e00\u6b65\u5efa\u8bae';
+const String _kGoConnectDevice = '\u53bb\u8fde\u63a5\u8bbe\u5907';
+const String _kReverifyCurrentTemplate =
+    '\u91cd\u65b0\u9a8c\u8bc1\u5f53\u524d\u6a21\u677f';
+const String _kSwitchToRecommendedTemplate =
+    '\u6539\u7528\u63a8\u8350\u6a21\u677f';

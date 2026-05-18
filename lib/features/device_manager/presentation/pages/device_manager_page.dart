@@ -19,6 +19,28 @@ class DeviceManagerPage extends ConsumerStatefulWidget {
   ConsumerState<DeviceManagerPage> createState() => _DeviceManagerPageState();
 }
 
+enum _GuidanceAction {
+  goScan,
+  bindRecommended,
+  verifyCurrent,
+  verifyRecommended,
+  switchToRecommended,
+  goControl,
+  goMcp,
+}
+
+class _DeviceManagerGuidance {
+  const _DeviceManagerGuidance({
+    required this.title,
+    required this.message,
+    required this.actions,
+  });
+
+  final String title;
+  final String message;
+  final List<_GuidanceAction> actions;
+}
+
 String _recommendationStatusLabel(AdapterRecommendation recommendation) {
   return switch (recommendation.verificationStatus) {
     AdapterVerificationStatus.verified => '已验证',
@@ -127,6 +149,89 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
     _jsonController.text = const JsonEncoder.withIndent('  ').convert(result);
   }
 
+  Widget _buildGuidanceActionButton({
+    required BuildContext context,
+    required _GuidanceAction action,
+    required String? activeDeviceId,
+    required ActiveAdapterBinding? currentBinding,
+    required AdapterManifest? currentBindingManifest,
+    required AdapterRecommendation? recommendedAdapter,
+  }) {
+    switch (action) {
+      case _GuidanceAction.goScan:
+        return FilledButton(
+          onPressed: () => context.push('/scan'),
+          child: const Text('去连接设备'),
+        );
+      case _GuidanceAction.bindRecommended:
+        if (recommendedAdapter == null ||
+            activeDeviceId == null ||
+            activeDeviceId.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return FilledButton.tonal(
+          onPressed: () async {
+            await ref
+                .read(deviceManagerControllerProvider.notifier)
+                .bindAdapterForCurrentDevice(
+                  adapterId: recommendedAdapter.manifest.adapterId,
+                  deviceFingerprint: activeDeviceId,
+                );
+          },
+          child: const Text('绑定推荐模板'),
+        );
+      case _GuidanceAction.verifyCurrent:
+        final String? adapterId =
+            currentBindingManifest?.adapterId ?? currentBinding?.adapterId;
+        if (adapterId == null || adapterId.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return OutlinedButton(
+          onPressed: () => context.push('/verification/$adapterId'),
+          child: const Text('重新验证当前模板'),
+        );
+      case _GuidanceAction.verifyRecommended:
+        if (recommendedAdapter == null) {
+          return const SizedBox.shrink();
+        }
+        return OutlinedButton(
+          onPressed: () => context.push(
+            '/verification/${recommendedAdapter.manifest.adapterId}',
+          ),
+          child: const Text('开始验证推荐模板'),
+        );
+      case _GuidanceAction.switchToRecommended:
+        if (recommendedAdapter == null ||
+            activeDeviceId == null ||
+            activeDeviceId.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return OutlinedButton(
+          onPressed: () async {
+            await ref
+                .read(deviceManagerControllerProvider.notifier)
+                .bindAdapterForCurrentDevice(
+                  adapterId: recommendedAdapter.manifest.adapterId,
+                  deviceFingerprint: activeDeviceId,
+                );
+          },
+          child: const Text('改用推荐模板'),
+        );
+      case _GuidanceAction.goControl:
+        return OutlinedButton(
+          onPressed: () => context.push(
+            '/control?returnTo=/device-manager&returnLabel=返回设备管理',
+          ),
+          child: const Text('进入手动控制排查'),
+        );
+      case _GuidanceAction.goMcp:
+        return OutlinedButton(
+          onPressed: () => context.push('/mcp'),
+          child: const Text('查看 MCP 状态'),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
@@ -168,6 +273,82 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
           data: (value) => value,
           orElse: () => const <AdapterRecommendation>[],
         );
+    final AdapterRecommendation? recommendedAdapter = recommendations.isEmpty
+        ? null
+        : recommendations.first;
+    final _DeviceManagerGuidance guidance;
+    if (activeDeviceId == null || activeDeviceId.isEmpty) {
+      guidance = const _DeviceManagerGuidance(
+        title: '下一步建议',
+        message: '当前还没有连接设备。先去扫描并连接设备，后面才能绑定模板、运行验证和启用 AI 控制。',
+        actions: <_GuidanceAction>[_GuidanceAction.goScan],
+      );
+    } else if (currentBinding == null) {
+      guidance = const _DeviceManagerGuidance(
+        title: '下一步建议',
+        message: '当前设备已经连接，但还没有绑定适配器。建议先绑定系统推荐模板，再开始低强度验证。',
+        actions: <_GuidanceAction>[
+          _GuidanceAction.bindRecommended,
+          _GuidanceAction.verifyRecommended,
+        ],
+      );
+    } else {
+      final String adapterName =
+          currentBindingManifest?.displayName ?? currentBinding.adapterId;
+      switch (currentBindingRecord?.status) {
+        case AdapterVerificationStatus.verified:
+          guidance = _DeviceManagerGuidance(
+            title: '下一步建议',
+            message:
+                '$adapterName 已经在当前设备上验证通过。现在可以进入手动控制做最后确认，或直接查看 MCP 状态准备交给 AI 调用。',
+            actions: const <_GuidanceAction>[
+              _GuidanceAction.goControl,
+              _GuidanceAction.goMcp,
+            ],
+          );
+        case AdapterVerificationStatus.needsReverify:
+          guidance = _DeviceManagerGuidance(
+            title: '下一步建议',
+            message: '$adapterName 之前用过，但当前状态要求重新验证。建议先重跑低强度验证；如果反应不对，再改用推荐模板。',
+            actions: const <_GuidanceAction>[
+              _GuidanceAction.verifyCurrent,
+              _GuidanceAction.switchToRecommended,
+              _GuidanceAction.goControl,
+            ],
+          );
+        case AdapterVerificationStatus.revoked:
+          guidance = _DeviceManagerGuidance(
+            title: '下一步建议',
+            message: '$adapterName 的本机信任已经被撤销。请先重新验证，确认反应正确后再继续交给 AI 控制。',
+            actions: const <_GuidanceAction>[
+              _GuidanceAction.verifyCurrent,
+              _GuidanceAction.switchToRecommended,
+            ],
+          );
+        case AdapterVerificationStatus.failed:
+          guidance = _DeviceManagerGuidance(
+            title: '下一步建议',
+            message:
+                '$adapterName 在当前设备上的验证曾失败。建议先进入手动控制低强度排查，或者直接切换到推荐模板后再验证。',
+            actions: const <_GuidanceAction>[
+              _GuidanceAction.goControl,
+              _GuidanceAction.switchToRecommended,
+              _GuidanceAction.verifyRecommended,
+            ],
+          );
+        case AdapterVerificationStatus.unverified:
+        case null:
+          guidance = _DeviceManagerGuidance(
+            title: '下一步建议',
+            message:
+                '$adapterName 已经绑定到当前设备，但还没有完成本机验证。下一步应该先跑低强度验证，再决定是否交给 AI 使用。',
+            actions: const <_GuidanceAction>[
+              _GuidanceAction.verifyCurrent,
+              _GuidanceAction.goControl,
+            ],
+          );
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('设备管理')),
@@ -502,6 +683,38 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                           : currentBinding == null
                           ? '当前设备还没有绑定适配器，可在下方列表中选择“设为当前设备适配器”。'
                           : '当前设备后续会优先使用这份适配器执行 MCP 控制和验证检查。',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      guidance.title,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(guidance.message),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: guidance.actions.map((action) {
+                        return _buildGuidanceActionButton(
+                          context: context,
+                          action: action,
+                          activeDeviceId: activeDeviceId,
+                          currentBinding: currentBinding,
+                          currentBindingManifest: currentBindingManifest,
+                          recommendedAdapter: recommendedAdapter,
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
