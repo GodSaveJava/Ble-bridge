@@ -38,6 +38,14 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        manifests
+            .firstWhere(
+              (AdapterManifest e) => e.adapterId == 'generic.triple_channel.v1',
+            )
+            .source,
+        AdapterSource.official,
+      );
     });
   });
 

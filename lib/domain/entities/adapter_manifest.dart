@@ -2,6 +2,8 @@ import '../../core/error/failure.dart';
 
 enum AdapterKind { codecBacked }
 
+enum AdapterSource { official, community, experimental }
+
 class IntRange {
   const IntRange({required this.min, required this.max});
 
@@ -247,6 +249,7 @@ class AdapterManifest {
     required this.version,
     required this.minAppVersion,
     required this.adapterKind,
+    this.source = AdapterSource.community,
     required this.codecKey,
     required this.bleNamePrefixes,
     required this.matching,
@@ -264,6 +267,7 @@ class AdapterManifest {
   final String version;
   final String minAppVersion;
   final AdapterKind adapterKind;
+  final AdapterSource source;
   final String codecKey;
   final List<String> bleNamePrefixes;
   final AdapterMatching matching;
@@ -281,6 +285,7 @@ class AdapterManifest {
     'version': version,
     'minAppVersion': minAppVersion,
     'adapterKind': adapterKind.name,
+    'source': source.name,
     'codecKey': codecKey,
     'bleNamePrefixes': bleNamePrefixes,
     'matching': matching.toJson(),
@@ -308,6 +313,7 @@ class AdapterManifest {
             'Only adapterKind="${AdapterKind.codecBacked.name}" is supported.',
       );
     }
+    final AdapterSource source = _readAdapterSource(json['source']);
 
     final List<String> blePrefixes = _readStringList(
       json: json,
@@ -328,6 +334,7 @@ class AdapterManifest {
       version: _readRequiredString(json: json, key: 'version'),
       minAppVersion: _readRequiredString(json: json, key: 'minAppVersion'),
       adapterKind: AdapterKind.codecBacked,
+      source: source,
       codecKey: _readRequiredString(json: json, key: 'codecKey'),
       bleNamePrefixes: blePrefixes,
       matching: AdapterMatching.fromJson(
@@ -344,6 +351,27 @@ class AdapterManifest {
       notes: json['notes'] as String?,
     );
   }
+}
+
+AdapterSource _readAdapterSource(Object? value) {
+  if (value == null) {
+    // Older imported adapter files did not include source. Treat them as
+    // community templates so they never gain official trust by accident.
+    return AdapterSource.community;
+  }
+  if (value is! String || value.isEmpty) {
+    throw const Failure.adapterSchemaInvalid(
+      message: 'source must be a non-empty string.',
+    );
+  }
+  for (final AdapterSource source in AdapterSource.values) {
+    if (source.name == value) {
+      return source;
+    }
+  }
+  throw Failure.adapterSchemaInvalid(
+    message: 'Unsupported adapter source "$value".',
+  );
 }
 
 Map<String, Object?> _readObject({

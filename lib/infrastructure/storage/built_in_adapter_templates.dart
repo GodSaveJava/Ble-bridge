@@ -13,6 +13,7 @@ class BuiltInAdapterTemplates {
         'version': '1.0.0',
         'minAppVersion': '1.0.0',
         'adapterKind': 'codecBacked',
+        'source': 'official',
         'codecKey': 'generic_triple_channel_v1',
         'bleNamePrefixes': <String>['SOSEXY'],
         'matching': <String, Object?>{

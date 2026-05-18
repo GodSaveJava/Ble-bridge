@@ -596,6 +596,12 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
+                                  _adapterSourceChip(
+                                    context,
+                                    recommendation.manifest.source,
+                                  ),
+                                  const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
@@ -841,6 +847,9 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                             title: Row(
                               children: <Widget>[
                                 Expanded(child: Text(manifest.displayName)),
+                                const SizedBox(width: 8),
+                                _adapterSourceChip(context, manifest.source),
+                                const SizedBox(width: 8),
                                 if (isCurrentBinding)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -868,6 +877,7 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
                             ),
                             subtitle: Text(
                               'ID: ${manifest.adapterId}\n'
+                              '来源：${_adapterSourceLabel(manifest.source)}，${_adapterSourceHint(manifest.source)}\n'
                               'codec: ${manifest.codecKey}\n'
                               'version: ${manifest.version}\n'
                               '当前绑定：${isCurrentBinding ? '是' : '否'}\n'
@@ -1307,6 +1317,7 @@ class _AdapterWizardDialogState extends State<_AdapterWizardDialog> {
       'version': '1.0.0',
       'minAppVersion': '1.0.0',
       'adapterKind': 'codecBacked',
+      'source': 'experimental',
       'codecKey': _codecKey.text.trim(),
       'bleNamePrefixes': <String>[_blePrefix.text.trim()],
       'matching': <String, Object?>{
@@ -1388,6 +1399,55 @@ VerifiedAdapterRecord? _findRecord({
     }
   }
   return null;
+}
+
+Widget _adapterSourceChip(BuildContext context, AdapterSource source) {
+  final ColorScheme colorScheme = Theme.of(context).colorScheme;
+  final Color background = switch (source) {
+    AdapterSource.official => colorScheme.primaryContainer,
+    AdapterSource.community => colorScheme.secondaryContainer,
+    AdapterSource.experimental => colorScheme.errorContainer,
+  };
+  final Color foreground = switch (source) {
+    AdapterSource.official => colorScheme.onPrimaryContainer,
+    AdapterSource.community => colorScheme.onSecondaryContainer,
+    AdapterSource.experimental => colorScheme.onErrorContainer,
+  };
+
+  return Semantics(
+    label: '适配器来源：${_adapterSourceLabel(source)}',
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        _adapterSourceLabel(source),
+        style: TextStyle(
+          color: foreground,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+  );
+}
+
+String _adapterSourceLabel(AdapterSource source) {
+  return switch (source) {
+    AdapterSource.official => '官方模板',
+    AdapterSource.community => '社区模板',
+    AdapterSource.experimental => '实验模板',
+  };
+}
+
+String _adapterSourceHint(AdapterSource source) {
+  return switch (source) {
+    AdapterSource.official => '优先尝试，仍需本机低强度验证',
+    AdapterSource.community => '来自导入或分享，必须先验证再使用',
+    AdapterSource.experimental => '用于调试新设备，普通用户需谨慎',
+  };
 }
 
 String _statusLabel(VerifiedAdapterRecord? record) {
