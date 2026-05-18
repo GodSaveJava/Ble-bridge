@@ -7,15 +7,20 @@ import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/application/services/adapter_registry.dart';
 import 'package:toylink_ai/application/services/adapter_validator.dart';
 import 'package:toylink_ai/application/use_cases/manage_adapter_use_case.dart';
+import 'package:toylink_ai/domain/devices/toy_device.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
+import 'package:toylink_ai/domain/entities/device_status.dart';
+import 'package:toylink_ai/domain/entities/toy_device_info.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
+import 'package:toylink_ai/domain/repositories/hardware_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/domain/services/adapter_export_service.dart';
 import 'package:toylink_ai/domain/services/adapter_import_service.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/device_manager_controller.dart';
+import 'package:toylink_ai/infrastructure/mock/mock_toy_device.dart';
 
 void main() {
   test(
@@ -239,6 +244,53 @@ void main() {
     expect(state.successMessage, contains('切换'));
     expect(state.errorMessage, isNull);
   });
+  test(
+    'buildAdapterRecommendations sorts current verified matching template first',
+    () {
+      final List<AdapterManifest> manifests = <AdapterManifest>[
+        _manifestFromJsonText(_manifestJsonText()),
+        _manifestFromJsonText(
+          _manifestJsonTextWithValues(
+            adapterId: 'generic.other.v1',
+            displayName: 'Other Template',
+            blePrefix: 'OTHER',
+            priority: 10,
+            emsMax: 20,
+          ),
+        ),
+      ];
+
+      final List<AdapterRecommendation> recommendations =
+          buildAdapterRecommendations(
+            manifests: manifests,
+            activeDeviceId: 'device-a',
+            activeDeviceName: 'Mock SOSEXY Device',
+            activeBleNamePrefix: 'SOSEXY',
+            bindings: <ActiveAdapterBinding>[
+              ActiveAdapterBinding(
+                deviceFingerprint: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                boundAt: DateTime(2026, 1, 1),
+              ),
+            ],
+            records: <VerifiedAdapterRecord>[
+              _verifiedRecord(
+                adapterId: 'generic.triple_channel.v1',
+                deviceFingerprint: 'device-a',
+                status: AdapterVerificationStatus.verified,
+              ),
+            ],
+          );
+
+      expect(
+        recommendations.first.manifest.adapterId,
+        'generic.triple_channel.v1',
+      );
+      expect(recommendations.first.reasons, contains('当前设备已经绑定这份适配器'));
+      expect(recommendations.first.reasons, contains('设备前缀与模板匹配：SOSEXY'));
+      expect(recommendations.first.reasons, contains('这份适配器已经在当前设备上验证通过'));
+    },
+  );
 }
 
 ProviderContainer _buildContainer({
@@ -246,6 +298,7 @@ ProviderContainer _buildContainer({
   _InMemoryManifestRepository? manifestRepository,
   _InMemoryVerifiedRepository? verifiedRepository,
   _InMemoryActiveBindingRepository? activeBindingRepository,
+  HardwareRepository? hardwareRepository,
 }) {
   final _InMemoryManifestRepository resolvedManifestRepository =
       manifestRepository ?? _InMemoryManifestRepository();
@@ -271,6 +324,24 @@ ProviderContainer _buildContainer({
     overrides: [
       manageAdapterUseCaseProvider.overrideWithValue(useCase),
       adapterImportServiceProvider.overrideWithValue(importService),
+      hardwareRepositoryProvider.overrideWithValue(
+        hardwareRepository ?? _FakeHardwareRepository(),
+      ),
+      activeDeviceStatusStreamProvider.overrideWith(
+        (_) => Stream<DeviceStatus>.value(
+          DeviceStatus(
+            deviceId: 'device-a',
+            isConnected: true,
+            suckIntensity: 0,
+            vibeIntensity: 0,
+            emsIntensity: 0,
+            suckMode: 1,
+            vibeMode: 1,
+            emsMode: 1,
+            lastUpdatedAt: DateTime(2026),
+          ),
+        ),
+      ),
     ],
   );
 }
@@ -416,21 +487,37 @@ class _InMemoryActiveBindingRepository
 }
 
 String _manifestJsonText({int emsMax = 20}) {
+  return _manifestJsonTextWithValues(
+    adapterId: 'generic.triple_channel.v1',
+    displayName: 'Generic Triple Channel',
+    blePrefix: 'SOSEXY',
+    priority: 100,
+    emsMax: emsMax,
+  );
+}
+
+String _manifestJsonTextWithValues({
+  required String adapterId,
+  required String displayName,
+  required String blePrefix,
+  required int priority,
+  required int emsMax,
+}) {
   return '''
 {
   "schemaVersion": 1,
-  "adapterId": "generic.triple_channel.v1",
-  "displayName": "Generic Triple Channel",
+  "adapterId": "$adapterId",
+  "displayName": "$displayName",
   "protocolKey": "generic_triple_channel",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
   "adapterKind": "codecBacked",
   "codecKey": "generic_triple_channel_v1",
-  "bleNamePrefixes": ["SOSEXY"],
+  "bleNamePrefixes": ["$blePrefix"],
   "matching": {
     "serviceUuids": ["0000fff0-0000-1000-8000-00805f9b34fb"],
     "manufacturerDataPattern": null,
-    "priority": 100
+    "priority": $priority
   },
   "gatt": {
     "serviceUuid": "0000fff0-0000-1000-8000-00805f9b34fb",
@@ -458,4 +545,76 @@ String _manifestJsonText({int emsMax = 20}) {
   }
 }
 ''';
+}
+
+AdapterManifest _manifestFromJsonText(String jsonText) {
+  return AdapterManifest.fromJson(jsonDecode(jsonText) as Map<String, Object?>);
+}
+
+VerifiedAdapterRecord _verifiedRecord({
+  required String adapterId,
+  required String deviceFingerprint,
+  required AdapterVerificationStatus status,
+}) {
+  return VerifiedAdapterRecord(
+    adapterId: adapterId,
+    manifestHash: 'hash-$adapterId',
+    adapterVersion: '1.0.0',
+    status: status,
+    updatedAt: DateTime(2026, 1, 1),
+    verifiedByAppVersion: '1.0.0',
+    target: VerifiedTarget(
+      deviceFingerprint: deviceFingerprint,
+      gattFingerprint: 'gatt-$deviceFingerprint',
+    ),
+    stepResults: const <VerificationStepResult>[
+      VerificationStepResult(stepKey: 'set_suck', passed: true),
+      VerificationStepResult(stepKey: 'stop_all', passed: true),
+    ],
+  );
+}
+
+class _FakeHardwareRepository implements HardwareRepository {
+  _FakeHardwareRepository({ToyDevice? activeDevice})
+    : _activeDevice =
+          activeDevice ??
+          MockToyDevice(id: 'device-a', name: 'Mock SOSEXY Device');
+
+  final ToyDevice _activeDevice;
+
+  @override
+  Future<void> connectActiveDevice(ToyDeviceInfo info) async {}
+
+  @override
+  Future<void> disconnectActiveDevice() async {}
+
+  @override
+  ToyDevice getActiveDevice() => _activeDevice;
+
+  @override
+  Future<void> startScan() async {}
+
+  @override
+  Future<void> stopScan() async {}
+
+  @override
+  Stream<DeviceStatus> watchActiveStatus() {
+    return Stream<DeviceStatus>.value(
+      DeviceStatus(
+        deviceId: 'device-a',
+        isConnected: true,
+        suckIntensity: 0,
+        vibeIntensity: 0,
+        emsIntensity: 0,
+        suckMode: 1,
+        vibeMode: 1,
+        emsMode: 1,
+        lastUpdatedAt: DateTime(2026),
+      ),
+    );
+  }
+
+  @override
+  Stream<List<ToyDeviceInfo>> watchDiscoveredDevices() =>
+      const Stream<List<ToyDeviceInfo>>.empty();
 }

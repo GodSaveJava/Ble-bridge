@@ -7,6 +7,22 @@ import '../../../../domain/entities/active_adapter_binding.dart';
 import '../../../../domain/entities/adapter_manifest.dart';
 import '../../../../domain/entities/verified_adapter_record.dart';
 
+class AdapterRecommendation {
+  const AdapterRecommendation({
+    required this.manifest,
+    required this.reasons,
+    required this.score,
+    required this.isCurrentBinding,
+    this.verificationStatus,
+  });
+
+  final AdapterManifest manifest;
+  final List<String> reasons;
+  final int score;
+  final bool isCurrentBinding;
+  final AdapterVerificationStatus? verificationStatus;
+}
+
 class DeviceManagerState {
   const DeviceManagerState({
     this.adapters = const <AdapterManifest>[],
@@ -368,7 +384,223 @@ final activeAdapterBindingsProvider =
       return ref.read(manageAdapterUseCaseProvider).watchDeviceBindings();
     });
 
+final activeAdapterRecommendationsProvider =
+    Provider<AsyncValue<List<AdapterRecommendation>>>((ref) {
+      final activeStatusAsync = ref.watch(activeDeviceStatusStreamProvider);
+      final adaptersAsync = ref.watch(adapterListProvider);
+      final recordsAsync = ref.watch(verifiedAdapterRecordsProvider);
+      final bindingsAsync = ref.watch(activeAdapterBindingsProvider);
+
+      if (activeStatusAsync.hasError) {
+        return AsyncError<List<AdapterRecommendation>>(
+          activeStatusAsync.error!,
+          activeStatusAsync.stackTrace!,
+        );
+      }
+      if (adaptersAsync.hasError) {
+        return AsyncError<List<AdapterRecommendation>>(
+          adaptersAsync.error!,
+          adaptersAsync.stackTrace!,
+        );
+      }
+      if (recordsAsync.hasError) {
+        return AsyncError<List<AdapterRecommendation>>(
+          recordsAsync.error!,
+          recordsAsync.stackTrace!,
+        );
+      }
+      if (bindingsAsync.hasError) {
+        return AsyncError<List<AdapterRecommendation>>(
+          bindingsAsync.error!,
+          bindingsAsync.stackTrace!,
+        );
+      }
+
+      if (activeStatusAsync is! AsyncData ||
+          adaptersAsync is! AsyncData<List<AdapterManifest>> ||
+          recordsAsync is! AsyncData<List<VerifiedAdapterRecord>> ||
+          bindingsAsync is! AsyncData<List<ActiveAdapterBinding>>) {
+        return const AsyncLoading<List<AdapterRecommendation>>();
+      }
+
+      final activeDevice = ref
+          .watch(hardwareRepositoryProvider)
+          .getActiveDevice();
+
+      return AsyncData<List<AdapterRecommendation>>(
+        buildAdapterRecommendations(
+          manifests: adaptersAsync.value,
+          activeDeviceId: activeStatusAsync.value!.deviceId,
+          activeDeviceName: activeDevice?.name,
+          activeBleNamePrefix: activeDevice?.bleNamePrefix,
+          bindings: bindingsAsync.value,
+          records: recordsAsync.value,
+        ),
+      );
+    });
+
 final deviceManagerControllerProvider =
     NotifierProvider<DeviceManagerController, DeviceManagerState>(
       DeviceManagerController.new,
     );
+
+List<AdapterRecommendation> buildAdapterRecommendations({
+  required List<AdapterManifest> manifests,
+  required String? activeDeviceId,
+  required String? activeDeviceName,
+  required String? activeBleNamePrefix,
+  required List<ActiveAdapterBinding> bindings,
+  required List<VerifiedAdapterRecord> records,
+}) {
+  if (activeDeviceId == null || activeDeviceId.isEmpty || manifests.isEmpty) {
+    return const <AdapterRecommendation>[];
+  }
+
+  final ActiveAdapterBinding? currentBinding = _findBinding(
+    bindings: bindings,
+    deviceFingerprint: activeDeviceId,
+  );
+
+  final List<AdapterRecommendation> recommendations = manifests
+      .map(
+        (manifest) => _buildAdapterRecommendation(
+          manifest: manifest,
+          activeDeviceId: activeDeviceId,
+          activeDeviceName: activeDeviceName,
+          activeBleNamePrefix: activeBleNamePrefix,
+          currentBinding: currentBinding,
+          records: records,
+        ),
+      )
+      .toList();
+
+  recommendations.sort((left, right) {
+    final int scoreCompare = right.score.compareTo(left.score);
+    if (scoreCompare != 0) {
+      return scoreCompare;
+    }
+    return left.manifest.displayName.compareTo(right.manifest.displayName);
+  });
+  return recommendations;
+}
+
+AdapterRecommendation _buildAdapterRecommendation({
+  required AdapterManifest manifest,
+  required String activeDeviceId,
+  required String? activeDeviceName,
+  required String? activeBleNamePrefix,
+  required ActiveAdapterBinding? currentBinding,
+  required List<VerifiedAdapterRecord> records,
+}) {
+  final List<String> reasons = <String>[];
+  int score = manifest.matching.priority;
+
+  final bool isCurrentBinding = currentBinding?.adapterId == manifest.adapterId;
+  if (isCurrentBinding) {
+    score += 1000;
+    reasons.add('当前设备已经绑定这份适配器');
+  }
+
+  final String? matchedPrefix = _matchBlePrefix(
+    prefixes: manifest.bleNamePrefixes,
+    activeDeviceName: activeDeviceName,
+    activeBleNamePrefix: activeBleNamePrefix,
+  );
+  if (matchedPrefix != null) {
+    score += 500;
+    reasons.add('设备前缀与模板匹配：$matchedPrefix');
+  }
+
+  final VerifiedAdapterRecord? record = _findRecord(
+    records: records,
+    adapterId: manifest.adapterId,
+    deviceFingerprint: activeDeviceId,
+  );
+
+  switch (record?.status) {
+    case AdapterVerificationStatus.verified:
+      score += 800;
+      reasons.add('这份适配器已经在当前设备上验证通过');
+    case AdapterVerificationStatus.needsReverify:
+      score += 200;
+      reasons.add('这份适配器曾被使用，但现在需要重新验证');
+    case AdapterVerificationStatus.revoked:
+      score -= 200;
+      reasons.add('这份适配器的历史验证已被撤销');
+    case AdapterVerificationStatus.failed:
+      score -= 100;
+      reasons.add('这份适配器在当前设备上曾验证失败');
+    case AdapterVerificationStatus.unverified:
+    case null:
+      reasons.add('导入后仍需在本机完成低强度验证');
+  }
+
+  if (manifest.capabilities.supportsSuck &&
+      manifest.capabilities.supportsVibe &&
+      manifest.capabilities.supportsEms &&
+      manifest.capabilities.supportsStopAll) {
+    score += 80;
+    reasons.add('支持吸吮、震动、微电流和一键停止');
+  }
+
+  return AdapterRecommendation(
+    manifest: manifest,
+    reasons: reasons,
+    score: score,
+    isCurrentBinding: isCurrentBinding,
+    verificationStatus: record?.status,
+  );
+}
+
+String? _matchBlePrefix({
+  required List<String> prefixes,
+  required String? activeDeviceName,
+  required String? activeBleNamePrefix,
+}) {
+  final String normalizedName = activeDeviceName?.toUpperCase() ?? '';
+  final String normalizedPrefix = activeBleNamePrefix?.toUpperCase() ?? '';
+
+  for (final String prefix in prefixes) {
+    final String normalizedCandidate = prefix.toUpperCase();
+    if (normalizedCandidate.isEmpty) {
+      continue;
+    }
+    if (normalizedCandidate == normalizedPrefix ||
+        normalizedName.contains(normalizedCandidate)) {
+      return prefix;
+    }
+  }
+  return null;
+}
+
+ActiveAdapterBinding? _findBinding({
+  required List<ActiveAdapterBinding> bindings,
+  required String? deviceFingerprint,
+}) {
+  if (deviceFingerprint == null || deviceFingerprint.isEmpty) {
+    return null;
+  }
+  for (final binding in bindings) {
+    if (binding.deviceFingerprint == deviceFingerprint) {
+      return binding;
+    }
+  }
+  return null;
+}
+
+VerifiedAdapterRecord? _findRecord({
+  required List<VerifiedAdapterRecord> records,
+  required String adapterId,
+  required String? deviceFingerprint,
+}) {
+  if (deviceFingerprint == null || deviceFingerprint.isEmpty) {
+    return null;
+  }
+  for (final record in records) {
+    if (record.adapterId == adapterId &&
+        record.target.deviceFingerprint == deviceFingerprint) {
+      return record;
+    }
+  }
+  return null;
+}

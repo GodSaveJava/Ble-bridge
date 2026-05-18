@@ -19,6 +19,16 @@ class DeviceManagerPage extends ConsumerStatefulWidget {
   ConsumerState<DeviceManagerPage> createState() => _DeviceManagerPageState();
 }
 
+String _recommendationStatusLabel(AdapterRecommendation recommendation) {
+  return switch (recommendation.verificationStatus) {
+    AdapterVerificationStatus.verified => '已验证',
+    AdapterVerificationStatus.needsReverify => '需重验',
+    AdapterVerificationStatus.revoked => '已撤销',
+    AdapterVerificationStatus.failed => '曾失败',
+    AdapterVerificationStatus.unverified || null => '待验证',
+  };
+}
+
 class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
   final TextEditingController _jsonController = TextEditingController();
   late final ProviderSubscription<DeviceManagerState> _importListener;
@@ -122,6 +132,9 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
     final DeviceManagerState state = ref.watch(deviceManagerControllerProvider);
     final recordsAsync = ref.watch(verifiedAdapterRecordsProvider);
     final bindingsAsync = ref.watch(activeAdapterBindingsProvider);
+    final recommendationsAsync = ref.watch(
+      activeAdapterRecommendationsProvider,
+    );
     final activeStatus = ref.watch(activeDeviceStatusStreamProvider);
     final String? activeDeviceId = activeStatus.maybeWhen(
       data: (status) => status.deviceId,
@@ -150,6 +163,11 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
             adapterId: currentBinding.adapterId,
             deviceFingerprint: activeDeviceId,
           );
+    final List<AdapterRecommendation> recommendations = recommendationsAsync
+        .maybeWhen(
+          data: (value) => value,
+          orElse: () => const <AdapterRecommendation>[],
+        );
 
     return Scaffold(
       appBar: AppBar(title: const Text('设备管理')),
@@ -284,6 +302,130 @@ class _DeviceManagerPageState extends ConsumerState<DeviceManagerPage> {
               ),
             ),
             const SizedBox(height: 12),
+            if (recommendations.isNotEmpty) ...<Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const Text(
+                        '系统推荐模板',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('我们会结合当前连接设备、历史验证结果和模板能力，优先推荐更适合先尝试的模板。'),
+                      const SizedBox(height: 12),
+                      for (final AdapterRecommendation recommendation
+                          in recommendations.take(3)) ...<Widget>[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Text(
+                                      recommendation.manifest.displayName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: recommendation.isCurrentBinding
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primaryContainer
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.secondaryContainer,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      recommendation.isCurrentBinding
+                                          ? '当前正在使用'
+                                          : _recommendationStatusLabel(
+                                              recommendation,
+                                            ),
+                                      style: TextStyle(
+                                        color: recommendation.isCurrentBinding
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimaryContainer
+                                            : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSecondaryContainer,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              for (final String reason
+                                  in recommendation.reasons.take(3))
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Text('• $reason'),
+                                ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: <Widget>[
+                                  if (!recommendation.isCurrentBinding &&
+                                      activeDeviceId != null &&
+                                      activeDeviceId.isNotEmpty)
+                                    FilledButton.tonal(
+                                      onPressed: () async {
+                                        await ref
+                                            .read(
+                                              deviceManagerControllerProvider
+                                                  .notifier,
+                                            )
+                                            .bindAdapterForCurrentDevice(
+                                              adapterId: recommendation
+                                                  .manifest
+                                                  .adapterId,
+                                              deviceFingerprint: activeDeviceId,
+                                            );
+                                      },
+                                      child: const Text('优先使用这份模板'),
+                                    ),
+                                  OutlinedButton(
+                                    onPressed: () => context.push(
+                                      '/verification/${recommendation.manifest.adapterId}',
+                                    ),
+                                    child: const Text('开始验证'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (activeDeviceId != null &&
                 activeDeviceId.isNotEmpty &&
                 state.adapters.isNotEmpty) ...<Widget>[
