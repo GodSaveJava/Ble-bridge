@@ -37,6 +37,9 @@ void main() {
         mcpServiceProvider.overrideWith((ref) {
           return ref.watch(defaultMcpServiceProvider);
         }),
+        remoteBridgeServiceProvider.overrideWith((ref) {
+          return ref.watch(defaultRemoteBridgeServiceProvider);
+        }),
         foregroundConnectionServiceProvider.overrideWith((ref) {
           return ref.watch(defaultForegroundConnectionServiceProvider);
         }),

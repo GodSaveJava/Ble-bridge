@@ -10,6 +10,7 @@ import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/adapter_import_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
+import '../../domain/services/remote_bridge_service.dart';
 import '../ble/sosexy_hardware_repository.dart';
 import '../foreground/android_foreground_connection_service.dart';
 import '../mcp/local_mcp_http_service.dart';
@@ -17,6 +18,7 @@ import '../mock/mock_foreground_connection_service.dart';
 import '../mock/mock_hardware_repository.dart';
 import '../storage/local_adapter_export_service.dart';
 import '../storage/local_adapter_import_service.dart';
+import '../mock/mock_remote_bridge_service.dart';
 import '../storage/shared_prefs_active_adapter_binding_repository.dart';
 import '../storage/shared_prefs_adapter_manifest_repository.dart';
 import '../storage/shared_prefs_background_stability_checklist_repository.dart';
@@ -40,6 +42,12 @@ final defaultHardwareRepositoryProvider = Provider<HardwareRepository>((ref) {
 
 final defaultMcpServiceProvider = Provider<McpService>((ref) {
   return LocalMcpHttpService(toolRouter: ref.watch(mcpToolRouterProvider));
+});
+
+final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
+  final MockRemoteBridgeService service = MockRemoteBridgeService();
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 final defaultForegroundConnectionServiceProvider =

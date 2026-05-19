@@ -25,6 +25,8 @@ import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/adapter_import_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
+import '../../domain/services/remote_bridge_service.dart';
+import '../use_cases/manage_remote_bridge_session_use_case.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
   throw UnimplementedError(
@@ -34,6 +36,12 @@ final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
 
 final mcpServiceProvider = Provider<McpService>((_) {
   throw UnimplementedError('Provide a concrete McpService in infrastructure.');
+});
+
+final remoteBridgeServiceProvider = Provider<RemoteBridgeService>((_) {
+  throw UnimplementedError(
+    'Provide a concrete RemoteBridgeService in infrastructure.',
+  );
 });
 
 final adapterManifestRepositoryProvider = Provider<AdapterManifestRepository>((
@@ -265,6 +273,13 @@ final manageMcpServiceUseCaseProvider = Provider<ManageMcpServiceUseCase>((
 ) {
   return ManageMcpServiceUseCase(mcpService: ref.watch(mcpServiceProvider));
 });
+
+final manageRemoteBridgeSessionUseCaseProvider =
+    Provider<ManageRemoteBridgeSessionUseCase>((ref) {
+      return ManageRemoteBridgeSessionUseCase(
+        remoteBridgeService: ref.watch(remoteBridgeServiceProvider),
+      );
+    });
 
 final mcpToolRouterProvider = Provider<McpToolRouter>((ref) {
   return McpToolRouter(
