@@ -8,14 +8,17 @@ import 'package:toylink_ai/app.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/services/mcp_service.dart';
+import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/adapter_verification_controller.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/device_manager_controller.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/device_manager_page.dart';
 import 'package:toylink_ai/features/home/presentation/pages/home_page.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/mcp_page.dart';
+import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';
 import 'package:toylink_ai/infrastructure/providers/infrastructure_providers.dart';
 
 void main() {
@@ -70,6 +73,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
           activeDeviceAdapterReadinessProvider.overrideWith(
             (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
               ActiveDeviceAdapterReadiness(
@@ -107,6 +113,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
           activeDeviceAdapterReadinessProvider.overrideWith(
             (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
               ActiveDeviceAdapterReadiness(
@@ -146,6 +155,9 @@ void main() {
             verifiedAdapterRepositoryProvider.overrideWith((ref) {
               return ref.watch(defaultVerifiedAdapterRepositoryProvider);
             }),
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => MockRemoteBridgeService(),
+            ),
             activeDeviceAdapterReadinessProvider.overrideWith(
               (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
                 ActiveDeviceAdapterReadiness(
@@ -192,6 +204,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
           activeDeviceAdapterReadinessProvider.overrideWith(
             (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
               ActiveDeviceAdapterReadiness(
@@ -210,6 +225,108 @@ void main() {
     expect(find.text(_kAiControlReadyTitle), findsOneWidget);
     expect(find.text(_kAiControlReadyChip), findsOneWidget);
     expect(find.text(_kAiControlReadyHint), findsOneWidget);
+  });
+
+  testWidgets('mcp page shows bridge onboarding prompt before remote session starts', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kClaudeRemoteAccess),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kClaudeRemoteAccess), findsOneWidget);
+    expect(find.text(_kBridgeOfflineChip), findsOneWidget);
+    expect(find.text(_kStartBridgeSession), findsOneWidget);
+    expect(find.text(_kConnectorUrlPending), findsOneWidget);
+  });
+
+  testWidgets('mcp page shows connector info after remote bridge is ready', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kClaudeRemoteAccess),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kBridgeReadyChip), findsOneWidget);
+    expect(find.text(_kConnectorUrlReady), findsOneWidget);
+    expect(find.text(_kConnectorTokenReady), findsOneWidget);
+    expect(find.text(_kRefreshConnectorInfo), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -639,3 +756,49 @@ const String _kAiControlReadyTitle =
 const String _kAiControlReadyChip = 'AI \u63a7\u5236\u5df2\u53ef\u7528';
 const String _kAiControlReadyHint =
     '\u73b0\u5728\u5df2\u7ecf\u53ef\u4ee5\u8ba9 AI \u63a7\u5236\u8bbe\u5907\u4e86\u3002\u5982\u679c\u4f60\u8fd8\u4e0d\u653e\u5fc3\uff0c\u4e5f\u53ef\u4ee5\u5148\u8fdb\u5165\u624b\u52a8\u63a7\u5236\u518d\u786e\u8ba4\u4e00\u6b21\u3002';
+const String _kClaudeRemoteAccess = 'Claude 远程接入';
+const String _kBridgeOfflineChip = '桥接未启动';
+const String _kBridgeReadyChip = '桥接已就绪';
+const String _kStartBridgeSession = '启动桥接会话';
+const String _kRefreshConnectorInfo = '刷新接入信息';
+const String _kConnectorUrlPending = '接入地址：尚未生成';
+const String _kConnectorUrlReady =
+    '接入地址：https://bridge.toylink.local/mcp/claude';
+const String _kConnectorTokenReady = '接入令牌：已生成';
+
+class _ReadyRemoteBridgeService implements RemoteBridgeService {
+  @override
+  RemoteBridgeSession get currentSession => RemoteBridgeSession(
+    status: RemoteBridgeSessionStatus.ready,
+    bridgeSessionId: 'bridge-session-ready',
+    connectorInfo: const RemoteBridgeConnectorInfo(
+      connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+      connectorToken: 'toy_bridge_token_ready',
+      toolNames: <String>[
+        'set_suck',
+        'set_vibe',
+        'set_ems',
+        'set_all',
+        'stop_all',
+        'get_status',
+      ],
+    ),
+  );
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<void> refreshConnector() async {}
+
+  @override
+  Future<void> startSession() async {}
+
+  @override
+  Future<void> stopSession() async {}
+
+  @override
+  Stream<RemoteBridgeSession> watchSession() async* {
+    yield currentSession;
+  }
+}

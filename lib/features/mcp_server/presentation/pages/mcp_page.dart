@@ -4,36 +4,51 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
+import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/mcp_service_controller.dart';
+import '../controllers/remote_bridge_session_controller.dart';
 
 class McpPage extends ConsumerWidget {
   const McpPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(mcpServiceControllerProvider);
-    final readinessAsync = ref.watch(activeDeviceAdapterReadinessProvider);
+    final McpServiceState localMcpState = ref.watch(
+      mcpServiceControllerProvider,
+    );
+    final RemoteBridgeSessionState bridgeState = ref.watch(
+      remoteBridgeSessionControllerProvider,
+    );
+    final AsyncValue<ActiveDeviceAdapterReadiness> readinessAsync = ref.watch(
+      activeDeviceAdapterReadinessProvider,
+    );
 
     final String controlTitle = readinessAsync.maybeWhen(
-      data: (readiness) => _mcpControlTitle(readiness, state.isRunning),
+      data: (ActiveDeviceAdapterReadiness readiness) =>
+          _mcpControlTitle(readiness, localMcpState.isRunning),
       orElse: () => '正在读取当前设备状态',
     );
     final String controlSubtitle = readinessAsync.maybeWhen(
-      data: (readiness) => _mcpControlSubtitle(readiness, state.isRunning),
+      data: (ActiveDeviceAdapterReadiness readiness) =>
+          _mcpControlSubtitle(readiness, localMcpState.isRunning),
       orElse: () => '正在同步设备、适配器和验证结果，请稍候。',
     );
     final String nextStepText = readinessAsync.maybeWhen(
-      data: (readiness) => _mcpNextStepText(readiness, state.isRunning),
+      data: (ActiveDeviceAdapterReadiness readiness) =>
+          _mcpNextStepText(readiness, localMcpState.isRunning),
       orElse: () => '请先等待页面完成状态同步。',
     );
     final String aiControlStatus = readinessAsync.maybeWhen(
-      data: (readiness) => _aiControlStatusText(readiness, state.isRunning),
+      data: (ActiveDeviceAdapterReadiness readiness) =>
+          _aiControlStatusText(readiness, localMcpState.isRunning),
       orElse: () => '读取中',
     );
     final List<_McpAction> controlActions = readinessAsync.maybeWhen(
-      data: (readiness) =>
-          _buildMcpActions(readiness: readiness, mcpRunning: state.isRunning),
+      data: (ActiveDeviceAdapterReadiness readiness) => _buildMcpActions(
+        readiness: readiness,
+        mcpRunning: localMcpState.isRunning,
+      ),
       orElse: () => const <_McpAction>[],
     );
 
@@ -50,42 +65,42 @@ class McpPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      '本地 AI 控制服务',
+                      '本地 MCP 服务',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    const Text('这里决定 AI 现在能不能通过本机 MCP 工具控制玩具。'),
+                    const Text('这里决定本机是否已经把控制工具暴露给外部调用。'),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
                         _StatusChip(
-                          label: state.isRunning ? 'MCP 已启动' : 'MCP 未启动',
+                          label: localMcpState.isRunning ? 'MCP 已启动' : 'MCP 未启动',
                         ),
                         _StatusChip(label: aiControlStatus),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      state.endpointInfo == null
+                      localMcpState.endpointInfo == null
                           ? '本地地址：启动后自动生成'
-                          : '本地地址：http://${state.endpointInfo!.host}:${state.endpointInfo!.port}${state.endpointInfo!.path}',
+                          : '本地地址：http://${localMcpState.endpointInfo!.host}:${localMcpState.endpointInfo!.port}${localMcpState.endpointInfo!.path}',
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: <Widget>[
                         FilledButton(
-                          onPressed: state.isBusy || state.isRunning
+                          onPressed: localMcpState.isBusy || localMcpState.isRunning
                               ? null
                               : () => ref
                                     .read(mcpServiceControllerProvider.notifier)
                                     .start(),
-                          child: Text(state.isBusy ? '处理中...' : '启动 MCP'),
+                          child: Text(localMcpState.isBusy ? '处理中...' : '启动 MCP'),
                         ),
                         const SizedBox(width: 12),
                         OutlinedButton(
-                          onPressed: state.isBusy || !state.isRunning
+                          onPressed: localMcpState.isBusy || !localMcpState.isRunning
                               ? null
                               : () => ref
                                     .read(mcpServiceControllerProvider.notifier)
@@ -98,7 +113,6 @@ class McpPage extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -150,13 +164,118 @@ class McpPage extends ConsumerWidget {
                 ),
               ),
             ),
-            if (state.errorMessage != null) ...<Widget>[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Claude 远程接入',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('这里管理给 Claude 原对话使用的远程桥接会话。聊天和记忆仍然留在 Claude，那边只通过这里拿到控制能力。'),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        _StatusChip(label: _bridgeStatusLabel(bridgeState.status)),
+                        _StatusChip(
+                          label: bridgeState.canOnboardClaude
+                              ? 'Claude 可接入'
+                              : '等待生成接入信息',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      bridgeState.connectorUrl == null
+                          ? '接入地址：尚未生成'
+                          : '接入地址：${bridgeState.connectorUrl}',
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      bridgeState.connectorToken == null ||
+                              bridgeState.connectorToken!.isEmpty
+                          ? '接入令牌：尚未生成'
+                          : '接入令牌：已生成',
+                    ),
+                    if (bridgeState.maskedToken != null &&
+                        bridgeState.maskedToken!.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Text('当前令牌：${bridgeState.maskedToken}'),
+                    ],
+                    if (bridgeState.toolNames.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 4),
+                      Text('工具数量：${bridgeState.toolNames.length}'),
+                    ],
+                    const SizedBox(height: 12),
+                    _NextStepBanner(message: _bridgeGuidanceText(bridgeState)),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: <Widget>[
+                        FilledButton(
+                          onPressed: bridgeState.isBusy
+                              ? null
+                              : () => ref
+                                    .read(
+                                      remoteBridgeSessionControllerProvider
+                                          .notifier,
+                                    )
+                                    .startSession(),
+                          child: Text(bridgeState.isBusy ? '处理中...' : '启动桥接会话'),
+                        ),
+                        OutlinedButton(
+                          onPressed: bridgeState.isBusy
+                              ? null
+                              : () => ref
+                                    .read(
+                                      remoteBridgeSessionControllerProvider
+                                          .notifier,
+                                    )
+                                    .refreshConnector(),
+                          child: const Text('刷新接入信息'),
+                        ),
+                        OutlinedButton(
+                          onPressed: bridgeState.isBusy ||
+                                  bridgeState.status ==
+                                      RemoteBridgeSessionStatus.offline
+                              ? null
+                              : () => ref
+                                    .read(
+                                      remoteBridgeSessionControllerProvider
+                                          .notifier,
+                                    )
+                                    .stopSession(),
+                          child: const Text('停止桥接会话'),
+                        ),
+                      ],
+                    ),
+                    if (bridgeState.errorMessage != null) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Text(
+                        bridgeState.errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (localMcpState.errorMessage != null) ...<Widget>[
               const SizedBox(height: 12),
               Card(
                 color: Theme.of(context).colorScheme.errorContainer,
                 child: ListTile(
                   title: Text(
-                    state.errorMessage!,
+                    localMcpState.errorMessage!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onErrorContainer,
                     ),
@@ -337,7 +456,7 @@ String _mcpControlSubtitle(
     case ActiveDeviceAdapterReadinessState.noBinding:
       return '请先在设备管理页为当前设备选择一份适配器模板。';
     case ActiveDeviceAdapterReadinessState.bindingMissing:
-      return '当前绑定的 $adapterName 已从本地模板列表移除，请重新选择。';
+      return '当前绑定的是 $adapterName，但这份适配器已经从本地模板列表中移除，请重新选择。';
     case ActiveDeviceAdapterReadinessState.unverified:
       return '$adapterName 还没有在当前设备上完成低强度验证，AI 控制会被安全拦截。';
     case ActiveDeviceAdapterReadinessState.verified:
@@ -389,4 +508,29 @@ String _aiControlStatusText(
     return 'AI 控制暂不可用';
   }
   return mcpRunning ? 'AI 控制已可用' : '等待启动 MCP';
+}
+
+String _bridgeStatusLabel(RemoteBridgeSessionStatus status) {
+  return switch (status) {
+    RemoteBridgeSessionStatus.offline => '桥接未启动',
+    RemoteBridgeSessionStatus.connecting => '桥接连接中',
+    RemoteBridgeSessionStatus.ready => '桥接已就绪',
+    RemoteBridgeSessionStatus.busy => '桥接处理中',
+    RemoteBridgeSessionStatus.error => '桥接异常',
+  };
+}
+
+String _bridgeGuidanceText(RemoteBridgeSessionState state) {
+  switch (state.status) {
+    case RemoteBridgeSessionStatus.offline:
+      return '先启动桥接会话。接入地址和令牌生成后，你才能去 Claude 里添加 connector。';
+    case RemoteBridgeSessionStatus.connecting:
+      return '桥接正在建立会话，请稍等片刻，不要重复点击。';
+    case RemoteBridgeSessionStatus.ready:
+      return '接入信息已经准备好。下一步可以复制这些信息，并按教程去 Claude 完成一次 connector 配置。';
+    case RemoteBridgeSessionStatus.busy:
+      return '桥接正在刷新接入信息，请稍等当前操作完成。';
+    case RemoteBridgeSessionStatus.error:
+      return '桥接会话出现异常。请重新启动桥接会话；如果仍然失败，再检查网络和后台保活状态。';
+  }
 }
