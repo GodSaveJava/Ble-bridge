@@ -254,6 +254,11 @@ class McpPage extends ConsumerWidget {
                                     .stopSession(),
                           child: const Text('停止桥接会话'),
                         ),
+                        if (bridgeState.canOnboardClaude)
+                          OutlinedButton(
+                            onPressed: () => context.push('/claude-onboarding'),
+                            child: const Text('去配置 Claude'),
+                          ),
                       ],
                     ),
                     if (bridgeState.errorMessage != null) ...<Widget>[

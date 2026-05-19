@@ -17,6 +17,7 @@ import 'package:toylink_ai/features/device_manager/presentation/controllers/devi
 import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/device_manager_page.dart';
 import 'package:toylink_ai/features/home/presentation/pages/home_page.dart';
+import 'package:toylink_ai/features/mcp_server/presentation/pages/claude_onboarding_page.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/mcp_page.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';
 import 'package:toylink_ai/infrastructure/providers/infrastructure_providers.dart';
@@ -327,6 +328,64 @@ void main() {
     expect(find.text(_kConnectorUrlReady), findsOneWidget);
     expect(find.text(_kConnectorTokenReady), findsOneWidget);
     expect(find.text(_kRefreshConnectorInfo), findsOneWidget);
+    expect(find.text(_kGoConfigureClaude), findsOneWidget);
+  });
+
+  testWidgets('claude onboarding page blocks entry when local setup is incomplete', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.noDevice,
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: ClaudeOnboardingPage()),
+      ),
+    );
+
+    expect(find.text(_kClaudeOnboardingTitle), findsOneWidget);
+    expect(find.text(_kClaudeBlockedTitle), findsOneWidget);
+    expect(find.text(_kGoConnectDevice), findsOneWidget);
+  });
+
+  testWidgets('claude onboarding page shows connector steps when bridge is ready', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: ClaudeOnboardingPage()),
+      ),
+    );
+
+    expect(find.text(_kClaudeReadyTitle), findsOneWidget);
+    expect(find.text(_kOnboardingStepPrepare), findsOneWidget);
+    expect(find.text(_kOnboardingStepAddConnector), findsOneWidget);
+    expect(find.text(_kConnectorUrlReady), findsOneWidget);
+    expect(find.text(_kConnectorTokenReady), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -765,6 +824,12 @@ const String _kConnectorUrlPending = '接入地址：尚未生成';
 const String _kConnectorUrlReady =
     '接入地址：https://bridge.toylink.local/mcp/claude';
 const String _kConnectorTokenReady = '接入令牌：已生成';
+const String _kGoConfigureClaude = '去配置 Claude';
+const String _kClaudeOnboardingTitle = 'Claude 接入向导';
+const String _kClaudeBlockedTitle = '还不能开始 Claude 接入';
+const String _kClaudeReadyTitle = '现在可以开始接入 Claude';
+const String _kOnboardingStepPrepare = '第 1 步：确认本地准备';
+const String _kOnboardingStepAddConnector = '第 3 步：去 Claude 添加 connector';
 
 class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
