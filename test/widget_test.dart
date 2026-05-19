@@ -386,6 +386,53 @@ void main() {
     expect(find.text(_kOnboardingStepAddConnector), findsOneWidget);
     expect(find.text(_kConnectorUrlReady), findsOneWidget);
     expect(find.text(_kConnectorTokenReady), findsOneWidget);
+    expect(find.text(_kCopyConnectorUrl), findsOneWidget);
+    expect(find.text(_kCopyConnectorToken), findsOneWidget);
+    expect(find.text(_kTroubleshootingTitle), findsOneWidget);
+  });
+
+  testWidgets('claude onboarding page shows copy actions and completion state', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: ClaudeOnboardingPage()),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text(_kCopyConnectorUrl),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(_kCopyConnectorUrl), findsOneWidget);
+    expect(find.text(_kCopyConnectorToken), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text(_kFinishedClaudeSetup),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(_kFinishedClaudeSetup));
+    await tester.pumpAndSettle();
+    expect(find.text(_kClaudeSetupCompleteTitle), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -830,6 +877,11 @@ const String _kClaudeBlockedTitle = '还不能开始 Claude 接入';
 const String _kClaudeReadyTitle = '现在可以开始接入 Claude';
 const String _kOnboardingStepPrepare = '第 1 步：确认本地准备';
 const String _kOnboardingStepAddConnector = '第 3 步：去 Claude 添加 connector';
+const String _kCopyConnectorUrl = '复制接入地址';
+const String _kCopyConnectorToken = '复制接入令牌';
+const String _kTroubleshootingTitle = '常见问题排查';
+const String _kFinishedClaudeSetup = '我已完成 Claude 配置';
+const String _kClaudeSetupCompleteTitle = 'Claude 接入已准备完成';
 
 class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
