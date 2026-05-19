@@ -2,7 +2,7 @@
 
 This file defines the working rules for AI coding agents collaborating on **ToyLink AI**.
 
-ToyLink AI is a **Flutter-first, Android-priority** application for connecting to and controlling BLE intimate hardware, exposing a local **MCP Server** so AI clients can invoke device controls safely through standardized tools.
+ToyLink AI is a **Flutter-first, Android-priority** application for connecting to and controlling BLE intimate hardware, exposing verified control capabilities to external AI clients through a safe MCP-compatible bridge.
 
 This project is **hardware-sensitive** and **privacy-sensitive**. Safety, maintainability, and architectural discipline are higher priority than speed.
 
@@ -13,8 +13,8 @@ Build and maintain ToyLink AI as a production-grade Flutter app that:
 - connects to BLE toys with a simple user flow
 - lets users pair devices locally and verify them safely inside the app
 - abstracts device-specific protocols behind a stable domain model
-- exposes safe local MCP tools for AI-driven control
-- exposes verified devices to external AI clients through local MCP
+- exposes safe MCP tools for AI-driven control
+- exposes verified devices to external AI clients through a Claude-compatible remote bridge path
 - preserves privacy by keeping sensitive control local-first
 - remains easy to extend for future hardware brands and Buttplug-compatible integrations
 
@@ -194,7 +194,7 @@ Rules:
 Preferred flow:
 
 ```text
-MCP Tool Call
+Remote MCP Tool Call
 -> McpToolRouter
 -> SafetyGuard
 -> Application Use Case
@@ -365,7 +365,7 @@ Preferred delivery order:
 3. `infrastructure/ble + first device implementation`
 4. `features/ble_device + control`
 5. `infrastructure/mcp + features/mcp_server`
-6. `features/chat`
+6. `features/claude_connector_tutorial` or equivalent guided onboarding slice
 7. `features/settings + security`
 8. `features/device_manager`
 
@@ -384,11 +384,12 @@ Core screens should include:
 
 - device scan/connect
 - manual control
-- MCP server status
+- MCP / bridge status
+- Claude connector tutorial
 - device manager / adapter import
 - settings/security
 
-The in-app chat shell may exist later, but it is not the first-stage primary control entry.
+The in-app chat shell may exist later as a debug or experimental surface, but it is not the first-stage primary control entry.
 
 ## Chat Rules
 
@@ -406,10 +407,10 @@ Rules:
 
 For the current stage of the project:
 
-- Treat ToyLink AI as a local control runtime first.
-- External AI clients are expected to control the app through local MCP.
-- Do not expand the product into a full chat platform before the pairing, verification, and MCP control loop is stable.
-- Favor template selection, device verification, and safety visibility over conversational polish.
+- Treat ToyLink AI as a hardware bridge first, not a chat replacement.
+- The first supported user journey is Claude original-conversation control through a remote MCP-compatible bridge path.
+- Do not expand the product into a full in-app chat platform before the pairing, verification, connector setup, and remote control loop is stable.
+- Favor template selection, device verification, Claude connector setup, and safety visibility over conversational polish.
 
 ## Storage Rules
 
