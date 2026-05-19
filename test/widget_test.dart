@@ -9,6 +9,7 @@ import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/domain/services/mcp_service.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/adapter_verification_controller.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/device_manager_controller.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
@@ -122,6 +123,93 @@ void main() {
     );
 
     expect(find.text(_kGoReverify), findsOneWidget);
+  });
+
+  testWidgets(
+    'mcp page explains that MCP is the last step after verification',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultHardwareRepositoryProvider);
+            }),
+            mcpServiceProvider.overrideWith((ref) {
+              return ref.watch(defaultMcpServiceProvider);
+            }),
+            adapterManifestRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultAdapterManifestRepositoryProvider);
+            }),
+            activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+            }),
+            verifiedAdapterRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+            }),
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.verified,
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterDisplayName: '通用三通道模板',
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: McpPage()),
+        ),
+      );
+
+      expect(find.text(_kDeviceVerifiedTitle), findsOneWidget);
+      expect(
+        find.textContaining(_kOnlyStartMcpKeyLine),
+        findsAtLeastNWidgets(1),
+      );
+      expect(
+        find.textContaining(_kAiControlWaitsForMcpKeyLine),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('mcp page shows AI control ready after MCP starts', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    expect(find.text(_kAiControlReadyTitle), findsOneWidget);
+    expect(find.text(_kAiControlReadyChip), findsOneWidget);
+    expect(find.text(_kAiControlReadyHint), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -521,3 +609,33 @@ const String _kNeedsReverifyExplanation =
     '\u8fd9\u4efd\u9002\u914d\u5668\u4e4b\u524d\u53ef\u7528\uff0c\u4f46\u56e0\u4e3a\u6a21\u677f\u5185\u5bb9\u6216\u9a8c\u8bc1\u6761\u4ef6\u53d8\u5316\uff0c\u73b0\u5728\u9700\u8981\u91cd\u65b0\u786e\u8ba4\u4e00\u6b21\u3002\u539f\u56e0\uff1a\u9002\u914d\u5668\u5185\u5bb9\u53d1\u751f\u53d8\u5316\u3002';
 const String _kNeedsReverifyHint =
     '\u5148\u91cd\u65b0\u9a8c\u8bc1\uff1b\u5982\u679c\u53cd\u5e94\u548c\u4e4b\u524d\u4e0d\u4e00\u81f4\uff0c\u518d\u6539\u7528\u63a8\u8350\u6a21\u677f\u3002';
+
+class _RunningMockMcpService implements McpService {
+  @override
+  bool get isRunning => true;
+
+  @override
+  McpEndpointInfo? get endpointInfo =>
+      const McpEndpointInfo(host: '127.0.0.1', port: 8765, path: '/mcp');
+
+  @override
+  Future<void> registerToolsForActiveDevice() async {}
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<void> stop() async {}
+}
+
+const String _kDeviceVerifiedTitle =
+    '\u5f53\u524d\u8bbe\u5907\u5df2\u7ecf\u5b8c\u6210\u9a8c\u8bc1';
+const String _kOnlyStartMcpKeyLine =
+    '\u73b0\u5728\u53ea\u5dee\u542f\u52a8 MCP \u670d\u52a1';
+const String _kAiControlWaitsForMcpKeyLine =
+    '\u542f\u52a8\u540e\uff0cAI \u624d\u80fd\u901a\u8fc7\u672c\u673a\u5de5\u5177\u63a7\u5236\u8bbe\u5907';
+const String _kAiControlReadyTitle =
+    '\u73b0\u5728\u53ef\u4ee5\u8ba9 AI \u63a7\u5236\u5f53\u524d\u8bbe\u5907';
+const String _kAiControlReadyChip = 'AI \u63a7\u5236\u5df2\u53ef\u7528';
+const String _kAiControlReadyHint =
+    '\u73b0\u5728\u5df2\u7ecf\u53ef\u4ee5\u8ba9 AI \u63a7\u5236\u8bbe\u5907\u4e86\u3002\u5982\u679c\u4f60\u8fd8\u4e0d\u653e\u5fc3\uff0c\u4e5f\u53ef\u4ee5\u5148\u8fdb\u5165\u624b\u52a8\u63a7\u5236\u518d\u786e\u8ba4\u4e00\u6b21\u3002';
