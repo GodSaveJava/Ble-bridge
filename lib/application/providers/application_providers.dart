@@ -14,6 +14,7 @@ import '../use_cases/manage_active_device_use_case.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
+import '../../domain/repositories/claude_connector_onboarding_repository.dart';
 import '../../domain/entities/active_adapter_binding.dart';
 import '../../domain/entities/adapter_manifest.dart';
 import '../../domain/entities/device_status.dart';
@@ -71,6 +72,13 @@ final backgroundStabilityChecklistRepositoryProvider =
     Provider<BackgroundStabilityChecklistRepository>((_) {
       throw UnimplementedError(
         'Provide a concrete BackgroundStabilityChecklistRepository in infrastructure.',
+      );
+    });
+
+final claudeConnectorOnboardingRepositoryProvider =
+    Provider<ClaudeConnectorOnboardingRepository>((_) {
+      throw UnimplementedError(
+        'Provide a concrete ClaudeConnectorOnboardingRepository in infrastructure.',
       );
     });
 

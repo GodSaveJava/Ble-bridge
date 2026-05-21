@@ -7,9 +7,11 @@ import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/app.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
+import 'package:toylink_ai/domain/entities/claude_connector_onboarding_record.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
+import 'package:toylink_ai/domain/repositories/claude_connector_onboarding_repository.dart';
 import 'package:toylink_ai/domain/services/mcp_service.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/features/device_manager/presentation/controllers/adapter_verification_controller.dart';
@@ -42,6 +44,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
         ],
         child: const ToyLinkApp(),
       ),
@@ -74,6 +79,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           remoteBridgeServiceProvider.overrideWith(
             (_) => MockRemoteBridgeService(),
           ),
@@ -114,6 +122,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           remoteBridgeServiceProvider.overrideWith(
             (_) => MockRemoteBridgeService(),
           ),
@@ -156,6 +167,9 @@ void main() {
             verifiedAdapterRepositoryProvider.overrideWith((ref) {
               return ref.watch(defaultVerifiedAdapterRepositoryProvider);
             }),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+            ),
             remoteBridgeServiceProvider.overrideWith(
               (_) => MockRemoteBridgeService(),
             ),
@@ -205,6 +219,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           remoteBridgeServiceProvider.overrideWith(
             (_) => _ReadyRemoteBridgeService(),
           ),
@@ -247,6 +264,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           remoteBridgeServiceProvider.overrideWith(
             (_) => MockRemoteBridgeService(),
           ),
@@ -298,6 +318,9 @@ void main() {
           verifiedAdapterRepositoryProvider.overrideWith((ref) {
             return ref.watch(defaultVerifiedAdapterRepositoryProvider);
           }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           remoteBridgeServiceProvider.overrideWith(
             (_) => _ReadyRemoteBridgeService(),
           ),
@@ -340,6 +363,9 @@ void main() {
           remoteBridgeServiceProvider.overrideWith(
             (_) => MockRemoteBridgeService(),
           ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           activeDeviceAdapterReadinessProvider.overrideWith(
             (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
               ActiveDeviceAdapterReadiness(
@@ -365,6 +391,9 @@ void main() {
         overrides: [
           remoteBridgeServiceProvider.overrideWith(
             (_) => _ReadyRemoteBridgeService(),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
           ),
           activeDeviceAdapterReadinessProvider.overrideWith(
             (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
@@ -400,6 +429,9 @@ void main() {
           remoteBridgeServiceProvider.overrideWith(
             (_) => _ReadyRemoteBridgeService(),
           ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
           activeDeviceAdapterReadinessProvider.overrideWith(
             (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
               ActiveDeviceAdapterReadiness(
@@ -433,6 +465,64 @@ void main() {
     await tester.tap(find.text(_kFinishedClaudeSetup));
     await tester.pumpAndSettle();
     expect(find.text(_kClaudeSetupCompleteTitle), findsOneWidget);
+  });
+
+  testWidgets('mcp page shows completed Claude setup label for current device', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(
+              record: ClaudeConnectorOnboardingRecord(
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                completedAt: DateTime(2026),
+              ),
+            ),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kClaudeRemoteAccess),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kClaudeSetupCompletedChip), findsOneWidget);
+    expect(find.text(_kViewClaudeConnectorInfo), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -882,6 +972,8 @@ const String _kCopyConnectorToken = '复制接入令牌';
 const String _kTroubleshootingTitle = '常见问题排查';
 const String _kFinishedClaudeSetup = '我已完成 Claude 配置';
 const String _kClaudeSetupCompleteTitle = 'Claude 接入已准备完成';
+const String _kClaudeSetupCompletedChip = 'Claude 已完成接入';
+const String _kViewClaudeConnectorInfo = '查看接入信息';
 
 class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
@@ -917,5 +1009,27 @@ class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
   Stream<RemoteBridgeSession> watchSession() async* {
     yield currentSession;
+  }
+}
+
+class _InMemoryClaudeConnectorOnboardingRepository
+    implements ClaudeConnectorOnboardingRepository {
+  _InMemoryClaudeConnectorOnboardingRepository({
+    ClaudeConnectorOnboardingRecord? record,
+  }) : _record = record;
+
+  ClaudeConnectorOnboardingRecord? _record;
+
+  @override
+  Future<ClaudeConnectorOnboardingRecord?> load() async => _record;
+
+  @override
+  Future<void> reset() async {
+    _record = null;
+  }
+
+  @override
+  Future<void> save(ClaudeConnectorOnboardingRecord record) async {
+    _record = record;
   }
 }

@@ -6,6 +6,7 @@ import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../shared/widgets/toylink_background.dart';
+import '../controllers/claude_connector_onboarding_controller.dart';
 import '../controllers/mcp_service_controller.dart';
 import '../controllers/remote_bridge_session_controller.dart';
 
@@ -19,6 +20,9 @@ class McpPage extends ConsumerWidget {
     );
     final RemoteBridgeSessionState bridgeState = ref.watch(
       remoteBridgeSessionControllerProvider,
+    );
+    final ClaudeConnectorOnboardingState onboardingState = ref.watch(
+      claudeConnectorOnboardingControllerProvider,
     );
     final AsyncValue<ActiveDeviceAdapterReadiness> readinessAsync = ref.watch(
       activeDeviceAdapterReadinessProvider,
@@ -50,6 +54,11 @@ class McpPage extends ConsumerWidget {
         mcpRunning: localMcpState.isRunning,
       ),
       orElse: () => const <_McpAction>[],
+    );
+    final bool claudeSetupCompleted = readinessAsync.maybeWhen(
+      data: (ActiveDeviceAdapterReadiness readiness) =>
+          onboardingState.matchesReadiness(readiness),
+      orElse: () => false,
     );
 
     return Scaffold(
@@ -185,7 +194,9 @@ class McpPage extends ConsumerWidget {
                         _StatusChip(label: _bridgeStatusLabel(bridgeState.status)),
                         _StatusChip(
                           label: bridgeState.canOnboardClaude
-                              ? 'Claude 可接入'
+                              ? claudeSetupCompleted
+                                    ? 'Claude 已完成接入'
+                                    : 'Claude 可接入'
                               : '等待生成接入信息',
                         ),
                       ],
@@ -257,7 +268,11 @@ class McpPage extends ConsumerWidget {
                         if (bridgeState.canOnboardClaude)
                           OutlinedButton(
                             onPressed: () => context.push('/claude-onboarding'),
-                            child: const Text('去配置 Claude'),
+                            child: Text(
+                              claudeSetupCompleted
+                                  ? '查看接入信息'
+                                  : '去配置 Claude',
+                            ),
                           ),
                       ],
                     ),

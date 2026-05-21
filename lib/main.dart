@@ -63,6 +63,11 @@ void main() {
             defaultBackgroundStabilityChecklistRepositoryProvider,
           );
         }),
+        claudeConnectorOnboardingRepositoryProvider.overrideWith((ref) {
+          return ref.watch(
+            defaultClaudeConnectorOnboardingRepositoryProvider,
+          );
+        }),
       ],
       child: const ToyLinkApp(),
     ),

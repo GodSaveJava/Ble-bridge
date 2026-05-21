@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../shared/widgets/toylink_background.dart';
+import '../controllers/claude_connector_onboarding_controller.dart';
 import '../controllers/remote_bridge_session_controller.dart';
 
 class ClaudeOnboardingPage extends ConsumerStatefulWidget {
@@ -17,7 +18,6 @@ class ClaudeOnboardingPage extends ConsumerStatefulWidget {
 }
 
 class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
-  bool _completedClaudeSetup = false;
   String? _copyFeedback;
 
   @override
@@ -27,6 +27,9 @@ class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
     );
     final RemoteBridgeSessionState bridgeState = ref.watch(
       remoteBridgeSessionControllerProvider,
+    );
+    final ClaudeConnectorOnboardingState onboardingState = ref.watch(
+      claudeConnectorOnboardingControllerProvider,
     );
 
     final ActiveDeviceAdapterReadiness? readiness = switch (readinessAsync) {
@@ -69,7 +72,8 @@ class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
               _ReadyStateContent(
                 readiness: readiness!,
                 bridgeState: bridgeState,
-                completedClaudeSetup: _completedClaudeSetup,
+                completedClaudeSetup:
+                    onboardingState.matchesReadiness(readiness),
                 copyFeedback: _copyFeedback,
                 onCopyConnectorUrl: () => _copyText(
                   value: bridgeState.connectorUrl ?? '',
@@ -79,11 +83,9 @@ class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
                   value: bridgeState.connectorToken ?? '',
                   successMessage: '接入令牌已复制到剪贴板',
                 ),
-                onCompleteSetup: () {
-                  setState(() {
-                    _completedClaudeSetup = true;
-                  });
-                },
+                onCompleteSetup: () => ref
+                    .read(claudeConnectorOnboardingControllerProvider.notifier)
+                    .markCompleted(readiness),
               ),
           ],
         ),
