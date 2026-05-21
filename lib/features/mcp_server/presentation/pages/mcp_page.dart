@@ -36,7 +36,7 @@ class McpPage extends ConsumerWidget {
     final String controlSubtitle = readinessAsync.maybeWhen(
       data: (ActiveDeviceAdapterReadiness readiness) =>
           _mcpControlSubtitle(readiness, localMcpState.isRunning),
-      orElse: () => '正在同步设备、适配器和验证结果，请稍候。',
+      orElse: () => '正在同步设备、适配器和验证结果，请稍等。',
     );
     final String nextStepText = readinessAsync.maybeWhen(
       data: (ActiveDeviceAdapterReadiness readiness) =>
@@ -100,16 +100,20 @@ class McpPage extends ConsumerWidget {
                     Row(
                       children: <Widget>[
                         FilledButton(
-                          onPressed: localMcpState.isBusy || localMcpState.isRunning
+                          onPressed:
+                              localMcpState.isBusy || localMcpState.isRunning
                               ? null
                               : () => ref
                                     .read(mcpServiceControllerProvider.notifier)
                                     .start(),
-                          child: Text(localMcpState.isBusy ? '处理中...' : '启动 MCP'),
+                          child: Text(
+                            localMcpState.isBusy ? '处理中...' : '启动 MCP',
+                          ),
                         ),
                         const SizedBox(width: 12),
                         OutlinedButton(
-                          onPressed: localMcpState.isBusy || !localMcpState.isRunning
+                          onPressed:
+                              localMcpState.isBusy || !localMcpState.isRunning
                               ? null
                               : () => ref
                                     .read(mcpServiceControllerProvider.notifier)
@@ -185,7 +189,9 @@ class McpPage extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    const Text('这里管理给 Claude 原对话使用的远程桥接会话。聊天和记忆仍然留在 Claude，那边只通过这里拿到控制能力。'),
+                    const Text(
+                      '这里管理给 Claude 原对话使用的远程桥接会话。聊天和记忆仍然留在 Claude，那边只通过这里拿到控制能力。',
+                    ),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -194,9 +200,9 @@ class McpPage extends ConsumerWidget {
                         _StatusChip(label: _bridgeStatusLabel(bridgeState.status)),
                         _StatusChip(
                           label: bridgeState.canOnboardClaude
-                              ? claudeSetupCompleted
+                              ? (claudeSetupCompleted
                                     ? 'Claude 已完成接入'
-                                    : 'Claude 可接入'
+                                    : 'Claude 可接入')
                               : '等待生成接入信息',
                         ),
                       ],
@@ -239,7 +245,9 @@ class McpPage extends ConsumerWidget {
                                           .notifier,
                                     )
                                     .startSession(),
-                          child: Text(bridgeState.isBusy ? '处理中...' : '启动桥接会话'),
+                          child: Text(
+                            bridgeState.isBusy ? '处理中...' : '启动桥接会话',
+                          ),
                         ),
                         OutlinedButton(
                           onPressed: bridgeState.isBusy
@@ -251,6 +259,25 @@ class McpPage extends ConsumerWidget {
                                     )
                                     .refreshConnector(),
                           child: const Text('刷新接入信息'),
+                        ),
+                        OutlinedButton(
+                          onPressed: bridgeState.isBusy
+                              ? null
+                              : () => ref
+                                    .read(
+                                      remoteBridgeSessionControllerProvider
+                                          .notifier,
+                                    )
+                                    .refreshConnector()
+                                    .then((_) {
+                                      return ref
+                                          .read(
+                                            claudeConnectorOnboardingControllerProvider
+                                                .notifier,
+                                          )
+                                          .reset();
+                                    }),
+                          child: const Text('重新生成接入信息'),
                         ),
                         OutlinedButton(
                           onPressed: bridgeState.isBusy ||
@@ -276,6 +303,23 @@ class McpPage extends ConsumerWidget {
                           ),
                       ],
                     ),
+                    if (claudeSetupCompleted) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton(
+                          onPressed: onboardingState.isSaving
+                              ? null
+                              : () => ref
+                                    .read(
+                                      claudeConnectorOnboardingControllerProvider
+                                          .notifier,
+                                    )
+                                    .reset(),
+                          child: const Text('重置 Claude 接入状态'),
+                        ),
+                      ),
+                    ],
                     if (bridgeState.errorMessage != null) ...<Widget>[
                       const SizedBox(height: 12),
                       Text(
@@ -482,7 +526,7 @@ String _mcpControlSubtitle(
     case ActiveDeviceAdapterReadinessState.verified:
       return mcpRunning
           ? '$adapterName 已验证通过，现在 AI 可以通过本机 MCP 工具调用控制能力。'
-          : '$adapterName 已验证通过，现在只差启动 MCP 服务。';
+          : '$adapterName 已验证通过，现在只差启动 MCP 服务。启动后，AI 才能通过本机工具控制设备。';
     case ActiveDeviceAdapterReadinessState.revoked:
       return '$adapterName 的本机验证已撤销，除了 stop_all 之外的 AI 控制请求都会被拒绝。';
     case ActiveDeviceAdapterReadinessState.needsReverify:
@@ -510,7 +554,7 @@ String _mcpNextStepText(
     case ActiveDeviceAdapterReadinessState.verified:
       return mcpRunning
           ? '现在已经可以让 AI 控制设备了。如果你还不放心，也可以先进入手动控制再确认一次。'
-          : '当前设备已经完成验证，现在只差启动 MCP 服务。启动后，AI 才能通过本机工具控制设备。';
+          : '现在只差启动 MCP 服务';
     case ActiveDeviceAdapterReadinessState.revoked:
       return '请重新完成验证。撤销验证后，系统会继续拦截 AI 控制请求。';
     case ActiveDeviceAdapterReadinessState.needsReverify:
@@ -547,7 +591,7 @@ String _bridgeGuidanceText(RemoteBridgeSessionState state) {
     case RemoteBridgeSessionStatus.connecting:
       return '桥接正在建立会话，请稍等片刻，不要重复点击。';
     case RemoteBridgeSessionStatus.ready:
-      return '接入信息已经准备好。下一步可以复制这些信息，并按教程去 Claude 完成一次 connector 配置。';
+      return '接入信息已经准备好了。下一步可以复制这些信息，并按教程去 Claude 完成一次 connector 配置。';
     case RemoteBridgeSessionStatus.busy:
       return '桥接正在刷新接入信息，请稍等当前操作完成。';
     case RemoteBridgeSessionStatus.error:

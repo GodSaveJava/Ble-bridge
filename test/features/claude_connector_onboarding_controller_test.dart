@@ -62,6 +62,38 @@ void main() {
         isTrue,
       );
     });
+
+    test('reset clears saved onboarding record', () async {
+      final _InMemoryClaudeConnectorOnboardingRepository repository =
+          _InMemoryClaudeConnectorOnboardingRepository();
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => repository,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(claudeConnectorOnboardingControllerProvider.notifier)
+          .markCompleted(
+            const ActiveDeviceAdapterReadiness(
+              state: ActiveDeviceAdapterReadinessState.verified,
+              deviceId: 'device-a',
+              adapterId: 'generic.triple_channel.v1',
+            ),
+          );
+      await container
+          .read(claudeConnectorOnboardingControllerProvider.notifier)
+          .reset();
+
+      final ClaudeConnectorOnboardingState state = container.read(
+        claudeConnectorOnboardingControllerProvider,
+      );
+      expect(state.record, isNull);
+      expect(repository.record, isNull);
+    });
   });
 }
 

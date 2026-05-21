@@ -523,6 +523,72 @@ void main() {
 
     expect(find.text(_kClaudeSetupCompletedChip), findsOneWidget);
     expect(find.text(_kViewClaudeConnectorInfo), findsOneWidget);
+    expect(find.text(_kResetClaudeSetup), findsOneWidget);
+  });
+
+  testWidgets('mcp page reset Claude onboarding returns to configure state', (
+    WidgetTester tester,
+  ) async {
+    final _InMemoryClaudeConnectorOnboardingRepository repository =
+        _InMemoryClaudeConnectorOnboardingRepository(
+          record: ClaudeConnectorOnboardingRecord(
+            deviceId: 'device-a',
+            adapterId: 'generic.triple_channel.v1',
+            completedAt: DateTime(2026),
+          ),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => repository,
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kClaudeRemoteAccess),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(_kResetClaudeSetup));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kClaudeSetupCompletedChip), findsNothing);
+    expect(find.text(_kGoConfigureClaude), findsOneWidget);
+    expect(repository.record, isNull);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -974,6 +1040,7 @@ const String _kFinishedClaudeSetup = '我已完成 Claude 配置';
 const String _kClaudeSetupCompleteTitle = 'Claude 接入已准备完成';
 const String _kClaudeSetupCompletedChip = 'Claude 已完成接入';
 const String _kViewClaudeConnectorInfo = '查看接入信息';
+const String _kResetClaudeSetup = '重置 Claude 接入状态';
 
 class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
@@ -1019,6 +1086,8 @@ class _InMemoryClaudeConnectorOnboardingRepository
   }) : _record = record;
 
   ClaudeConnectorOnboardingRecord? _record;
+
+  ClaudeConnectorOnboardingRecord? get record => _record;
 
   @override
   Future<ClaudeConnectorOnboardingRecord?> load() async => _record;

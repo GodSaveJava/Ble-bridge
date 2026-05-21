@@ -59,7 +59,7 @@ class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '这个向导只负责把当前手机里的 ToyLink 能力接给 Claude。你原来在 Claude 里的对话、记忆和相处方式都继续保留在那边，不会被替换成新的聊天。',
+                      '这个向导只负责把当前手机里的 ToyLink 控制能力接给 Claude。你原来在 Claude 里的对话、记忆和互动关系都会继续保留，不会被替换成新的聊天。',
                     ),
                   ],
                 ),
@@ -74,6 +74,7 @@ class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
                 bridgeState: bridgeState,
                 completedClaudeSetup:
                     onboardingState.matchesReadiness(readiness),
+                isSavingOnboarding: onboardingState.isSaving,
                 copyFeedback: _copyFeedback,
                 onCopyConnectorUrl: () => _copyText(
                   value: bridgeState.connectorUrl ?? '',
@@ -86,6 +87,20 @@ class _ClaudeOnboardingPageState extends ConsumerState<ClaudeOnboardingPage> {
                 onCompleteSetup: () => ref
                     .read(claudeConnectorOnboardingControllerProvider.notifier)
                     .markCompleted(readiness),
+                onResetSetup: () => ref
+                    .read(claudeConnectorOnboardingControllerProvider.notifier)
+                    .reset(),
+                onRegenerateConnector: () => ref
+                    .read(remoteBridgeSessionControllerProvider.notifier)
+                    .refreshConnector()
+                    .then((_) {
+                      return ref
+                          .read(
+                            claudeConnectorOnboardingControllerProvider
+                                .notifier,
+                          )
+                          .reset();
+                    }),
               ),
           ],
         ),
@@ -118,19 +133,25 @@ class _ReadyStateContent extends StatelessWidget {
     required this.readiness,
     required this.bridgeState,
     required this.completedClaudeSetup,
+    required this.isSavingOnboarding,
     required this.copyFeedback,
     required this.onCopyConnectorUrl,
     required this.onCopyConnectorToken,
     required this.onCompleteSetup,
+    required this.onResetSetup,
+    required this.onRegenerateConnector,
   });
 
   final ActiveDeviceAdapterReadiness readiness;
   final RemoteBridgeSessionState bridgeState;
   final bool completedClaudeSetup;
+  final bool isSavingOnboarding;
   final String? copyFeedback;
   final VoidCallback onCopyConnectorUrl;
   final VoidCallback onCopyConnectorToken;
   final VoidCallback onCompleteSetup;
+  final VoidCallback onResetSetup;
+  final VoidCallback onRegenerateConnector;
 
   @override
   Widget build(BuildContext context) {
@@ -152,19 +173,19 @@ class _ReadyStateContent extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   completedClaudeSetup
-                      ? '如果 Claude 已经成功保存 connector，现在就可以回到你原来的对话里，用自然的话确认它是否能开始控制设备。'
-                      : '$adapterName 已经完成本机验证，桥接会话也已经准备好。下面按步骤去 Claude 添加 connector，之后就可以回到原来的对话里继续互动。',
+                      ? '如果 Claude 那边已经保存好 connector，现在就可以回到原来的对话里，用自然的话确认它是否已经能开始控制设备。'
+                      : '$adapterName 已完成本机验证，桥接会话也已经准备好。下面按步骤去 Claude 添加 connector，之后就可以回到原来的对话里继续互动。',
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
-        _StepCard(
+        const _StepCard(
           title: '第 1 步：确认本地准备',
           body:
               '确认当前设备已连接、适配器已绑定、低强度验证已通过。只要这三项任意一项失效，Claude 的控制请求就会被本地安全规则拦住。',
-          footerChips: const <String>[
+          footerChips: <String>[
             '设备已连接',
             '适配器已验证',
             '桥接已就绪',
@@ -174,21 +195,15 @@ class _ReadyStateContent extends StatelessWidget {
         _StepCard(
           title: '第 2 步：记下接入信息',
           body:
-              '在 Claude 添加 connector 时，需要用到下面这两项。地址决定 Claude 去哪里找 ToyLink，令牌用来证明这次接入属于你。',
+              '在 Claude 添加 connector 时，需要用到下面这两项。地址决定 Claude 去哪里找到 ToyLink，令牌用来证明这次接入属于你。',
           extra: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               SelectableText('接入地址：${bridgeState.connectorUrl}'),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: <Widget>[
-                  OutlinedButton(
-                    onPressed: onCopyConnectorUrl,
-                    child: const Text('复制接入地址'),
-                  ),
-                ],
+              OutlinedButton(
+                onPressed: onCopyConnectorUrl,
+                child: const Text('复制接入地址'),
               ),
               const SizedBox(height: 12),
               const Text('接入令牌：已生成'),
@@ -198,15 +213,9 @@ class _ReadyStateContent extends StatelessWidget {
                 Text('当前令牌：${bridgeState.maskedToken}'),
               ],
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: <Widget>[
-                  OutlinedButton(
-                    onPressed: onCopyConnectorToken,
-                    child: const Text('复制接入令牌'),
-                  ),
-                ],
+              OutlinedButton(
+                onPressed: onCopyConnectorToken,
+                child: const Text('复制接入令牌'),
               ),
               if (copyFeedback != null && copyFeedback!.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 8),
@@ -222,23 +231,22 @@ class _ReadyStateContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _StepCard(
+        const _StepCard(
           title: '第 3 步：去 Claude 添加 connector',
           body:
-              '打开 claude.ai 的 connector 配置页，新增一个 Remote MCP connector，把上面的接入地址和令牌填进去。完成保存后，Claude 才能在原对话里调用 ToyLink 的控制工具。',
+              '打开 claude.ai 的 connector 配置页，新建一个 Remote MCP connector，把上面的接入地址和令牌填进去。保存完成后，Claude 才能在原对话里调用 ToyLink 的控制工具。',
         ),
         const SizedBox(height: 12),
-        _StepCard(
+        const _StepCard(
           title: '第 4 步：回到原对话测试',
           body:
-              '回到你原来的 Claude 对话里，用自然的话确认它是否已经能控制设备。例如：“你现在可以控制我的设备了吗？” 如果它能正常调用工具，再开始正式互动。',
+              '回到你原来的 Claude 对话里，用自然的话确认它是否已经能控制设备。例如：“你现在可以控制我的设备了吗？”如果它能正常调用工具，再开始正式互动。',
         ),
         const SizedBox(height: 12),
-        _StepCard(
+        const _StepCard(
           title: '常见问题排查',
-          body:
-              '如果 Claude 侧没有成功连上，先不要急着重配。先按下面的顺序检查，通常能比较快定位问题。',
-          extra: const Column(
+          body: '如果 Claude 侧没有成功连上，先不要急着重配。先按下面的顺序检查，通常能比较快定位问题。',
+          extra: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text('1. 看不到 connector：先确认你是在 claude.ai 的 connector 配置页，不是普通聊天页。'),
@@ -247,7 +255,7 @@ class _ReadyStateContent extends StatelessWidget {
               SizedBox(height: 6),
               Text('3. 手机没反应：先确认 ToyLink 没被系统杀后台，设备也没有断连。'),
               SizedBox(height: 6),
-              Text('4. 仍然失败：先停止桥接会话，再重新启动一次，然后重新复制地址和令牌。'),
+              Text('4. 仍然失败：先重新生成接入信息，再重新复制地址和令牌。'),
             ],
           ),
         ),
@@ -263,16 +271,28 @@ class _ReadyStateContent extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                const Text('如果你已经在 Claude 那边保存好了 connector，就点下面这个按钮，把当前流程标记为已完成。'),
+                const Text(
+                  '如果你已经在 Claude 那边保存好了 connector，就点下面这个按钮，把当前流程标记为已完成。',
+                ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: <Widget>[
                     FilledButton(
-                      onPressed: onCompleteSetup,
+                      onPressed: isSavingOnboarding ? null : onCompleteSetup,
                       child: const Text('我已完成 Claude 配置'),
                     ),
+                    OutlinedButton(
+                      onPressed:
+                          bridgeState.isBusy ? null : onRegenerateConnector,
+                      child: const Text('重新生成接入信息'),
+                    ),
+                    if (completedClaudeSetup)
+                      OutlinedButton(
+                        onPressed: isSavingOnboarding ? null : onResetSetup,
+                        child: const Text('重置 Claude 接入状态'),
+                      ),
                     OutlinedButton(
                       onPressed: () => context.pop(),
                       child: const Text('返回 MCP 页面'),
