@@ -6,6 +6,7 @@ import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../shared/widgets/toylink_background.dart';
+import '../controllers/claude_connector_health_controller.dart';
 import '../controllers/claude_connector_onboarding_controller.dart';
 import '../controllers/mcp_service_controller.dart';
 import '../controllers/remote_bridge_session_controller.dart';
@@ -23,6 +24,9 @@ class McpPage extends ConsumerWidget {
     );
     final ClaudeConnectorOnboardingState onboardingState = ref.watch(
       claudeConnectorOnboardingControllerProvider,
+    );
+    final AsyncValue<ClaudeConnectorHealthCheck> claudeHealthAsync = ref.watch(
+      claudeConnectorHealthCheckProvider,
     );
     final AsyncValue<ActiveDeviceAdapterReadiness> readinessAsync = ref.watch(
       activeDeviceAdapterReadinessProvider,
@@ -333,6 +337,55 @@ class McpPage extends ConsumerWidget {
                 ),
               ),
             ),
+            if (claudeHealthAsync case AsyncData<ClaudeConnectorHealthCheck>(:final value))
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Claude 接入自检',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      _StatusChip(label: _claudeHealthStatusLabel(value.status)),
+                      const SizedBox(height: 12),
+                      Text(
+                        value.title,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(value.summary),
+                      const SizedBox(height: 12),
+                      _HealthRow(
+                        label: '设备验证通过',
+                        passed: value.deviceReady,
+                      ),
+                      _HealthRow(
+                        label: '桥接会话已就绪',
+                        passed: value.bridgeReady,
+                      ),
+                      _HealthRow(
+                        label: '接入信息已生成',
+                        passed: value.connectorReady,
+                      ),
+                      _HealthRow(
+                        label: 'Claude 向导已完成',
+                        passed: value.onboardingCompleted,
+                      ),
+                      if (value.actionLabel != null &&
+                          value.actionRoute != null) ...<Widget>[
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () => context.push(value.actionRoute!),
+                          child: Text(value.actionLabel!),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             if (localMcpState.errorMessage != null) ...<Widget>[
               const SizedBox(height: 12),
               Card(
@@ -370,6 +423,34 @@ class _StatusChip extends StatelessWidget {
     return Chip(
       label: Text(label),
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+    );
+  }
+}
+
+class _HealthRow extends StatelessWidget {
+  const _HealthRow({required this.label, required this.passed});
+
+  final String label;
+  final bool passed;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = passed
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.error;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            passed ? Icons.check_circle : Icons.cancel,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+        ],
+      ),
     );
   }
 }
@@ -581,6 +662,14 @@ String _bridgeStatusLabel(RemoteBridgeSessionStatus status) {
     RemoteBridgeSessionStatus.ready => '桥接已就绪',
     RemoteBridgeSessionStatus.busy => '桥接处理中',
     RemoteBridgeSessionStatus.error => '桥接异常',
+  };
+}
+
+String _claudeHealthStatusLabel(ClaudeConnectorHealthStatus status) {
+  return switch (status) {
+    ClaudeConnectorHealthStatus.blocked => '自检未通过',
+    ClaudeConnectorHealthStatus.pending => '还需处理',
+    ClaudeConnectorHealthStatus.ready => '自检通过',
   };
 }
 

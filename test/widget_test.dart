@@ -352,6 +352,8 @@ void main() {
     expect(find.text(_kConnectorTokenReady), findsOneWidget);
     expect(find.text(_kRefreshConnectorInfo), findsOneWidget);
     expect(find.text(_kGoConfigureClaude), findsOneWidget);
+    expect(find.text(_kClaudeHealthCheckTitle), findsOneWidget);
+    expect(find.text(_kClaudeHealthPendingTitle), findsOneWidget);
   });
 
   testWidgets('claude onboarding page blocks entry when local setup is incomplete', (
@@ -524,6 +526,8 @@ void main() {
     expect(find.text(_kClaudeSetupCompletedChip), findsOneWidget);
     expect(find.text(_kViewClaudeConnectorInfo), findsOneWidget);
     expect(find.text(_kResetClaudeSetup), findsOneWidget);
+    expect(find.text(_kClaudeHealthReadyTitle), findsOneWidget);
+    expect(find.text(_kClaudeHealthReadySummary), findsOneWidget);
   });
 
   testWidgets('mcp page reset Claude onboarding returns to configure state', (
@@ -1041,6 +1045,10 @@ const String _kClaudeSetupCompleteTitle = 'Claude 接入已准备完成';
 const String _kClaudeSetupCompletedChip = 'Claude 已完成接入';
 const String _kViewClaudeConnectorInfo = '查看接入信息';
 const String _kResetClaudeSetup = '重置 Claude 接入状态';
+const String _kClaudeHealthCheckTitle = 'Claude 接入自检';
+const String _kClaudeHealthPendingTitle = '还差 Claude 侧配置';
+const String _kClaudeHealthReadyTitle = 'Claude 接入健康';
+const String _kClaudeHealthReadySummary = '现在可以回到 Claude 原对话继续使用。';
 
 class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
