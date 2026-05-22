@@ -13,6 +13,7 @@ import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 import '../../domain/services/remote_bridge_service.dart';
 import '../ble/sosexy_hardware_repository.dart';
+import '../bridge/http_remote_bridge_service.dart';
 import '../foreground/android_foreground_connection_service.dart';
 import '../mcp/local_mcp_http_service.dart';
 import '../mock/mock_foreground_connection_service.dart';
@@ -47,6 +48,33 @@ final defaultMcpServiceProvider = Provider<McpService>((ref) {
 });
 
 final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
+  const bool useRealRemoteBridge = bool.fromEnvironment(
+    'TOYLINK_USE_REAL_REMOTE_BRIDGE',
+    defaultValue: false,
+  );
+  const String baseUrl = String.fromEnvironment(
+    'TOYLINK_REMOTE_BRIDGE_BASE_URL',
+    defaultValue: '',
+  );
+  const String clientId = String.fromEnvironment(
+    'TOYLINK_REMOTE_BRIDGE_CLIENT_ID',
+    defaultValue: 'toylink-mobile-dev',
+  );
+  const String clientToken = String.fromEnvironment(
+    'TOYLINK_REMOTE_BRIDGE_CLIENT_TOKEN',
+    defaultValue: '',
+  );
+
+  if (useRealRemoteBridge && baseUrl.isNotEmpty) {
+    final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+      baseUrl: Uri.parse(baseUrl),
+      clientId: clientId,
+      clientToken: clientToken.isEmpty ? null : clientToken,
+    );
+    ref.onDispose(service.dispose);
+    return service;
+  }
+
   final MockRemoteBridgeService service = MockRemoteBridgeService();
   ref.onDispose(service.dispose);
   return service;
