@@ -21,6 +21,7 @@ import '../../domain/entities/device_status.dart';
 import '../../domain/entities/toy_device_info.dart';
 import '../../domain/entities/verified_adapter_record.dart';
 import '../../domain/repositories/hardware_repository.dart';
+import '../../domain/repositories/remote_bridge_config_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
 import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/adapter_import_service.dart';
@@ -28,6 +29,7 @@ import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 import '../../domain/services/remote_bridge_service.dart';
 import '../use_cases/manage_remote_bridge_session_use_case.dart';
+import '../use_cases/manage_remote_bridge_config_use_case.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
   throw UnimplementedError(
@@ -44,6 +46,13 @@ final remoteBridgeServiceProvider = Provider<RemoteBridgeService>((_) {
     'Provide a concrete RemoteBridgeService in infrastructure.',
   );
 });
+
+final remoteBridgeConfigRepositoryProvider =
+    Provider<RemoteBridgeConfigRepository>((_) {
+      throw UnimplementedError(
+        'Provide a concrete RemoteBridgeConfigRepository in infrastructure.',
+      );
+    });
 
 final adapterManifestRepositoryProvider = Provider<AdapterManifestRepository>((
   _,
@@ -286,6 +295,13 @@ final manageRemoteBridgeSessionUseCaseProvider =
     Provider<ManageRemoteBridgeSessionUseCase>((ref) {
       return ManageRemoteBridgeSessionUseCase(
         remoteBridgeService: ref.watch(remoteBridgeServiceProvider),
+      );
+    });
+
+final manageRemoteBridgeConfigUseCaseProvider =
+    Provider<ManageRemoteBridgeConfigUseCase>((ref) {
+      return ManageRemoteBridgeConfigUseCase(
+        repository: ref.watch(remoteBridgeConfigRepositoryProvider),
       );
     });
 

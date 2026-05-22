@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/controllers/remote_bridge_config_controller.dart';
 import '../../application/providers/application_providers.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
 import '../../domain/repositories/claude_connector_onboarding_repository.dart';
 import '../../domain/repositories/hardware_repository.dart';
+import '../../domain/repositories/remote_bridge_config_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
 import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/adapter_import_service.dart';
@@ -25,6 +27,7 @@ import '../storage/shared_prefs_active_adapter_binding_repository.dart';
 import '../storage/shared_prefs_adapter_manifest_repository.dart';
 import '../storage/shared_prefs_background_stability_checklist_repository.dart';
 import '../storage/shared_prefs_claude_connector_onboarding_repository.dart';
+import '../storage/shared_prefs_remote_bridge_config_repository.dart';
 import '../storage/shared_prefs_verified_adapter_repository.dart';
 
 final defaultHardwareRepositoryProvider = Provider<HardwareRepository>((ref) {
@@ -48,6 +51,7 @@ final defaultMcpServiceProvider = Provider<McpService>((ref) {
 });
 
 final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
+  final configAsync = ref.watch(remoteBridgeConfigControllerProvider);
   const bool useRealRemoteBridge = bool.fromEnvironment(
     'TOYLINK_USE_REAL_REMOTE_BRIDGE',
     defaultValue: false,
@@ -64,6 +68,24 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
     'TOYLINK_REMOTE_BRIDGE_CLIENT_TOKEN',
     defaultValue: '',
   );
+
+  final bool useSavedRemoteBridge =
+      configAsync.hasValue &&
+      configAsync.requireValue.enabled &&
+      configAsync.requireValue.normalizedBaseUrl.isNotEmpty;
+
+  if (useSavedRemoteBridge) {
+    final savedConfig = configAsync.requireValue;
+    final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+      baseUrl: Uri.parse(savedConfig.normalizedBaseUrl),
+      clientId: savedConfig.normalizedClientId,
+      clientToken: savedConfig.normalizedClientToken.isEmpty
+          ? null
+          : savedConfig.normalizedClientToken,
+    );
+    ref.onDispose(service.dispose);
+    return service;
+  }
 
   if (useRealRemoteBridge && baseUrl.isNotEmpty) {
     final HttpRemoteBridgeService service = HttpRemoteBridgeService(
@@ -132,4 +154,9 @@ final defaultBackgroundStabilityChecklistRepositoryProvider =
 final defaultClaudeConnectorOnboardingRepositoryProvider =
     Provider<ClaudeConnectorOnboardingRepository>((_) {
       return SharedPrefsClaudeConnectorOnboardingRepository();
+    });
+
+final defaultRemoteBridgeConfigRepositoryProvider =
+    Provider<RemoteBridgeConfigRepository>((_) {
+      return SharedPrefsRemoteBridgeConfigRepository();
     });

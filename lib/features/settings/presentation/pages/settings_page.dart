@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/security/app_lock_controller.dart';
 import '../../../../shared/widgets/toylink_background.dart';
@@ -22,7 +23,7 @@ class SettingsPage extends ConsumerWidget {
                 title: const Text('启用应用锁'),
                 subtitle: const Text('开启后，进入应用时需要先解锁。'),
                 value: lockState.enabled,
-                onChanged: (value) => ref
+                onChanged: (bool value) => ref
                     .read(appLockControllerProvider.notifier)
                     .setEnabled(value),
               ),
@@ -39,6 +40,19 @@ class SettingsPage extends ConsumerWidget {
                             .lockNow()
                       : null,
                   child: const Text('锁定'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                title: const Text('远程桥接配置'),
+                subtitle: const Text(
+                  '配置 Claude Remote MCP 使用的 Bridge 地址、客户端 ID 和令牌。',
+                ),
+                trailing: FilledButton.tonal(
+                  onPressed: () => context.push('/settings/bridge'),
+                  child: const Text('去配置'),
                 ),
               ),
             ),

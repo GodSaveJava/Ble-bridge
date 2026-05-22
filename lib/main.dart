@@ -68,6 +68,9 @@ void main() {
             defaultClaudeConnectorOnboardingRepositoryProvider,
           );
         }),
+        remoteBridgeConfigRepositoryProvider.overrideWith((ref) {
+          return ref.watch(defaultRemoteBridgeConfigRepositoryProvider);
+        }),
       ],
       child: const ToyLinkApp(),
     ),
