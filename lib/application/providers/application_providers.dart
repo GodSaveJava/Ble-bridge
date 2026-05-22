@@ -27,9 +27,11 @@ import '../../domain/services/adapter_export_service.dart';
 import '../../domain/services/adapter_import_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
+import '../../domain/services/remote_bridge_probe_service.dart';
 import '../../domain/services/remote_bridge_service.dart';
 import '../use_cases/manage_remote_bridge_session_use_case.dart';
 import '../use_cases/manage_remote_bridge_config_use_case.dart';
+import '../use_cases/test_remote_bridge_connection_use_case.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
   throw UnimplementedError(
@@ -44,6 +46,12 @@ final mcpServiceProvider = Provider<McpService>((_) {
 final remoteBridgeServiceProvider = Provider<RemoteBridgeService>((_) {
   throw UnimplementedError(
     'Provide a concrete RemoteBridgeService in infrastructure.',
+  );
+});
+
+final remoteBridgeProbeServiceProvider = Provider<RemoteBridgeProbeService>((_) {
+  throw UnimplementedError(
+    'Provide a concrete RemoteBridgeProbeService in infrastructure.',
   );
 });
 
@@ -302,6 +310,13 @@ final manageRemoteBridgeConfigUseCaseProvider =
     Provider<ManageRemoteBridgeConfigUseCase>((ref) {
       return ManageRemoteBridgeConfigUseCase(
         repository: ref.watch(remoteBridgeConfigRepositoryProvider),
+      );
+    });
+
+final testRemoteBridgeConnectionUseCaseProvider =
+    Provider<TestRemoteBridgeConnectionUseCase>((ref) {
+      return TestRemoteBridgeConnectionUseCase(
+        probeService: ref.watch(remoteBridgeProbeServiceProvider),
       );
     });
 

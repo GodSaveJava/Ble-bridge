@@ -40,6 +40,9 @@ void main() {
         remoteBridgeServiceProvider.overrideWith((ref) {
           return ref.watch(defaultRemoteBridgeServiceProvider);
         }),
+        remoteBridgeProbeServiceProvider.overrideWith((ref) {
+          return ref.watch(defaultRemoteBridgeProbeServiceProvider);
+        }),
         foregroundConnectionServiceProvider.overrideWith((ref) {
           return ref.watch(defaultForegroundConnectionServiceProvider);
         }),

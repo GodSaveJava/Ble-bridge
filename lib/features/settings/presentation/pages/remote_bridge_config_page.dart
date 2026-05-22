@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/controllers/remote_bridge_config_controller.dart';
+import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_config.dart';
+import '../../../../domain/entities/remote_bridge_probe_result.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 
 class RemoteBridgeConfigPage extends ConsumerStatefulWidget {
@@ -20,6 +22,8 @@ class _RemoteBridgeConfigPageState
   late final TextEditingController _clientTokenController;
   bool _enabled = false;
   bool _didSeedFields = false;
+  bool _isTesting = false;
+  RemoteBridgeProbeResult? _probeResult;
 
   @override
   void initState() {
@@ -75,7 +79,7 @@ class _RemoteBridgeConfigPageState
                     const SizedBox(height: 12),
                     TextField(
                       controller: _baseUrlController,
-                      enabled: !configAsync.isLoading,
+                      enabled: !_isBusy(configAsync),
                       decoration: const InputDecoration(
                         labelText: 'Bridge 地址',
                         hintText: 'https://bridge.example.com',
@@ -85,7 +89,7 @@ class _RemoteBridgeConfigPageState
                     const SizedBox(height: 12),
                     TextField(
                       controller: _clientIdController,
-                      enabled: !configAsync.isLoading,
+                      enabled: !_isBusy(configAsync),
                       decoration: const InputDecoration(
                         labelText: '客户端 ID',
                         helperText: '默认值适合开发阶段，后续可按用户或设备分配。',
@@ -94,7 +98,7 @@ class _RemoteBridgeConfigPageState
                     const SizedBox(height: 12),
                     TextField(
                       controller: _clientTokenController,
-                      enabled: !configAsync.isLoading,
+                      enabled: !_isBusy(configAsync),
                       obscureText: true,
                       decoration: const InputDecoration(
                         labelText: '客户端令牌',
@@ -118,13 +122,17 @@ class _RemoteBridgeConfigPageState
                         ),
                       ),
                     ],
+                    if (_probeResult != null) ...<Widget>[
+                      const SizedBox(height: 12),
+                      _ProbeResultCard(result: _probeResult!),
+                    ],
                     const SizedBox(height: 16),
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
                       children: <Widget>[
                         FilledButton(
-                          onPressed: configAsync.isLoading
+                          onPressed: _isBusy(configAsync)
                               ? null
                               : () => _save(context),
                           child: Text(
@@ -132,7 +140,13 @@ class _RemoteBridgeConfigPageState
                           ),
                         ),
                         OutlinedButton(
-                          onPressed: configAsync.isLoading
+                          onPressed: _isBusy(configAsync)
+                              ? null
+                              : () => _testConnection(context),
+                          child: Text(_isTesting ? '测试中...' : '测试连接'),
+                        ),
+                        OutlinedButton(
+                          onPressed: _isBusy(configAsync)
                               ? null
                               : () => _reset(context),
                           child: const Text('恢复默认'),
@@ -149,11 +163,24 @@ class _RemoteBridgeConfigPageState
     );
   }
 
+  bool _isBusy(AsyncValue<RemoteBridgeConfig> configAsync) {
+    return configAsync.isLoading || _isTesting;
+  }
+
   bool _shouldShowValidation(AsyncValue<RemoteBridgeConfig> configAsync) {
     return _enabled &&
         !configAsync.isLoading &&
         (_baseUrlController.text.trim().isEmpty ||
             _clientIdController.text.trim().isEmpty);
+  }
+
+  RemoteBridgeConfig _currentFormConfig() {
+    return RemoteBridgeConfig(
+      enabled: _enabled,
+      baseUrl: _baseUrlController.text,
+      clientId: _clientIdController.text,
+      clientToken: _clientTokenController.text,
+    ).normalized();
   }
 
   void _seedFieldsIfNeeded(RemoteBridgeConfig config) {
@@ -170,6 +197,9 @@ class _RemoteBridgeConfigPageState
   Future<void> _reset(BuildContext context) async {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     _didSeedFields = false;
+    setState(() {
+      _probeResult = null;
+    });
     await ref.read(remoteBridgeConfigControllerProvider.notifier).reset();
     if (!mounted) {
       return;
@@ -180,12 +210,7 @@ class _RemoteBridgeConfigPageState
   }
 
   Future<void> _save(BuildContext context) async {
-    final RemoteBridgeConfig next = RemoteBridgeConfig(
-      enabled: _enabled,
-      baseUrl: _baseUrlController.text,
-      clientId: _clientIdController.text,
-      clientToken: _clientTokenController.text,
-    ).normalized();
+    final RemoteBridgeConfig next = _currentFormConfig();
     if (!next.hasRequiredFields) {
       setState(() {});
       return;
@@ -197,5 +222,70 @@ class _RemoteBridgeConfigPageState
       return;
     }
     messenger.showSnackBar(const SnackBar(content: Text('远程桥接配置已保存。')));
+  }
+
+  Future<void> _testConnection(BuildContext context) async {
+    final RemoteBridgeConfig next = _currentFormConfig();
+    if (!next.hasRequiredFields) {
+      setState(() {
+        _probeResult = const RemoteBridgeProbeResult(
+          isSuccess: false,
+          summary: '请先填写 Bridge 地址和客户端 ID。',
+        );
+      });
+      return;
+    }
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _isTesting = true;
+      _probeResult = null;
+    });
+    final RemoteBridgeProbeResult result = await ref
+        .read(testRemoteBridgeConnectionUseCaseProvider)
+        .execute(next);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isTesting = false;
+      _probeResult = result;
+    });
+    messenger.showSnackBar(SnackBar(content: Text(result.summary)));
+  }
+}
+
+class _ProbeResultCard extends StatelessWidget {
+  const _ProbeResultCard({required this.result});
+
+  final RemoteBridgeProbeResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color tone = result.isSuccess
+        ? Colors.green.shade700
+        : Theme.of(context).colorScheme.error;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: tone.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            result.summary,
+            style: TextStyle(fontWeight: FontWeight.w600, color: tone),
+          ),
+          if (result.detail != null && result.detail!.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(result.detail!),
+          ],
+        ],
+      ),
+    );
   }
 }

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_config.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_probe_result.dart';
 import 'package:toylink_ai/domain/repositories/remote_bridge_config_repository.dart';
+import 'package:toylink_ai/domain/services/remote_bridge_probe_service.dart';
 import 'package:toylink_ai/features/settings/presentation/pages/remote_bridge_config_page.dart';
 
 void main() {
@@ -17,6 +19,9 @@ void main() {
       ProviderScope(
         overrides: [
           remoteBridgeConfigRepositoryProvider.overrideWith((_) => repository),
+          remoteBridgeProbeServiceProvider.overrideWith(
+            (_) => _FakeRemoteBridgeProbeService.success(),
+          ),
         ],
         child: const MaterialApp(home: RemoteBridgeConfigPage()),
       ),
@@ -45,6 +50,41 @@ void main() {
     expect(repository.config.baseUrl, 'https://bridge.example.com');
     expect(repository.config.clientToken, 'secret-token');
   });
+
+  testWidgets('remote bridge config page tests connection and shows result', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          remoteBridgeConfigRepositoryProvider.overrideWith(
+            (_) => _InMemoryRemoteBridgeConfigRepository(),
+          ),
+          remoteBridgeProbeServiceProvider.overrideWith(
+            (_) => _FakeRemoteBridgeProbeService.success(),
+          ),
+        ],
+        child: const MaterialApp(home: RemoteBridgeConfigPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Bridge 地址'),
+      'https://bridge.example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, '客户端 ID'),
+      'device-a',
+    );
+    await tester.tap(find.text('测试连接'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('连接测试成功，Bridge 可以正常返回接入信息。'), findsWidgets);
+    expect(find.textContaining('已拿到 connector 地址'), findsOneWidget);
+  });
 }
 
 class _InMemoryRemoteBridgeConfigRepository
@@ -62,5 +102,21 @@ class _InMemoryRemoteBridgeConfigRepository
   @override
   Future<void> save(RemoteBridgeConfig next) async {
     config = next;
+  }
+}
+
+class _FakeRemoteBridgeProbeService implements RemoteBridgeProbeService {
+  _FakeRemoteBridgeProbeService.success()
+    : result = const RemoteBridgeProbeResult(
+        isSuccess: true,
+        summary: '连接测试成功，Bridge 可以正常返回接入信息。',
+        detail: '已拿到 connector 地址，当前工具数量：6',
+      );
+
+  final RemoteBridgeProbeResult result;
+
+  @override
+  Future<RemoteBridgeProbeResult> probe(RemoteBridgeConfig config) async {
+    return result;
   }
 }
