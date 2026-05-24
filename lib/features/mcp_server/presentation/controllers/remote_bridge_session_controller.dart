@@ -15,6 +15,7 @@ class RemoteBridgeSessionState {
     this.toolNames = const <String>[],
     this.errorCode,
     this.errorMessage,
+    this.lastUpdatedAt,
   });
 
   factory RemoteBridgeSessionState.fromSession(RemoteBridgeSession session) {
@@ -27,6 +28,7 @@ class RemoteBridgeSessionState {
       toolNames: session.connectorInfo?.toolNames ?? const <String>[],
       errorCode: session.lastErrorCode,
       errorMessage: session.lastErrorMessage,
+      lastUpdatedAt: session.lastUpdatedAt,
     );
   }
 
@@ -38,6 +40,7 @@ class RemoteBridgeSessionState {
   final List<String> toolNames;
   final String? errorCode;
   final String? errorMessage;
+  final DateTime? lastUpdatedAt;
 
   bool get isBusy =>
       status == RemoteBridgeSessionStatus.connecting ||
@@ -59,6 +62,7 @@ class RemoteBridgeSessionState {
     List<String>? toolNames,
     String? errorCode,
     String? errorMessage,
+    DateTime? lastUpdatedAt,
     bool clearError = false,
   }) {
     return RemoteBridgeSessionState(
@@ -70,6 +74,7 @@ class RemoteBridgeSessionState {
       toolNames: toolNames ?? this.toolNames,
       errorCode: clearError ? null : (errorCode ?? this.errorCode),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
     );
   }
 }
