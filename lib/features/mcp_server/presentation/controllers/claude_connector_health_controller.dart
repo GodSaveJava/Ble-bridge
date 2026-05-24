@@ -115,7 +115,8 @@ final claudeConnectorHealthCheckProvider =
           ClaudeConnectorHealthCheck(
             status: ClaudeConnectorHealthStatus.pending,
             title: '还差 Claude 侧配置',
-            summary: '设备、桥接和接入信息都已就绪，下一步去 Claude 添加 connector，完成后就能回到原对话继续使用。',
+            summary:
+                '设备、桥接和接入信息都已经就绪，下一步去 Claude 添加 connector，完成后就能回到原对话继续使用。',
             deviceReady: true,
             bridgeReady: true,
             connectorReady: true,
@@ -202,10 +203,8 @@ String? _deviceBlockedActionRoute(ActiveDeviceAdapterReadiness readiness) {
 
 String _bridgePendingSummary(RemoteBridgeSessionStatus status) {
   return switch (status) {
-    RemoteBridgeSessionStatus.offline =>
-      '桥接会话还没启动。先在当前页面启动桥接会话。',
-    RemoteBridgeSessionStatus.connecting =>
-      '桥接正在建立连接，请稍等片刻，不要重复点击。',
+    RemoteBridgeSessionStatus.offline => '桥接会话还没启动。先在当前页面启动桥接会话。',
+    RemoteBridgeSessionStatus.connecting => '桥接正在建立连接，请稍等片刻，不要重复点击。',
     RemoteBridgeSessionStatus.busy =>
       '桥接正在处理请求或刷新接入信息，请等待当前操作完成。',
     RemoteBridgeSessionStatus.error =>

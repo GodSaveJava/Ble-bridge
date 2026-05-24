@@ -81,6 +81,7 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
     final HttpRemoteBridgeService service = HttpRemoteBridgeService(
       baseUrl: Uri.parse(savedConfig.normalizedBaseUrl),
       clientId: savedConfig.normalizedClientId,
+      runtimeSource: RemoteBridgeRuntimeSource.savedConfig,
       clientToken: savedConfig.normalizedClientToken.isEmpty
           ? null
           : savedConfig.normalizedClientToken,
@@ -93,6 +94,7 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
     final HttpRemoteBridgeService service = HttpRemoteBridgeService(
       baseUrl: Uri.parse(baseUrl),
       clientId: clientId,
+      runtimeSource: RemoteBridgeRuntimeSource.dartDefine,
       clientToken: clientToken.isEmpty ? null : clientToken,
     );
     ref.onDispose(service.dispose);

@@ -3,7 +3,8 @@ import 'dart:async';
 import '../../domain/entities/remote_bridge_session.dart';
 import '../../domain/services/remote_bridge_service.dart';
 
-class MockRemoteBridgeService implements RemoteBridgeService {
+class MockRemoteBridgeService
+    implements RemoteBridgeService, RemoteBridgeServiceDiagnostics {
   MockRemoteBridgeService()
     : _session = const RemoteBridgeSession(
         status: RemoteBridgeSessionStatus.offline,
@@ -17,6 +18,9 @@ class MockRemoteBridgeService implements RemoteBridgeService {
 
   @override
   RemoteBridgeSession get currentSession => _session;
+
+  @override
+  RemoteBridgeRuntimeSource get runtimeSource => RemoteBridgeRuntimeSource.mock;
 
   @override
   void dispose() {

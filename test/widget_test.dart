@@ -522,6 +522,12 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kClaudeHealthReadyTitle),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text(_kClaudeSetupCompletedChip), findsOneWidget);
     expect(find.text(_kViewClaudeConnectorInfo), findsOneWidget);

@@ -5,10 +5,12 @@ import 'dart:io';
 import '../../domain/entities/remote_bridge_session.dart';
 import '../../domain/services/remote_bridge_service.dart';
 
-class HttpRemoteBridgeService implements RemoteBridgeService {
+class HttpRemoteBridgeService
+    implements RemoteBridgeService, RemoteBridgeServiceDiagnostics {
   HttpRemoteBridgeService({
     required Uri baseUrl,
     required String clientId,
+    this.runtimeSource = RemoteBridgeRuntimeSource.unknown,
     String? clientToken,
     HttpClient? httpClient,
   }) : _baseUrl = baseUrl,
@@ -22,6 +24,8 @@ class HttpRemoteBridgeService implements RemoteBridgeService {
   final Uri _baseUrl;
   final String _clientId;
   final String? _clientToken;
+  @override
+  final RemoteBridgeRuntimeSource runtimeSource;
   final HttpClient _httpClient;
   final StreamController<RemoteBridgeSession> _controller =
       StreamController<RemoteBridgeSession>.broadcast();
