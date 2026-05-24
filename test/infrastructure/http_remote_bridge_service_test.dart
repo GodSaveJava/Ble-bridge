@@ -133,6 +133,92 @@ void main() {
       expect(service.currentSession.status, RemoteBridgeSessionStatus.offline);
       expect(capturedRequests.last.path, '/mobile-bridge/session/bridge-session-1/stop');
     });
+
+    test('startSession schedules keepalive refreshes automatically', () async {
+      final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+        baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        clientId: 'test-client',
+        keepAliveInterval: const Duration(milliseconds: 20),
+      );
+      addTearDown(service.dispose);
+
+      await service.startSession();
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+
+      final Iterable<_CapturedRequest> refreshRequests = capturedRequests.where(
+        (_CapturedRequest request) =>
+            request.path == '/mobile-bridge/session/bridge-session-1/refresh',
+      );
+      expect(refreshRequests, isNotEmpty);
+      expect(service.currentSession.status, RemoteBridgeSessionStatus.ready);
+    });
+
+    test('keepalive failure moves session into bridge_keepalive_failed error', () async {
+      var refreshShouldFail = false;
+      await server.close(force: true);
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((HttpRequest request) async {
+        final String body = await utf8.decoder.bind(request).join();
+        capturedRequests.add(
+          _CapturedRequest(
+            method: request.method,
+            path: request.uri.path,
+            authorization: request.headers.value(HttpHeaders.authorizationHeader),
+            body: body,
+          ),
+        );
+
+        if (request.method == 'POST' &&
+            request.uri.path == '/mobile-bridge/session/start') {
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode(_sessionPayload(token: 'bridge_token_1')),
+          );
+          await request.response.close();
+          refreshShouldFail = true;
+          return;
+        }
+
+        if (request.method == 'POST' &&
+            request.uri.path == '/mobile-bridge/session/bridge-session-1/refresh') {
+          request.response.statusCode = refreshShouldFail
+              ? HttpStatus.internalServerError
+              : HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            refreshShouldFail
+                ? jsonEncode(<String, Object?>{'error': 'keepalive failed'})
+                : jsonEncode(_sessionPayload(token: 'bridge_token_2')),
+          );
+          await request.response.close();
+          return;
+        }
+
+        if (request.method == 'POST' &&
+            request.uri.path == '/mobile-bridge/session/bridge-session-1/stop') {
+          request.response.statusCode = HttpStatus.noContent;
+          await request.response.close();
+          return;
+        }
+
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+      });
+
+      final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+        baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        clientId: 'test-client',
+        keepAliveInterval: const Duration(milliseconds: 20),
+      );
+      addTearDown(service.dispose);
+
+      await service.startSession();
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+
+      expect(service.currentSession.status, RemoteBridgeSessionStatus.error);
+      expect(service.currentSession.lastErrorCode, 'bridge_keepalive_failed');
+    });
   });
 }
 

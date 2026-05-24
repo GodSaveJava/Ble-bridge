@@ -11,6 +11,7 @@ class HttpRemoteBridgeService
     required Uri baseUrl,
     required String clientId,
     this.runtimeSource = RemoteBridgeRuntimeSource.unknown,
+    this.keepAliveInterval = const Duration(seconds: 45),
     String? clientToken,
     HttpClient? httpClient,
   }) : _baseUrl = baseUrl,
@@ -26,17 +27,23 @@ class HttpRemoteBridgeService
   final String? _clientToken;
   @override
   final RemoteBridgeRuntimeSource runtimeSource;
+  final Duration keepAliveInterval;
   final HttpClient _httpClient;
   final StreamController<RemoteBridgeSession> _controller =
       StreamController<RemoteBridgeSession>.broadcast();
 
   RemoteBridgeSession _session;
+  Timer? _keepAliveTimer;
+  bool _keepAliveInFlight = false;
+  bool _isDisposed = false;
 
   @override
   RemoteBridgeSession get currentSession => _session;
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _stopKeepAliveTimer();
     _httpClient.close(force: true);
     _controller.close();
   }
@@ -72,7 +79,9 @@ class HttpRemoteBridgeService
         },
       );
       _emit(_sessionFromResponse(response));
+      _startKeepAliveTimer();
     } on Object catch (error) {
+      _stopKeepAliveTimer();
       _emit(_errorSession('bridge_refresh_failed', error));
     }
   }
@@ -95,7 +104,9 @@ class HttpRemoteBridgeService
         },
       );
       _emit(_sessionFromResponse(response));
+      _startKeepAliveTimer();
     } on Object catch (error) {
+      _stopKeepAliveTimer();
       _emit(_errorSession('bridge_start_failed', error));
     }
   }
@@ -103,6 +114,7 @@ class HttpRemoteBridgeService
   @override
   Future<void> stopSession() async {
     final String? bridgeSessionId = _session.bridgeSessionId;
+    _stopKeepAliveTimer();
     if (bridgeSessionId == null || bridgeSessionId.isEmpty) {
       _emit(
         RemoteBridgeSession(
@@ -225,6 +237,53 @@ class HttpRemoteBridgeService
 
   void _emit(RemoteBridgeSession next) {
     _session = next;
+    if (_isDisposed || _controller.isClosed) {
+      return;
+    }
     _controller.add(next);
+  }
+
+  void _startKeepAliveTimer() {
+    _stopKeepAliveTimer();
+    if (keepAliveInterval <= Duration.zero) {
+      return;
+    }
+    _keepAliveTimer = Timer.periodic(keepAliveInterval, (_) {
+      unawaited(_runKeepAlive());
+    });
+  }
+
+  void _stopKeepAliveTimer() {
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = null;
+  }
+
+  Future<void> _runKeepAlive() async {
+    if (_isDisposed || _keepAliveInFlight || !_session.isReady) {
+      return;
+    }
+
+    final String? bridgeSessionId = _session.bridgeSessionId;
+    if (bridgeSessionId == null || bridgeSessionId.isEmpty) {
+      return;
+    }
+
+    _keepAliveInFlight = true;
+    try {
+      final Map<String, dynamic> response = await _postJson(
+        path: '/mobile-bridge/session/$bridgeSessionId/refresh',
+        body: <String, Object?>{
+          'clientId': _clientId,
+        },
+      );
+      _emit(_sessionFromResponse(response));
+    } on Object catch (error) {
+      _stopKeepAliveTimer();
+      if (!_isDisposed) {
+        _emit(_errorSession('bridge_keepalive_failed', error));
+      }
+    } finally {
+      _keepAliveInFlight = false;
+    }
   }
 }
