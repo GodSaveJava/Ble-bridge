@@ -76,6 +76,93 @@ void main() {
     expect(find.textContaining('Bridge'), findsWidgets);
     expect(find.byType(OutlinedButton), findsWidgets);
   });
+
+  testWidgets('mcp page shows last sync diagnostics when bridge is ready', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mcpServiceProvider.overrideWith((_) => _StoppedMcpService()),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _FakeBridgeService(
+              RemoteBridgeRuntimeSource.savedConfig,
+              session: RemoteBridgeSession(
+                status: RemoteBridgeSessionStatus.ready,
+                bridgeSessionId: 'bridge-session-1',
+                connectorInfo: const RemoteBridgeConnectorInfo(
+                  connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+                  connectorToken: 'bridge_token_1',
+                  toolNames: <String>['get_status'],
+                ),
+                lastUpdatedAt: DateTime(2026, 5, 24, 16, 9),
+              ),
+            ),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('最近同步：2026-05-24 16:09'), findsOneWidget);
+  });
+
+  testWidgets('mcp page shows keepalive recovery guidance', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mcpServiceProvider.overrideWith((_) => _StoppedMcpService()),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _FakeBridgeService(
+              RemoteBridgeRuntimeSource.savedConfig,
+              session: RemoteBridgeSession(
+                status: RemoteBridgeSessionStatus.error,
+                bridgeSessionId: 'bridge-session-1',
+                lastErrorCode: 'bridge_keepalive_failed',
+                lastErrorMessage: 'keepalive failed',
+                lastUpdatedAt: DateTime(2026, 5, 24, 16, 10),
+              ),
+            ),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('桥接保活失败'), findsOneWidget);
+    expect(find.textContaining('后续保活刷新失败'), findsOneWidget);
+    expect(find.textContaining('最近同步：2026-05-24 16:10'), findsOneWidget);
+  });
 }
 
 class _StoppedMcpService implements McpService {
@@ -97,15 +184,18 @@ class _StoppedMcpService implements McpService {
 
 class _FakeBridgeService
     implements RemoteBridgeService, RemoteBridgeServiceDiagnostics {
-  _FakeBridgeService(this.runtimeSource);
+  _FakeBridgeService(this.runtimeSource, {RemoteBridgeSession? session})
+    : _session =
+          session ??
+          const RemoteBridgeSession(status: RemoteBridgeSessionStatus.offline);
 
   @override
   final RemoteBridgeRuntimeSource runtimeSource;
 
+  final RemoteBridgeSession _session;
+
   @override
-  RemoteBridgeSession get currentSession => const RemoteBridgeSession(
-    status: RemoteBridgeSessionStatus.offline,
-  );
+  RemoteBridgeSession get currentSession => _session;
 
   @override
   void dispose() {}

@@ -8,6 +8,7 @@ import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/claude_connector_health_controller.dart';
+import '../controllers/remote_bridge_diagnostics_controller.dart';
 import '../controllers/claude_connector_onboarding_controller.dart';
 import '../controllers/mcp_service_controller.dart';
 import '../controllers/remote_bridge_session_controller.dart';
@@ -29,6 +30,9 @@ class McpPage extends ConsumerWidget {
     );
     final AsyncValue<ClaudeConnectorHealthCheck> claudeHealthAsync = ref.watch(
       claudeConnectorHealthCheckProvider,
+    );
+    final RemoteBridgeDiagnostics bridgeDiagnostics = ref.watch(
+      remoteBridgeDiagnosticsProvider,
     );
     final AsyncValue<ActiveDeviceAdapterReadiness> readinessAsync = ref.watch(
       activeDeviceAdapterReadinessProvider,
@@ -265,6 +269,8 @@ class McpPage extends ConsumerWidget {
                     ],
                     const SizedBox(height: 12),
                     _NextStepBanner(message: _bridgeGuidanceText(bridgeState)),
+                    const SizedBox(height: 12),
+                    _BridgeDiagnosticsBanner(diagnostics: bridgeDiagnostics),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 12,
@@ -512,6 +518,72 @@ class _NextStepBanner extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(message),
+        ],
+      ),
+    );
+  }
+}
+
+class _BridgeDiagnosticsBanner extends StatelessWidget {
+  const _BridgeDiagnosticsBanner({required this.diagnostics});
+
+  final RemoteBridgeDiagnostics diagnostics;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final bool isWarning =
+        diagnostics.actionRoute != null || diagnostics.title.contains('失败');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isWarning
+            ? colorScheme.errorContainer.withValues(alpha: 0.82)
+            : colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            diagnostics.title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isWarning
+                  ? colorScheme.onErrorContainer
+                  : colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            diagnostics.summary,
+            style: TextStyle(
+              color: isWarning
+                  ? colorScheme.onErrorContainer
+                  : colorScheme.onSurface,
+            ),
+          ),
+          if (diagnostics.lastSyncLabel case final String label) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isWarning
+                    ? colorScheme.onErrorContainer
+                    : colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          if (diagnostics.actionLabel != null &&
+              diagnostics.actionRoute != null) ...<Widget>[
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () => context.push(diagnostics.actionRoute!),
+              child: Text(diagnostics.actionLabel!),
+            ),
+          ],
         ],
       ),
     );

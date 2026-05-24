@@ -346,6 +346,12 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kClaudeHealthCheckTitle),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text(_kBridgeReadyChip), findsOneWidget);
     expect(find.text(_kConnectorUrlReady), findsOneWidget);
@@ -592,6 +598,12 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(_kResetClaudeSetup),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text(_kResetClaudeSetup));
     await tester.pumpAndSettle();
@@ -599,6 +611,47 @@ void main() {
     expect(find.text(_kClaudeSetupCompletedChip), findsNothing);
     expect(find.text(_kGoConfigureClaude), findsOneWidget);
     expect(repository.record, isNull);
+  });
+
+  testWidgets('mcp page shows bridge diagnostics banner when keepalive failed', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _KeepaliveFailedRemoteBridgeService(),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('桥接保活失败'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('桥接保活失败'), findsOneWidget);
+    expect(find.textContaining('最近同步：2026-05-24 16:10'), findsOneWidget);
+    expect(find.textContaining('检查远程桥接配置'), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -1073,6 +1126,46 @@ class _ReadyRemoteBridgeService implements RemoteBridgeService {
         'get_status',
       ],
     ),
+  );
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<void> refreshConnector() async {}
+
+  @override
+  Future<void> startSession() async {}
+
+  @override
+  Future<void> stopSession() async {}
+
+  @override
+  Stream<RemoteBridgeSession> watchSession() async* {
+    yield currentSession;
+  }
+}
+
+class _KeepaliveFailedRemoteBridgeService implements RemoteBridgeService {
+  @override
+  RemoteBridgeSession get currentSession => RemoteBridgeSession(
+    status: RemoteBridgeSessionStatus.error,
+    bridgeSessionId: 'bridge-session-keepalive-failed',
+    connectorInfo: const RemoteBridgeConnectorInfo(
+      connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+      connectorToken: 'toy_bridge_token_ready',
+      toolNames: <String>[
+        'set_suck',
+        'set_vibe',
+        'set_ems',
+        'set_all',
+        'stop_all',
+        'get_status',
+      ],
+    ),
+    lastErrorCode: 'bridge_keepalive_failed',
+    lastErrorMessage: 'keepalive failed',
+    lastUpdatedAt: DateTime(2026, 5, 24, 16, 10),
   );
 
   @override
