@@ -162,6 +162,10 @@ void main() {
     expect(find.text('桥接保活失败'), findsOneWidget);
     expect(find.textContaining('后续保活刷新失败'), findsOneWidget);
     expect(find.textContaining('最近同步：2026-05-24 16:10'), findsOneWidget);
+    expect(
+      find.widgetWithText(OutlinedButton, '重新启动桥接会话'),
+      findsOneWidget,
+    );
   });
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -621,7 +623,7 @@ void main() {
         overrides: [
           mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
           remoteBridgeServiceProvider.overrideWith(
-            (_) => _KeepaliveFailedRemoteBridgeService(),
+            (_) => _RecoverableKeepaliveFailedRemoteBridgeService(),
           ),
           claudeConnectorOnboardingRepositoryProvider.overrideWith(
             (_) => _InMemoryClaudeConnectorOnboardingRepository(),
@@ -651,7 +653,17 @@ void main() {
 
     expect(find.textContaining('桥接保活失败'), findsOneWidget);
     expect(find.textContaining('最近同步：2026-05-24 16:10'), findsOneWidget);
-    expect(find.textContaining('检查远程桥接配置'), findsOneWidget);
+    final Finder restartBridgeButton = find.widgetWithText(
+      OutlinedButton,
+      '重新启动桥接会话',
+    );
+    expect(restartBridgeButton, findsOneWidget);
+
+    await tester.tap(restartBridgeButton);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('桥接连接正常'), findsOneWidget);
+    expect(find.textContaining('最近同步：2026-05-24 16:12'), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -1146,9 +1158,14 @@ class _ReadyRemoteBridgeService implements RemoteBridgeService {
   }
 }
 
-class _KeepaliveFailedRemoteBridgeService implements RemoteBridgeService {
-  @override
-  RemoteBridgeSession get currentSession => RemoteBridgeSession(
+class _RecoverableKeepaliveFailedRemoteBridgeService
+    implements RemoteBridgeService {
+  _RecoverableKeepaliveFailedRemoteBridgeService();
+
+  final StreamController<RemoteBridgeSession> _controller =
+      StreamController<RemoteBridgeSession>.broadcast();
+
+  RemoteBridgeSession _session = RemoteBridgeSession(
     status: RemoteBridgeSessionStatus.error,
     bridgeSessionId: 'bridge-session-keepalive-failed',
     connectorInfo: const RemoteBridgeConnectorInfo(
@@ -1169,20 +1186,45 @@ class _KeepaliveFailedRemoteBridgeService implements RemoteBridgeService {
   );
 
   @override
-  void dispose() {}
+  RemoteBridgeSession get currentSession => _session;
+
+  @override
+  void dispose() {
+    _controller.close();
+  }
 
   @override
   Future<void> refreshConnector() async {}
 
   @override
-  Future<void> startSession() async {}
+  Future<void> startSession() async {
+    _session = RemoteBridgeSession(
+      status: RemoteBridgeSessionStatus.ready,
+      bridgeSessionId: 'bridge-session-recovered',
+      connectorInfo: const RemoteBridgeConnectorInfo(
+        connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+        connectorToken: 'toy_bridge_token_recovered',
+        toolNames: <String>[
+          'set_suck',
+          'set_vibe',
+          'set_ems',
+          'set_all',
+          'stop_all',
+          'get_status',
+        ],
+      ),
+      lastUpdatedAt: DateTime(2026, 5, 24, 16, 12),
+    );
+    _controller.add(_session);
+  }
 
   @override
   Future<void> stopSession() async {}
 
   @override
   Stream<RemoteBridgeSession> watchSession() async* {
-    yield currentSession;
+    yield _session;
+    yield* _controller.stream;
   }
 }
 

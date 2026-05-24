@@ -3,11 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import 'remote_bridge_session_controller.dart';
 
+enum RemoteBridgeDiagnosticsAction {
+  restartBridgeSession,
+  openBridgeSettings,
+}
+
 class RemoteBridgeDiagnostics {
   const RemoteBridgeDiagnostics({
     required this.title,
     required this.summary,
     this.lastSyncLabel,
+    this.action,
     this.actionLabel,
     this.actionRoute,
   });
@@ -15,11 +21,14 @@ class RemoteBridgeDiagnostics {
   final String title;
   final String summary;
   final String? lastSyncLabel;
+  final RemoteBridgeDiagnosticsAction? action;
   final String? actionLabel;
   final String? actionRoute;
 }
 
-final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((Ref ref) {
+final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((
+  Ref ref,
+) {
   final RemoteBridgeSessionState state = ref.watch(
     remoteBridgeSessionControllerProvider,
   );
@@ -31,11 +40,10 @@ final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((Ref r
   if (state.errorCode == 'bridge_keepalive_failed') {
     return RemoteBridgeDiagnostics(
       title: '桥接保活失败',
-      summary:
-          '上一次会话已经建立，但后续保活刷新失败。请先检查网络、后台保活和远程 Bridge 配置，再重新启动桥接会话。',
+      summary: '上一段桥接会话曾成功建立，但后续保活刷新失败。请先尝试重新启动桥接会话；如果仍失败，再检查网络、后台保活和远程 Bridge 配置。',
       lastSyncLabel: lastSyncLabel,
-      actionLabel: '去检查远程桥接配置',
-      actionRoute: '/settings/bridge',
+      action: RemoteBridgeDiagnosticsAction.restartBridgeSession,
+      actionLabel: '重新启动桥接会话',
     );
   }
 
@@ -60,10 +68,10 @@ final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((Ref r
     ),
     RemoteBridgeSessionStatus.error => RemoteBridgeDiagnostics(
       title: '桥接会话异常',
-      summary: '桥接当前异常，请先重新启动桥接会话；如果仍失败，再检查远程 Bridge 配置。',
+      summary: '桥接当前处于异常状态。请先尝试重新启动桥接会话；如果仍失败，再检查远程 Bridge 配置。',
       lastSyncLabel: lastSyncLabel,
-      actionLabel: '去检查远程桥接配置',
-      actionRoute: '/settings/bridge',
+      action: RemoteBridgeDiagnosticsAction.restartBridgeSession,
+      actionLabel: '重新启动桥接会话',
     ),
   };
 });

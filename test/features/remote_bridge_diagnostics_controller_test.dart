@@ -6,7 +6,7 @@ import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_diagnostics_controller.dart';
 
 void main() {
-  test('reports keepalive failure with recovery guidance', () {
+  test('reports keepalive failure with restart guidance', () {
     final ProviderContainer container = ProviderContainer(
       overrides: [
         remoteBridgeServiceProvider.overrideWith(
@@ -29,10 +29,14 @@ void main() {
     );
 
     expect(diagnostics.title, '桥接保活失败');
-    expect(diagnostics.summary, contains('后台保活'));
+    expect(diagnostics.summary, contains('重新启动桥接会话'));
     expect(diagnostics.lastSyncLabel, '最近同步：2026-05-24 16:08');
-    expect(diagnostics.actionLabel, '去检查远程桥接配置');
-    expect(diagnostics.actionRoute, '/settings/bridge');
+    expect(diagnostics.actionLabel, '重新启动桥接会话');
+    expect(
+      diagnostics.action,
+      RemoteBridgeDiagnosticsAction.restartBridgeSession,
+    );
+    expect(diagnostics.actionRoute, isNull);
   });
 
   test('reports ready session with last sync label', () {

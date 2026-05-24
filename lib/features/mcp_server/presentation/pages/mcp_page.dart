@@ -270,7 +270,27 @@ class McpPage extends ConsumerWidget {
                     const SizedBox(height: 12),
                     _NextStepBanner(message: _bridgeGuidanceText(bridgeState)),
                     const SizedBox(height: 12),
-                    _BridgeDiagnosticsBanner(diagnostics: bridgeDiagnostics),
+                    _BridgeDiagnosticsBanner(
+                      diagnostics: bridgeDiagnostics,
+                      onActionPressed: () {
+                        switch (bridgeDiagnostics.action) {
+                          case RemoteBridgeDiagnosticsAction
+                              .restartBridgeSession:
+                            ref
+                                .read(
+                                  remoteBridgeSessionControllerProvider
+                                      .notifier,
+                                )
+                                .startSession();
+                          case RemoteBridgeDiagnosticsAction.openBridgeSettings:
+                            if (bridgeDiagnostics.actionRoute case final String route) {
+                              context.push(route);
+                            }
+                          case null:
+                            break;
+                        }
+                      },
+                    ),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 12,
@@ -525,15 +545,19 @@ class _NextStepBanner extends StatelessWidget {
 }
 
 class _BridgeDiagnosticsBanner extends StatelessWidget {
-  const _BridgeDiagnosticsBanner({required this.diagnostics});
+  const _BridgeDiagnosticsBanner({
+    required this.diagnostics,
+    required this.onActionPressed,
+  });
 
   final RemoteBridgeDiagnostics diagnostics;
+  final VoidCallback onActionPressed;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final bool isWarning =
-        diagnostics.actionRoute != null || diagnostics.title.contains('失败');
+        diagnostics.action != null || diagnostics.title.contains('失败');
 
     return Container(
       width: double.infinity,
@@ -577,10 +601,10 @@ class _BridgeDiagnosticsBanner extends StatelessWidget {
             ),
           ],
           if (diagnostics.actionLabel != null &&
-              diagnostics.actionRoute != null) ...<Widget>[
+              diagnostics.action != null) ...<Widget>[
             const SizedBox(height: 10),
             OutlinedButton(
-              onPressed: () => context.push(diagnostics.actionRoute!),
+              onPressed: onActionPressed,
               child: Text(diagnostics.actionLabel!),
             ),
           ],
