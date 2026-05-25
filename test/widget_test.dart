@@ -666,6 +666,47 @@ void main() {
     expect(find.textContaining('最近同步：2026-05-24 16:12'), findsOneWidget);
   });
 
+  testWidgets('mcp page distinguishes disconnected toy from bridge failure', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.noDevice,
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('玩具连接已断开'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('玩具连接已断开'), findsOneWidget);
+    expect(find.textContaining('重新连接设备'), findsWidgets);
+    expect(
+      find.widgetWithText(OutlinedButton, '去重新连接设备'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('verification page shows beginner guidance and locked submit', (
     WidgetTester tester,
   ) async {

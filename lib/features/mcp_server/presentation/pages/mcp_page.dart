@@ -286,6 +286,10 @@ class McpPage extends ConsumerWidget {
                             if (bridgeDiagnostics.actionRoute case final String route) {
                               context.push(route);
                             }
+                          case RemoteBridgeDiagnosticsAction.openDeviceScan:
+                            if (bridgeDiagnostics.actionRoute case final String route) {
+                              context.push(route);
+                            }
                           case null:
                             break;
                         }

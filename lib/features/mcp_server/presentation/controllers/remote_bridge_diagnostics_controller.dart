@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../application/models/active_device_adapter_readiness.dart';
+import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import 'remote_bridge_session_controller.dart';
 
 enum RemoteBridgeDiagnosticsAction {
   restartBridgeSession,
   openBridgeSettings,
+  openDeviceScan,
 }
 
 class RemoteBridgeDiagnostics {
@@ -29,25 +32,49 @@ class RemoteBridgeDiagnostics {
 final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((
   Ref ref,
 ) {
-  final RemoteBridgeSessionState state = ref.watch(
+  final RemoteBridgeSessionState bridgeState = ref.watch(
     remoteBridgeSessionControllerProvider,
   );
+  final AsyncValue<ActiveDeviceAdapterReadiness> readinessAsync = ref.watch(
+    activeDeviceAdapterReadinessProvider,
+  );
 
-  final String? lastSyncLabel = state.lastUpdatedAt == null
+  final String? lastSyncLabel = bridgeState.lastUpdatedAt == null
       ? null
-      : '最近同步：${_formatBridgeTimestamp(state.lastUpdatedAt!)}';
+      : '最近同步：${_formatBridgeTimestamp(bridgeState.lastUpdatedAt!)}';
 
-  if (state.errorCode == 'bridge_keepalive_failed') {
+  if (bridgeState.errorCode == 'bridge_keepalive_failed') {
     return RemoteBridgeDiagnostics(
       title: '桥接保活失败',
-      summary: '上一段桥接会话曾成功建立，但后续保活刷新失败。请先尝试重新启动桥接会话；如果仍失败，再检查网络、后台保活和远程 Bridge 配置。',
+      summary:
+          '上一段桥接会话曾成功建立，但后续保活刷新失败。请先尝试重新启动桥接会话；如果仍失败，再检查网络、后台保活和远程 Bridge 配置。',
       lastSyncLabel: lastSyncLabel,
       action: RemoteBridgeDiagnosticsAction.restartBridgeSession,
       actionLabel: '重新启动桥接会话',
     );
   }
 
-  return switch (state.status) {
+  final bool deviceDisconnectedWhileBridgeOnline = readinessAsync.maybeWhen(
+    data: (ActiveDeviceAdapterReadiness readiness) =>
+        readiness.state == ActiveDeviceAdapterReadinessState.noDevice &&
+        (bridgeState.status == RemoteBridgeSessionStatus.ready ||
+            bridgeState.status == RemoteBridgeSessionStatus.busy),
+    orElse: () => false,
+  );
+
+  if (deviceDisconnectedWhileBridgeOnline) {
+    return RemoteBridgeDiagnostics(
+      title: '玩具连接已断开',
+      summary:
+          '远程桥接仍然在线，但当前手机没有连着可控制的玩具。请先重新连接设备，再回到 Claude 原对话继续使用。',
+      lastSyncLabel: lastSyncLabel,
+      action: RemoteBridgeDiagnosticsAction.openDeviceScan,
+      actionLabel: '去重新连接设备',
+      actionRoute: '/scan',
+    );
+  }
+
+  return switch (bridgeState.status) {
     RemoteBridgeSessionStatus.offline => const RemoteBridgeDiagnostics(
       title: '桥接尚未启动',
       summary: '先启动桥接会话，等接入地址和令牌生成后，再继续 Claude 接入。',
@@ -68,7 +95,8 @@ final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((
     ),
     RemoteBridgeSessionStatus.error => RemoteBridgeDiagnostics(
       title: '桥接会话异常',
-      summary: '桥接当前处于异常状态。请先尝试重新启动桥接会话；如果仍失败，再检查远程 Bridge 配置。',
+      summary:
+          '桥接当前处于异常状态。请先尝试重新启动桥接会话；如果仍失败，再检查远程 Bridge 配置。',
       lastSyncLabel: lastSyncLabel,
       action: RemoteBridgeDiagnosticsAction.restartBridgeSession,
       actionLabel: '重新启动桥接会话',
