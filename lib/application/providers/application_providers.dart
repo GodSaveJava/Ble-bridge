@@ -5,6 +5,7 @@ import '../services/adapter_registry.dart';
 import '../services/adapter_validator.dart';
 import '../services/mcp_control_authorization_service.dart';
 import '../mcp/mcp_tool_router.dart';
+import '../mcp/remote_bridge_tool_call_handler.dart';
 import '../mcp/remote_bridge_tool_dispatcher.dart';
 import '../registry/active_device_registry.dart';
 import '../safety/safety_guard.dart';
@@ -337,6 +338,14 @@ final remoteBridgeToolDispatcherProvider = Provider<RemoteBridgeToolDispatcher>(
     mcpToolRouter: ref.watch(mcpToolRouterProvider),
   );
 });
+
+final remoteBridgeToolCallHandlerProvider = Provider<RemoteBridgeToolCallHandler>(
+  (ref) {
+    return RemoteBridgeToolCallHandler(
+      dispatcher: ref.watch(remoteBridgeToolDispatcherProvider),
+    );
+  },
+);
 
 final adapterRegistryProvider = Provider<AdapterRegistry>((ref) {
   return AdapterRegistry(
