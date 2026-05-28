@@ -49,7 +49,10 @@ final defaultHardwareRepositoryProvider = Provider<HardwareRepository>((ref) {
 });
 
 final defaultMcpServiceProvider = Provider<McpService>((ref) {
-  return LocalMcpHttpService(toolRouter: ref.watch(mcpToolRouterProvider));
+  return LocalMcpHttpService(
+    toolRouter: ref.watch(mcpToolRouterProvider),
+    remoteBridgeToolCallHandler: ref.watch(remoteBridgeToolCallHandlerProvider),
+  );
 });
 
 final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {

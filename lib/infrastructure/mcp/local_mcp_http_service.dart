@@ -6,16 +6,20 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import '../../application/mcp/mcp_tool_router.dart';
+import '../../application/mcp/remote_bridge_tool_call_handler.dart';
 import '../../domain/services/mcp_service.dart';
 
 class LocalMcpHttpService implements McpService {
   LocalMcpHttpService({
     required McpToolRouter toolRouter,
+    required RemoteBridgeToolCallHandler remoteBridgeToolCallHandler,
     this.host = '127.0.0.1',
     this.port = 8765,
-  }) : _toolRouter = toolRouter;
+  }) : _toolRouter = toolRouter,
+       _remoteBridgeToolCallHandler = remoteBridgeToolCallHandler;
 
   final McpToolRouter _toolRouter;
+  final RemoteBridgeToolCallHandler _remoteBridgeToolCallHandler;
   final String host;
   final int port;
 
@@ -95,6 +99,11 @@ class LocalMcpHttpService implements McpService {
       return _handleLegacyToolRequest(request);
     }
 
+    if (request.url.path == 'mobile-bridge/tool-call' &&
+        request.method == 'POST') {
+      return _handleRemoteBridgeToolCall(request);
+    }
+
     return _errorResponse(
       HttpStatus.notFound,
       code: 'route_not_found',
@@ -164,6 +173,30 @@ class LocalMcpHttpService implements McpService {
         HttpStatus.internalServerError,
         code: 'mcp_internal_error',
         message: 'Unexpected server error.',
+        recoverable: false,
+      );
+    }
+  }
+
+  Future<Response> _handleRemoteBridgeToolCall(Request request) async {
+    try {
+      final dynamic json = jsonDecode(await request.readAsString());
+      final Map<String, Object?> response = await _remoteBridgeToolCallHandler
+          .handle(json);
+      return _jsonResponse(
+        response['ok'] == true ? HttpStatus.ok : HttpStatus.badRequest,
+        response,
+      );
+    } on FormatException {
+      return _jsonResponse(
+        HttpStatus.badRequest,
+        await _remoteBridgeToolCallHandler.handle(null),
+      );
+    } catch (_) {
+      return _errorResponse(
+        HttpStatus.internalServerError,
+        code: 'bridge_tool_call_failed',
+        message: 'Unexpected remote bridge tool error.',
         recoverable: false,
       );
     }

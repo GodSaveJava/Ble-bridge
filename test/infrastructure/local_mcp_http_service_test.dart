@@ -40,8 +40,10 @@ void main() {
       addTearDown(container.dispose);
 
       final router = container.read(mcpToolRouterProvider);
+      final bridgeHandler = container.read(remoteBridgeToolCallHandlerProvider);
       final service = LocalMcpHttpService(
         toolRouter: router,
+        remoteBridgeToolCallHandler: bridgeHandler,
         host: '127.0.0.1',
         port: 8871,
       );
@@ -96,8 +98,10 @@ void main() {
       addTearDown(container.dispose);
 
       final router = container.read(mcpToolRouterProvider);
+      final bridgeHandler = container.read(remoteBridgeToolCallHandlerProvider);
       final service = LocalMcpHttpService(
         toolRouter: router,
+        remoteBridgeToolCallHandler: bridgeHandler,
         host: '127.0.0.1',
         port: 8872,
       );
@@ -146,8 +150,10 @@ void main() {
       addTearDown(container.dispose);
 
       final router = container.read(mcpToolRouterProvider);
+      final bridgeHandler = container.read(remoteBridgeToolCallHandlerProvider);
       final service = LocalMcpHttpService(
         toolRouter: router,
+        remoteBridgeToolCallHandler: bridgeHandler,
         host: '127.0.0.1',
         port: 8873,
       );
@@ -195,8 +201,10 @@ void main() {
       addTearDown(container.dispose);
 
       final router = container.read(mcpToolRouterProvider);
+      final bridgeHandler = container.read(remoteBridgeToolCallHandlerProvider);
       final service = LocalMcpHttpService(
         toolRouter: router,
+        remoteBridgeToolCallHandler: bridgeHandler,
         host: '127.0.0.1',
         port: 8874,
       );
@@ -249,8 +257,12 @@ void main() {
         addTearDown(container.dispose);
 
         final router = container.read(mcpToolRouterProvider);
+        final bridgeHandler = container.read(
+          remoteBridgeToolCallHandlerProvider,
+        );
         final service = LocalMcpHttpService(
           toolRouter: router,
+          remoteBridgeToolCallHandler: bridgeHandler,
           host: '127.0.0.1',
           port: 8875,
         );
@@ -281,6 +293,125 @@ void main() {
         expect(
           (json['error'] as Map<String, dynamic>)['code'],
           'adapter_not_verified',
+        );
+      },
+    );
+
+    test('supports remote bridge tool-call payload for get_status', () async {
+      final container = ProviderContainer(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith(
+            (_) => MockHardwareRepository(),
+          ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
+          verifiedAdapterRepositoryProvider.overrideWith(
+            (_) => _InMemoryVerifiedRepository(),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final router = container.read(mcpToolRouterProvider);
+      final bridgeHandler = container.read(remoteBridgeToolCallHandlerProvider);
+      final service = LocalMcpHttpService(
+        toolRouter: router,
+        remoteBridgeToolCallHandler: bridgeHandler,
+        host: '127.0.0.1',
+        port: 8876,
+      );
+      addTearDown(service.stop);
+
+      await service.start();
+
+      final client = HttpClient();
+      addTearDown(client.close);
+
+      final request = await client.postUrl(
+        Uri.parse('http://127.0.0.1:8876/mobile-bridge/tool-call'),
+      );
+      request.headers.contentType = ContentType.json;
+      request.write(
+        jsonEncode(<String, Object?>{
+          'requestId': 'bridge-req-1',
+          'tool': 'get_status',
+        }),
+      );
+      final response = await request.close();
+      final body = await utf8.decodeStream(response);
+      final Map<String, dynamic> json =
+          jsonDecode(body) as Map<String, dynamic>;
+
+      expect(response.statusCode, HttpStatus.ok);
+      expect(json['ok'], true);
+      expect(json['requestId'], 'bridge-req-1');
+      expect((json['result'] as Map<String, dynamic>)['deviceId'], 'mock-sosexy-001');
+    });
+
+    test(
+      'returns bridge whitelist error for disabled tool on remote bridge route',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith(
+              (_) => MockHardwareRepository(),
+            ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
+            verifiedAdapterRepositoryProvider.overrideWith(
+              (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = container.read(mcpToolRouterProvider);
+        final bridgeHandler = container.read(
+          remoteBridgeToolCallHandlerProvider,
+        );
+        final service = LocalMcpHttpService(
+          toolRouter: router,
+          remoteBridgeToolCallHandler: bridgeHandler,
+          host: '127.0.0.1',
+          port: 8877,
+        );
+        addTearDown(service.stop);
+
+        await service.start();
+
+        final client = HttpClient();
+        addTearDown(client.close);
+
+        final request = await client.postUrl(
+          Uri.parse('http://127.0.0.1:8877/mobile-bridge/tool-call'),
+        );
+        request.headers.contentType = ContentType.json;
+        request.write(
+          jsonEncode(<String, Object?>{
+            'requestId': 'bridge-req-2',
+            'tool': 'set_suck',
+            'input': <String, Object?>{'intensity': 10, 'mode': 1},
+          }),
+        );
+        final response = await request.close();
+        final body = await utf8.decodeStream(response);
+        final Map<String, dynamic> json =
+            jsonDecode(body) as Map<String, dynamic>;
+
+        expect(response.statusCode, HttpStatus.badRequest);
+        expect(json['ok'], false);
+        expect(json['requestId'], 'bridge-req-2');
+        expect(
+          (json['error'] as Map<String, dynamic>)['code'],
+          'tool_not_enabled_for_bridge',
         );
       },
     );
