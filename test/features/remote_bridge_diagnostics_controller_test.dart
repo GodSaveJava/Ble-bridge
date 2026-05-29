@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/application/models/active_device_adapter_readiness.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_diagnostics_controller.dart';
 
@@ -142,6 +143,9 @@ class _FakeBridgeService implements RemoteBridgeService {
 
   @override
   void dispose() {}
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
 
   @override
   Future<void> refreshConnector() async {}

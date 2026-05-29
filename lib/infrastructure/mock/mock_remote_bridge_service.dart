@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../domain/entities/remote_bridge_session.dart';
+import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/remote_bridge_service.dart';
 
 class MockRemoteBridgeService
@@ -81,6 +82,9 @@ class MockRemoteBridgeService
       ),
     );
   }
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
 
   @override
   Future<void> stopSession() async {

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/infrastructure/bridge/http_remote_bridge_service.dart';
 
 void main() {
@@ -49,6 +50,16 @@ void main() {
         if (request.method == 'POST' &&
             request.uri.path == '/mobile-bridge/session/bridge-session-1/stop') {
           request.response.statusCode = HttpStatus.noContent;
+          await request.response.close();
+          return;
+        }
+
+        if (request.method == 'POST' &&
+            request.uri.path ==
+                '/mobile-bridge/session/bridge-session-1/task-result') {
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, Object?>{'ok': true}));
           await request.response.close();
           return;
         }
@@ -134,13 +145,71 @@ void main() {
       expect(capturedRequests.last.path, '/mobile-bridge/session/bridge-session-1/stop');
     });
 
+    test('reportTaskResult posts execution outcome to remote bridge', () async {
+      final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+        baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        clientId: 'test-client',
+      );
+      addTearDown(service.dispose);
+
+      await service.startSession();
+      await service.reportTaskResult(
+        const RemoteBridgeTaskResult(
+          ok: true,
+          requestId: 'bridge-task-1',
+          tool: 'get_status',
+          result: <String, dynamic>{'deviceId': 'mock-sosexy-001'},
+        ),
+      );
+
+      expect(
+        capturedRequests.last.path,
+        '/mobile-bridge/session/bridge-session-1/task-result',
+      );
+      final Map<String, dynamic> requestBody =
+          jsonDecode(capturedRequests.last.body) as Map<String, dynamic>;
+      expect(requestBody['clientId'], 'test-client');
+      expect(requestBody['requestId'], 'bridge-task-1');
+      expect(requestBody['tool'], 'get_status');
+      expect(requestBody['ok'], isTrue);
+      expect(
+        requestBody['result'],
+        <String, dynamic>{'deviceId': 'mock-sosexy-001'},
+      );
+      expect(service.currentSession.lastErrorCode, isNull);
+    });
+
+    test('reportTaskResult without session returns bridge_session_missing error', () async {
+      final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+        baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        clientId: 'test-client',
+      );
+      addTearDown(service.dispose);
+
+      await service.reportTaskResult(
+        const RemoteBridgeTaskResult(
+          ok: false,
+          requestId: 'bridge-task-2',
+          tool: 'stop_all',
+          errorCode: 'bridge_dispatch_failed',
+          errorMessage: 'dispatcher failed',
+        ),
+      );
+
+      expect(service.currentSession.status, RemoteBridgeSessionStatus.error);
+      expect(service.currentSession.lastErrorCode, 'bridge_session_missing');
+    });
+
     test('startSession schedules keepalive refreshes automatically', () async {
       final HttpRemoteBridgeService service = HttpRemoteBridgeService(
         baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
         clientId: 'test-client',
         keepAliveInterval: const Duration(milliseconds: 20),
       );
-      addTearDown(service.dispose);
+      addTearDown(() async {
+        service.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+      });
 
       await service.startSession();
       await Future<void>.delayed(const Duration(milliseconds: 70));
@@ -202,6 +271,16 @@ void main() {
           return;
         }
 
+        if (request.method == 'POST' &&
+            request.uri.path ==
+                '/mobile-bridge/session/bridge-session-1/task-result') {
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(<String, Object?>{'ok': true}));
+          await request.response.close();
+          return;
+        }
+
         request.response.statusCode = HttpStatus.notFound;
         await request.response.close();
       });
@@ -211,7 +290,10 @@ void main() {
         clientId: 'test-client',
         keepAliveInterval: const Duration(milliseconds: 20),
       );
-      addTearDown(service.dispose);
+      addTearDown(() async {
+        service.dispose();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+      });
 
       await service.startSession();
       await Future<void>.delayed(const Duration(milliseconds: 70));

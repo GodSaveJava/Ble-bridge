@@ -184,6 +184,9 @@ class _ReadyBridgeService implements RemoteBridgeService {
   void dispose() {}
 
   @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
+
+  @override
   Future<void> refreshConnector() async {}
 
   @override
@@ -205,6 +208,9 @@ class _OfflineBridgeService implements RemoteBridgeService {
 
   @override
   void dispose() {}
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
 
   @override
   Future<void> refreshConnector() async {}

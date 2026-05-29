@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../../domain/entities/remote_bridge_session.dart';
+import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/remote_bridge_service.dart';
 
 class HttpRemoteBridgeService
@@ -83,6 +84,45 @@ class HttpRemoteBridgeService
     } on Object catch (error) {
       _stopKeepAliveTimer();
       _emit(_errorSession('bridge_refresh_failed', error));
+    }
+  }
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {
+    final String? bridgeSessionId = _session.bridgeSessionId;
+    if (bridgeSessionId == null || bridgeSessionId.isEmpty) {
+      _emit(
+        _session.copyWith(
+          status: RemoteBridgeSessionStatus.error,
+          lastErrorCode: 'bridge_session_missing',
+          lastErrorMessage: 'Current bridge session is missing.',
+          lastUpdatedAt: DateTime.now(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _postJson(
+        path: '/mobile-bridge/session/$bridgeSessionId/task-result',
+        body: <String, Object?>{
+          'clientId': _clientId,
+          'requestId': result.requestId,
+          'tool': result.tool,
+          'ok': result.ok,
+          'result': result.result,
+          'errorCode': result.errorCode,
+          'errorMessage': result.errorMessage,
+        },
+      );
+      _emit(
+        _session.copyWith(
+          clearError: true,
+          lastUpdatedAt: DateTime.now(),
+        ),
+      );
+    } on Object catch (error) {
+      _emit(_errorSession('bridge_task_result_report_failed', error));
     }
   }
 
