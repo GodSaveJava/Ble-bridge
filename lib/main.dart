@@ -43,6 +43,9 @@ void main() {
         remoteBridgeProbeServiceProvider.overrideWith((ref) {
           return ref.watch(defaultRemoteBridgeProbeServiceProvider);
         }),
+        remoteBridgeTaskExecutorProvider.overrideWith((ref) {
+          return ref.watch(defaultRemoteBridgeTaskExecutorProvider);
+        }),
         foregroundConnectionServiceProvider.overrideWith((ref) {
           return ref.watch(defaultForegroundConnectionServiceProvider);
         }),

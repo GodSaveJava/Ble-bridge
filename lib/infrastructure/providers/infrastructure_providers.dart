@@ -15,9 +15,11 @@ import '../../domain/services/adapter_import_service.dart';
 import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 import '../../domain/services/remote_bridge_service.dart';
+import '../../domain/services/remote_bridge_task_executor.dart';
 import '../ble/sosexy_hardware_repository.dart';
 import '../bridge/http_remote_bridge_service.dart';
 import '../bridge/http_remote_bridge_probe_service.dart';
+import '../bridge/loopback_remote_bridge_task_executor.dart';
 import '../foreground/android_foreground_connection_service.dart';
 import '../mcp/local_mcp_http_service.dart';
 import '../mock/mock_foreground_connection_service.dart';
@@ -112,6 +114,11 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
 final defaultRemoteBridgeProbeServiceProvider =
     Provider<RemoteBridgeProbeService>((_) {
       return HttpRemoteBridgeProbeService();
+    });
+
+final defaultRemoteBridgeTaskExecutorProvider =
+    Provider<RemoteBridgeTaskExecutor>((_) {
+      return LoopbackRemoteBridgeTaskExecutor();
     });
 
 final defaultForegroundConnectionServiceProvider =

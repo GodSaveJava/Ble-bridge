@@ -1,43 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-class LoopbackRemoteBridgeTaskResult {
-  const LoopbackRemoteBridgeTaskResult({
-    required this.ok,
-    this.requestId,
-    this.tool,
-    this.result,
-    this.errorCode,
-    this.errorMessage,
-  });
+import '../../domain/entities/remote_bridge_task_result.dart';
+import '../../domain/services/remote_bridge_task_executor.dart';
 
-  factory LoopbackRemoteBridgeTaskResult.fromJson(Map<String, dynamic> json) {
-    final Object? error = json['error'];
-    final Map<String, dynamic>? errorMap = error is Map<String, dynamic>
-        ? error
-        : null;
-
-    return LoopbackRemoteBridgeTaskResult(
-      ok: json['ok'] == true,
-      requestId: json['requestId']?.toString(),
-      tool: json['tool']?.toString(),
-      result: json['result'] is Map<String, dynamic>
-          ? json['result'] as Map<String, dynamic>
-          : null,
-      errorCode: errorMap?['code']?.toString(),
-      errorMessage: errorMap?['message']?.toString(),
-    );
-  }
-
-  final bool ok;
-  final String? requestId;
-  final String? tool;
-  final Map<String, dynamic>? result;
-  final String? errorCode;
-  final String? errorMessage;
-}
-
-class LoopbackRemoteBridgeTaskExecutor {
+class LoopbackRemoteBridgeTaskExecutor implements RemoteBridgeTaskExecutor {
   LoopbackRemoteBridgeTaskExecutor({
     this.baseUrl = 'http://127.0.0.1:8765',
     this.path = '/mobile-bridge/tool-call',
@@ -48,7 +15,8 @@ class LoopbackRemoteBridgeTaskExecutor {
   final String path;
   final HttpClient _httpClient;
 
-  Future<LoopbackRemoteBridgeTaskResult> execute({
+  @override
+  Future<RemoteBridgeTaskResult> execute({
     String? requestId,
     required String tool,
     Map<String, Object?> input = const <String, Object?>{},
@@ -79,9 +47,24 @@ class LoopbackRemoteBridgeTaskExecutor {
       throw StateError('Loopback bridge returned an invalid JSON object.');
     }
 
-    return LoopbackRemoteBridgeTaskResult.fromJson(json);
+    final Object? error = json['error'];
+    final Map<String, dynamic>? errorMap = error is Map<String, dynamic>
+        ? error
+        : null;
+
+    return RemoteBridgeTaskResult(
+      ok: json['ok'] == true,
+      requestId: json['requestId']?.toString(),
+      tool: json['tool']?.toString(),
+      result: json['result'] is Map<String, dynamic>
+          ? json['result'] as Map<String, dynamic>
+          : null,
+      errorCode: errorMap?['code']?.toString(),
+      errorMessage: errorMap?['message']?.toString(),
+    );
   }
 
+  @override
   void dispose() {
     _httpClient.close(force: true);
   }

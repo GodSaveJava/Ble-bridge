@@ -31,9 +31,11 @@ import '../../domain/services/foreground_connection_service.dart';
 import '../../domain/services/mcp_service.dart';
 import '../../domain/services/remote_bridge_probe_service.dart';
 import '../../domain/services/remote_bridge_service.dart';
+import '../../domain/services/remote_bridge_task_executor.dart';
 import '../use_cases/manage_remote_bridge_session_use_case.dart';
 import '../use_cases/manage_remote_bridge_config_use_case.dart';
 import '../use_cases/test_remote_bridge_connection_use_case.dart';
+import '../use_cases/execute_remote_bridge_task_use_case.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
   throw UnimplementedError(
@@ -54,6 +56,12 @@ final remoteBridgeServiceProvider = Provider<RemoteBridgeService>((_) {
 final remoteBridgeProbeServiceProvider = Provider<RemoteBridgeProbeService>((_) {
   throw UnimplementedError(
     'Provide a concrete RemoteBridgeProbeService in infrastructure.',
+  );
+});
+
+final remoteBridgeTaskExecutorProvider = Provider<RemoteBridgeTaskExecutor>((_) {
+  throw UnimplementedError(
+    'Provide a concrete RemoteBridgeTaskExecutor in infrastructure.',
   );
 });
 
@@ -319,6 +327,14 @@ final testRemoteBridgeConnectionUseCaseProvider =
     Provider<TestRemoteBridgeConnectionUseCase>((ref) {
       return TestRemoteBridgeConnectionUseCase(
         probeService: ref.watch(remoteBridgeProbeServiceProvider),
+      );
+    });
+
+final executeRemoteBridgeTaskUseCaseProvider =
+    Provider<ExecuteRemoteBridgeTaskUseCase>((ref) {
+      return ExecuteRemoteBridgeTaskUseCase(
+        remoteBridgeService: ref.watch(remoteBridgeServiceProvider),
+        remoteBridgeTaskExecutor: ref.watch(remoteBridgeTaskExecutorProvider),
       );
     });
 
