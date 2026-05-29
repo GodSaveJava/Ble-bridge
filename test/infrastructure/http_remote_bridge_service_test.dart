@@ -15,7 +15,12 @@ void main() {
       capturedRequests = <_CapturedRequest>[];
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       server.listen((HttpRequest request) async {
-        final String body = await utf8.decoder.bind(request).join();
+        String body;
+        try {
+          body = await utf8.decoder.bind(request).join();
+        } on HttpException {
+          return;
+        }
         capturedRequests.add(
           _CapturedRequest(
             method: request.method,
@@ -227,7 +232,12 @@ void main() {
       await server.close(force: true);
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       server.listen((HttpRequest request) async {
-        final String body = await utf8.decoder.bind(request).join();
+        String body;
+        try {
+          body = await utf8.decoder.bind(request).join();
+        } on HttpException {
+          return;
+        }
         capturedRequests.add(
           _CapturedRequest(
             method: request.method,
