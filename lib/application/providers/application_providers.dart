@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/active_device_adapter_readiness.dart';
 import '../services/adapter_registry.dart';
 import '../services/adapter_validator.dart';
+import '../bridge/remote_bridge_task_assignment_handler.dart';
 import '../services/mcp_control_authorization_service.dart';
 import '../mcp/mcp_tool_router.dart';
 import '../mcp/remote_bridge_tool_call_handler.dart';
@@ -346,6 +347,16 @@ final consumeRemoteBridgeTaskUseCaseProvider =
         executeRemoteBridgeTaskUseCase: ref.watch(
           executeRemoteBridgeTaskUseCaseProvider,
         ),
+      );
+    });
+
+final remoteBridgeTaskAssignmentHandlerProvider =
+    Provider<RemoteBridgeTaskAssignmentHandler>((ref) {
+      final ConsumeRemoteBridgeTaskUseCase useCase = ref.watch(
+        consumeRemoteBridgeTaskUseCaseProvider,
+      );
+      return RemoteBridgeTaskAssignmentHandler(
+        consumeTask: useCase.consume,
       );
     });
 

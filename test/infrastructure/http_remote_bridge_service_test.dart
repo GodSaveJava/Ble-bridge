@@ -306,7 +306,13 @@ void main() {
       });
 
       await service.startSession();
-      await Future<void>.delayed(const Duration(milliseconds: 70));
+      final DateTime timeoutAt = DateTime.now().add(
+        const Duration(milliseconds: 250),
+      );
+      while (service.currentSession.status != RemoteBridgeSessionStatus.error &&
+          DateTime.now().isBefore(timeoutAt)) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
 
       expect(service.currentSession.status, RemoteBridgeSessionStatus.error);
       expect(service.currentSession.lastErrorCode, 'bridge_keepalive_failed');
