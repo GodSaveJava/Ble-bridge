@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:toylink_ai/application/bridge/remote_bridge_task_assignment_handler.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
+import 'package:toylink_ai/application/use_cases/process_next_remote_bridge_task_use_case.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
@@ -69,6 +71,91 @@ void main() {
       expect(state.status, RemoteBridgeSessionStatus.error);
       expect(state.errorMessage, contains('桥接'));
     });
+
+    test('consumeNextTask surfaces empty queue feedback', () async {
+      final _TaskQueueBridgeService bridgeService = _TaskQueueBridgeService();
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith((_) => bridgeService),
+          processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
+            (_) => ProcessNextRemoteBridgeTaskUseCase(
+              remoteBridgeService: bridgeService,
+              assignmentHandler: RemoteBridgeTaskAssignmentHandler(
+                consumeTask: ({
+                  String? requestId,
+                  required String tool,
+                  Map<String, Object?> input = const <String, Object?>{},
+                }) async {
+                  return RemoteBridgeTaskResult(
+                    ok: true,
+                    requestId: requestId,
+                    tool: tool,
+                    result: input,
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(remoteBridgeSessionControllerProvider.notifier)
+          .consumeNextTask();
+
+      final RemoteBridgeSessionState state = container.read(
+        remoteBridgeSessionControllerProvider,
+      );
+      expect(state.isConsumingTask, isFalse);
+      expect(state.taskFeedbackMessage, contains('没有'));
+    });
+
+    test('consumeNextTask surfaces handled task feedback', () async {
+      final _TaskQueueBridgeService bridgeService = _TaskQueueBridgeService(
+        pendingTask: const RemoteBridgeTaskAssignment(
+          requestId: 'bridge-task-7',
+          tool: 'get_status',
+        ),
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith((_) => bridgeService),
+          processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
+            (_) => ProcessNextRemoteBridgeTaskUseCase(
+              remoteBridgeService: bridgeService,
+              assignmentHandler: RemoteBridgeTaskAssignmentHandler(
+                consumeTask: ({
+                  String? requestId,
+                  required String tool,
+                  Map<String, Object?> input = const <String, Object?>{},
+                }) async {
+                  return RemoteBridgeTaskResult(
+                    ok: true,
+                    requestId: requestId,
+                    tool: tool,
+                    result: const <String, Object?>{
+                      'deviceId': 'mock-sosexy-001',
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(remoteBridgeSessionControllerProvider.notifier)
+          .consumeNextTask();
+
+      final RemoteBridgeSessionState state = container.read(
+        remoteBridgeSessionControllerProvider,
+      );
+      expect(state.lastTaskResult?.requestId, 'bridge-task-7');
+      expect(state.taskFeedbackMessage, contains('get_status'));
+    });
   });
 }
 
@@ -84,10 +171,10 @@ class _FailingBridgeService implements RemoteBridgeService {
   void dispose() {}
 
   @override
-  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async => null;
 
   @override
-  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async => null;
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
 
   @override
   Future<void> refreshConnector() async {}
@@ -97,7 +184,7 @@ class _FailingBridgeService implements RemoteBridgeService {
     _session = const RemoteBridgeSession(
       status: RemoteBridgeSessionStatus.error,
       lastErrorCode: 'bridge_start_failed',
-      lastErrorMessage: '桥接连接失败',
+      lastErrorMessage: '妗ユ帴杩炴帴澶辫触',
     );
     throw StateError('bridge start failed');
   }
@@ -112,5 +199,49 @@ class _FailingBridgeService implements RemoteBridgeService {
   @override
   Stream<RemoteBridgeSession> watchSession() async* {
     yield _session;
+  }
+}
+
+class _TaskQueueBridgeService implements RemoteBridgeService {
+  _TaskQueueBridgeService({this.pendingTask});
+
+  RemoteBridgeTaskAssignment? pendingTask;
+
+  @override
+  RemoteBridgeSession get currentSession => const RemoteBridgeSession(
+    status: RemoteBridgeSessionStatus.ready,
+    bridgeSessionId: 'bridge-session-test',
+    connectorInfo: RemoteBridgeConnectorInfo(
+      connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+      connectorToken: 'toy-connector-token',
+      toolNames: <String>['get_status', 'stop_all'],
+    ),
+  );
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async {
+    final next = pendingTask;
+    pendingTask = null;
+    return next;
+  }
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
+
+  @override
+  Future<void> refreshConnector() async {}
+
+  @override
+  Future<void> startSession() async {}
+
+  @override
+  Future<void> stopSession() async {}
+
+  @override
+  Stream<RemoteBridgeSession> watchSession() async* {
+    yield currentSession;
   }
 }

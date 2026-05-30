@@ -325,6 +325,24 @@ class McpPage extends ConsumerWidget {
                           child: const Text('刷新接入信息'),
                         ),
                         OutlinedButton(
+                          onPressed: bridgeState.isBusy ||
+                                  bridgeState.isConsumingTask ||
+                                  bridgeState.status !=
+                                      RemoteBridgeSessionStatus.ready
+                              ? null
+                              : () => ref
+                                    .read(
+                                      remoteBridgeSessionControllerProvider
+                                          .notifier,
+                                    )
+                                    .consumeNextTask(),
+                          child: Text(
+                            bridgeState.isConsumingTask
+                                ? '拉取中...'
+                                : '拉取一条远程任务',
+                          ),
+                        ),
+                        OutlinedButton(
                           onPressed: bridgeState.isBusy
                               ? null
                               : () => ref
@@ -367,6 +385,42 @@ class McpPage extends ConsumerWidget {
                           ),
                       ],
                     ),
+                    if (bridgeState.taskFeedbackMessage != null) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: (bridgeState.lastTaskResult?.ok ?? false)
+                              ? Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer
+                                    .withValues(alpha: 0.72)
+                              : Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              bridgeState.lastTaskResult?.ok ?? false
+                                  ? '最近任务处理成功'
+                                  : '最近任务反馈',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(bridgeState.taskFeedbackMessage!),
+                            if (bridgeState.lastTaskResult?.requestId
+                                case final String requestId) ...<Widget>[
+                              const SizedBox(height: 4),
+                              Text('requestId：$requestId'),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                     if (claudeSetupCompleted) ...<Widget>[
                       const SizedBox(height: 12),
                       Align(

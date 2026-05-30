@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
+import '../../../../domain/entities/remote_bridge_task_result.dart';
 
 class RemoteBridgeSessionState {
   const RemoteBridgeSessionState({
@@ -16,6 +17,9 @@ class RemoteBridgeSessionState {
     this.errorCode,
     this.errorMessage,
     this.lastUpdatedAt,
+    this.isConsumingTask = false,
+    this.lastTaskResult,
+    this.taskFeedbackMessage,
   });
 
   factory RemoteBridgeSessionState.fromSession(RemoteBridgeSession session) {
@@ -41,6 +45,9 @@ class RemoteBridgeSessionState {
   final String? errorCode;
   final String? errorMessage;
   final DateTime? lastUpdatedAt;
+  final bool isConsumingTask;
+  final RemoteBridgeTaskResult? lastTaskResult;
+  final String? taskFeedbackMessage;
 
   bool get isBusy =>
       status == RemoteBridgeSessionStatus.connecting ||
@@ -63,7 +70,11 @@ class RemoteBridgeSessionState {
     String? errorCode,
     String? errorMessage,
     DateTime? lastUpdatedAt,
+    bool? isConsumingTask,
+    RemoteBridgeTaskResult? lastTaskResult,
+    String? taskFeedbackMessage,
     bool clearError = false,
+    bool clearTaskFeedback = false,
   }) {
     return RemoteBridgeSessionState(
       status: status ?? this.status,
@@ -75,6 +86,13 @@ class RemoteBridgeSessionState {
       errorCode: clearError ? null : (errorCode ?? this.errorCode),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+      isConsumingTask: isConsumingTask ?? this.isConsumingTask,
+      lastTaskResult: clearTaskFeedback
+          ? null
+          : (lastTaskResult ?? this.lastTaskResult),
+      taskFeedbackMessage: clearTaskFeedback
+          ? null
+          : (taskFeedbackMessage ?? this.taskFeedbackMessage),
     );
   }
 }
@@ -87,7 +105,7 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     final useCase = ref.watch(manageRemoteBridgeSessionUseCaseProvider);
     _subscription?.cancel();
     _subscription = useCase.watchSession().listen((RemoteBridgeSession session) {
-      state = RemoteBridgeSessionState.fromSession(session);
+      state = _mergeSession(session);
     });
     ref.onDispose(() {
       _subscription?.cancel();
@@ -99,7 +117,7 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     try {
       final useCase = ref.read(manageRemoteBridgeSessionUseCaseProvider);
       await useCase.startSession();
-      state = RemoteBridgeSessionState.fromSession(useCase.currentSession);
+      state = _mergeSession(useCase.currentSession);
     } catch (_) {
       state = state.copyWith(
         status: RemoteBridgeSessionStatus.error,
@@ -113,7 +131,7 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     try {
       final useCase = ref.read(manageRemoteBridgeSessionUseCaseProvider);
       await useCase.stopSession();
-      state = RemoteBridgeSessionState.fromSession(useCase.currentSession);
+      state = _mergeSession(useCase.currentSession);
     } catch (_) {
       state = state.copyWith(
         status: RemoteBridgeSessionStatus.error,
@@ -127,7 +145,7 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     try {
       final useCase = ref.read(manageRemoteBridgeSessionUseCaseProvider);
       await useCase.refreshConnector();
-      state = RemoteBridgeSessionState.fromSession(useCase.currentSession);
+      state = _mergeSession(useCase.currentSession);
     } catch (_) {
       state = state.copyWith(
         status: RemoteBridgeSessionStatus.error,
@@ -137,8 +155,50 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     }
   }
 
+  Future<void> consumeNextTask() async {
+    state = state.copyWith(
+      isConsumingTask: true,
+      clearTaskFeedback: true,
+    );
+
+    try {
+      final RemoteBridgeTaskResult? result = await ref
+          .read(processNextRemoteBridgeTaskUseCaseProvider)
+          .processNextTask();
+
+      if (result == null) {
+        state = state.copyWith(
+          isConsumingTask: false,
+          taskFeedbackMessage: '当前没有待处理的远程任务。',
+        );
+        return;
+      }
+
+      state = state.copyWith(
+        isConsumingTask: false,
+        lastTaskResult: result,
+        taskFeedbackMessage: result.ok
+            ? '已处理远程任务：${result.tool ?? 'unknown'}'
+            : (result.errorMessage ?? '远程任务处理失败。'),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isConsumingTask: false,
+        taskFeedbackMessage: '手动拉取远程任务失败，请稍后重试。',
+      );
+    }
+  }
+
   void clearError() {
     state = state.copyWith(clearError: true);
+  }
+
+  RemoteBridgeSessionState _mergeSession(RemoteBridgeSession session) {
+    return RemoteBridgeSessionState.fromSession(session).copyWith(
+      isConsumingTask: state.isConsumingTask,
+      lastTaskResult: state.lastTaskResult,
+      taskFeedbackMessage: state.taskFeedbackMessage,
+    );
   }
 }
 

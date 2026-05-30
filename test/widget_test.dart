@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:toylink_ai/application/bridge/remote_bridge_task_assignment_handler.dart';
 import 'package:toylink_ai/application/models/active_device_adapter_readiness.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
+import 'package:toylink_ai/application/use_cases/process_next_remote_bridge_task_use_case.dart';
 import 'package:toylink_ai/app.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
@@ -364,6 +366,89 @@ void main() {
     expect(find.text(_kGoConfigureClaude), findsOneWidget);
     expect(find.text(_kClaudeHealthCheckTitle), findsOneWidget);
     expect(find.text(_kClaudeHealthPendingTitle), findsOneWidget);
+  });
+
+  testWidgets('mcp page can manually consume one remote task', (
+    WidgetTester tester,
+  ) async {
+    final _TaskPollingBridgeService pollingBridge = _TaskPollingBridgeService(
+      pendingTask: const RemoteBridgeTaskAssignment(
+        requestId: 'bridge-task-9',
+        tool: 'get_status',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
+            (_) => ProcessNextRemoteBridgeTaskUseCase(
+              remoteBridgeService: pollingBridge,
+              assignmentHandler: RemoteBridgeTaskAssignmentHandler(
+                consumeTask: ({
+                  String? requestId,
+                  required String tool,
+                  Map<String, Object?> input = const <String, Object?>{},
+                }) async {
+                  return RemoteBridgeTaskResult(
+                    ok: true,
+                    requestId: requestId,
+                    tool: tool,
+                    result: const <String, Object?>{
+                      'deviceId': 'mock-sosexy-001',
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('拉取一条远程任务'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('拉取一条远程任务'));
+    await tester.tap(find.text('拉取一条远程任务'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('最近任务处理成功'), findsOneWidget);
+    expect(find.textContaining('get_status'), findsOneWidget);
+    expect(find.textContaining('bridge-task-9'), findsOneWidget);
   });
 
   testWidgets('claude onboarding page blocks entry when local setup is incomplete', (
@@ -1280,6 +1365,50 @@ class _RecoverableKeepaliveFailedRemoteBridgeService
   Stream<RemoteBridgeSession> watchSession() async* {
     yield _session;
     yield* _controller.stream;
+  }
+}
+
+class _TaskPollingBridgeService implements RemoteBridgeService {
+  _TaskPollingBridgeService({this.pendingTask});
+
+  RemoteBridgeTaskAssignment? pendingTask;
+
+  @override
+  RemoteBridgeSession get currentSession => const RemoteBridgeSession(
+    status: RemoteBridgeSessionStatus.ready,
+    bridgeSessionId: 'bridge-session-polling',
+    connectorInfo: RemoteBridgeConnectorInfo(
+      connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+      connectorToken: 'toy_bridge_token_polling',
+      toolNames: <String>['get_status', 'stop_all'],
+    ),
+  );
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async {
+    final next = pendingTask;
+    pendingTask = null;
+    return next;
+  }
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
+
+  @override
+  Future<void> refreshConnector() async {}
+
+  @override
+  Future<void> startSession() async {}
+
+  @override
+  Future<void> stopSession() async {}
+
+  @override
+  Stream<RemoteBridgeSession> watchSession() async* {
+    yield currentSession;
   }
 }
 
