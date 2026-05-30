@@ -1,4 +1,5 @@
 import '../entities/remote_bridge_session.dart';
+import '../entities/remote_bridge_task_assignment.dart';
 import '../entities/remote_bridge_task_result.dart';
 
 enum RemoteBridgeRuntimeSource { mock, dartDefine, savedConfig, unknown }
@@ -13,6 +14,7 @@ abstract class RemoteBridgeService {
   Future<void> startSession();
   Future<void> stopSession();
   Future<void> refreshConnector();
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask();
   Future<void> reportTaskResult(RemoteBridgeTaskResult result);
   void dispose();
 }

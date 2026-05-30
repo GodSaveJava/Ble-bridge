@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/application/use_cases/consume_remote_bridge_task_use_case.dart';
 import 'package:toylink_ai/application/use_cases/execute_remote_bridge_task_use_case.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_task_executor.dart';
@@ -102,6 +103,9 @@ class _RecordingBridgeService implements RemoteBridgeService {
 
   @override
   Future<void> refreshConnector() async {}
+
+  @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async => null;
 
   @override
   Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {

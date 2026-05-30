@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/infrastructure/bridge/http_remote_bridge_service.dart';
 
@@ -10,9 +11,11 @@ void main() {
   group('HttpRemoteBridgeService', () {
     late HttpServer server;
     late List<_CapturedRequest> capturedRequests;
+    Map<String, Object?>? pendingTaskPayload;
 
     setUp(() async {
       capturedRequests = <_CapturedRequest>[];
+      pendingTaskPayload = null;
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       server.listen((HttpRequest request) async {
         String body;
@@ -48,6 +51,20 @@ void main() {
           request.response.write(
             jsonEncode(_sessionPayload(token: 'bridge_token_2')),
           );
+          await request.response.close();
+          return;
+        }
+
+        if (request.method == 'POST' &&
+            request.uri.path == '/mobile-bridge/session/bridge-session-1/next-task') {
+          if (pendingTaskPayload == null) {
+            request.response.statusCode = HttpStatus.noContent;
+            await request.response.close();
+            return;
+          }
+          request.response.statusCode = HttpStatus.ok;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode(pendingTaskPayload));
           await request.response.close();
           return;
         }
@@ -134,6 +151,44 @@ void main() {
 
       expect(service.currentSession.status, RemoteBridgeSessionStatus.error);
       expect(service.currentSession.lastErrorCode, 'bridge_session_missing');
+    });
+
+    test('fetchNextTask returns null when no task is assigned', () async {
+      final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+        baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        clientId: 'test-client',
+      );
+      addTearDown(service.dispose);
+
+      await service.startSession();
+      final RemoteBridgeTaskAssignment? task = await service.fetchNextTask();
+
+      expect(task, isNull);
+      expect(
+        capturedRequests.last.path,
+        '/mobile-bridge/session/bridge-session-1/next-task',
+      );
+    });
+
+    test('fetchNextTask returns one assigned task when bridge has work', () async {
+      pendingTaskPayload = <String, Object?>{
+        'requestId': 'bridge-task-3',
+        'tool': 'get_status',
+        'input': <String, Object?>{'source': 'bridge'},
+      };
+      final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+        baseUrl: Uri.parse('http://127.0.0.1:${server.port}'),
+        clientId: 'test-client',
+      );
+      addTearDown(service.dispose);
+
+      await service.startSession();
+      final RemoteBridgeTaskAssignment? task = await service.fetchNextTask();
+
+      expect(task, isNotNull);
+      expect(task?.requestId, 'bridge-task-3');
+      expect(task?.tool, 'get_status');
+      expect(task?.input, <String, Object?>{'source': 'bridge'});
     });
 
     test('stopSession closes remote session and returns offline', () async {

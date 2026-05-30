@@ -12,6 +12,7 @@ import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/claude_connector_onboarding_record.dart';
 import 'package:toylink_ai/domain/entities/device_status.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/claude_connector_onboarding_repository.dart';
@@ -1189,6 +1190,9 @@ class _ReadyRemoteBridgeService implements RemoteBridgeService {
   Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
 
   @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async => null;
+
+  @override
   Future<void> refreshConnector() async {}
 
   @override
@@ -1240,6 +1244,9 @@ class _RecoverableKeepaliveFailedRemoteBridgeService
 
   @override
   Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {}
+
+  @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async => null;
 
   @override
   Future<void> refreshConnector() async {}

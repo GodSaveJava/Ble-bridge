@@ -38,6 +38,7 @@ import '../use_cases/manage_remote_bridge_config_use_case.dart';
 import '../use_cases/test_remote_bridge_connection_use_case.dart';
 import '../use_cases/execute_remote_bridge_task_use_case.dart';
 import '../use_cases/consume_remote_bridge_task_use_case.dart';
+import '../use_cases/process_next_remote_bridge_task_use_case.dart';
 
 final hardwareRepositoryProvider = Provider<HardwareRepository>((_) {
   throw UnimplementedError(
@@ -357,6 +358,14 @@ final remoteBridgeTaskAssignmentHandlerProvider =
       );
       return RemoteBridgeTaskAssignmentHandler(
         consumeTask: useCase.consume,
+      );
+    });
+
+final processNextRemoteBridgeTaskUseCaseProvider =
+    Provider<ProcessNextRemoteBridgeTaskUseCase>((ref) {
+      return ProcessNextRemoteBridgeTaskUseCase(
+        remoteBridgeService: ref.watch(remoteBridgeServiceProvider),
+        assignmentHandler: ref.watch(remoteBridgeTaskAssignmentHandlerProvider),
       );
     });
 

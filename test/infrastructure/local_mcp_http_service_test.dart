@@ -8,6 +8,7 @@ import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
@@ -627,6 +628,9 @@ class _RecordingBridgeService implements RemoteBridgeService {
 
   @override
   Future<void> refreshConnector() async {}
+
+  @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async => null;
 
   @override
   Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {

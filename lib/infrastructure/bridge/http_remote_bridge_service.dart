@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../../domain/entities/remote_bridge_session.dart';
+import '../../domain/entities/remote_bridge_task_assignment.dart';
 import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/remote_bridge_service.dart';
 
@@ -84,6 +85,56 @@ class HttpRemoteBridgeService
     } on Object catch (error) {
       _stopKeepAliveTimer();
       _emit(_errorSession('bridge_refresh_failed', error));
+    }
+  }
+
+  @override
+  Future<RemoteBridgeTaskAssignment?> fetchNextTask() async {
+    final String? bridgeSessionId = _session.bridgeSessionId;
+    if (!_session.isReady || bridgeSessionId == null || bridgeSessionId.isEmpty) {
+      return null;
+    }
+
+    try {
+      final Map<String, dynamic>? response = await _postJsonOrNull(
+        path: '/mobile-bridge/session/$bridgeSessionId/next-task',
+        body: <String, Object?>{
+          'clientId': _clientId,
+        },
+      );
+      if (response == null || response.isEmpty) {
+        return null;
+      }
+
+      final Object? requestId = response['requestId'];
+      final Object? tool = response['tool'];
+      final Object? input = response['input'];
+      if (requestId is! String || requestId.isEmpty) {
+        return null;
+      }
+      if (tool is! String || tool.isEmpty) {
+        return null;
+      }
+      if (input != null && input is! Map<String, dynamic>) {
+        return null;
+      }
+
+      _emit(
+        _session.copyWith(
+          clearError: true,
+          lastUpdatedAt: DateTime.now(),
+        ),
+      );
+
+      return RemoteBridgeTaskAssignment(
+        requestId: requestId,
+        tool: tool,
+        input: (input as Map<String, dynamic>? ?? const <String, dynamic>{})
+            .cast<String, Object?>(),
+      );
+    } on Object catch (error) {
+      _emit(_errorSession('bridge_task_fetch_failed', error));
+      return null;
     }
   }
 
@@ -202,6 +253,40 @@ class HttpRemoteBridgeService
     request.write(jsonEncode(body));
     final HttpClientResponse response = await request.close();
     final String responseBody = await utf8.decoder.bind(response).join();
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError(
+        'Remote bridge returned ${response.statusCode}: $responseBody',
+      );
+    }
+
+    if (responseBody.isEmpty) {
+      return const <String, dynamic>{};
+    }
+
+    return jsonDecode(responseBody) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>?> _postJsonOrNull({
+    required String path,
+    required Map<String, Object?> body,
+  }) async {
+    final HttpClientRequest request = await _httpClient.postUrl(_resolve(path));
+    request.headers.contentType = ContentType.json;
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    if (_clientToken case final String clientToken when clientToken.isNotEmpty) {
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer $clientToken',
+      );
+    }
+    request.write(jsonEncode(body));
+    final HttpClientResponse response = await request.close();
+    final String responseBody = await utf8.decoder.bind(response).join();
+
+    if (response.statusCode == HttpStatus.noContent) {
+      return null;
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw StateError(
