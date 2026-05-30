@@ -12,12 +12,14 @@ import '../controllers/remote_bridge_diagnostics_controller.dart';
 import '../controllers/claude_connector_onboarding_controller.dart';
 import '../controllers/mcp_service_controller.dart';
 import '../controllers/remote_bridge_session_controller.dart';
+import '../controllers/remote_bridge_task_pump_controller.dart';
 
 class McpPage extends ConsumerWidget {
   const McpPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(remoteBridgeTaskPumpControllerProvider);
     final McpServiceState localMcpState = ref.watch(
       mcpServiceControllerProvider,
     );

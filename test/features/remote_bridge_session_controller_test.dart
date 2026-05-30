@@ -11,6 +11,7 @@ import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
+import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_task_pump_controller.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';
 
 void main() {
@@ -144,6 +145,8 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
+
+      container.read(remoteBridgeTaskPumpControllerProvider);
 
       await container
           .read(remoteBridgeSessionControllerProvider.notifier)

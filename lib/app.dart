@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/mcp_server/presentation/controllers/remote_bridge_task_pump_controller.dart';
 import 'shared/widgets/app_lock_overlay.dart';
 
 class ToyLinkApp extends ConsumerWidget {
@@ -10,6 +11,7 @@ class ToyLinkApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(remoteBridgeTaskPumpControllerProvider);
     return MaterialApp.router(
       title: 'ToyLink AI',
       debugShowCheckedModeBanner: false,

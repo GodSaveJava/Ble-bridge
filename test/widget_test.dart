@@ -25,7 +25,7 @@ import 'package:toylink_ai/features/device_manager/presentation/controllers/devi
 import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/device_manager_page.dart';
 import 'package:toylink_ai/features/home/presentation/pages/home_page.dart';
-import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
+import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_task_pump_controller.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/claude_onboarding_page.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/mcp_page.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';

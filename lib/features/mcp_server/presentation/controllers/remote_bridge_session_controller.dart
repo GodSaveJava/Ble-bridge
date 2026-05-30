@@ -104,10 +104,6 @@ class RemoteBridgeSessionState {
 
 class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
   StreamSubscription<RemoteBridgeSession>? _subscription;
-  Timer? _autoConsumeTimer;
-
-  Duration get _autoConsumeInterval =>
-      ref.read(remoteBridgeAutoConsumeIntervalProvider);
 
   @override
   RemoteBridgeSessionState build() {
@@ -115,11 +111,9 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     _subscription?.cancel();
     _subscription = useCase.watchSession().listen((RemoteBridgeSession session) {
       state = _mergeSession(session);
-      _syncAutoConsumeLoop();
     });
     ref.onDispose(() {
       _subscription?.cancel();
-      _autoConsumeTimer?.cancel();
     });
     return RemoteBridgeSessionState.fromSession(useCase.currentSession);
   }
@@ -129,7 +123,6 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
       final useCase = ref.read(manageRemoteBridgeSessionUseCaseProvider);
       await useCase.startSession();
       state = _mergeSession(useCase.currentSession);
-      _syncAutoConsumeLoop();
     } catch (_) {
       state = state.copyWith(
         status: RemoteBridgeSessionStatus.error,
@@ -144,7 +137,6 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
       final useCase = ref.read(manageRemoteBridgeSessionUseCaseProvider);
       await useCase.stopSession();
       state = _mergeSession(useCase.currentSession);
-      _syncAutoConsumeLoop();
     } catch (_) {
       state = state.copyWith(
         status: RemoteBridgeSessionStatus.error,
@@ -159,7 +151,6 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
       final useCase = ref.read(manageRemoteBridgeSessionUseCaseProvider);
       await useCase.refreshConnector();
       state = _mergeSession(useCase.currentSession);
-      _syncAutoConsumeLoop();
     } catch (_) {
       state = state.copyWith(
         status: RemoteBridgeSessionStatus.error,
@@ -177,23 +168,20 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     );
   }
 
+  Future<void> consumeNextTaskSilently() async {
+    await _consumeNextTask(
+      surfaceEmptyQueueFeedback: false,
+      failureMessage: '自动拉取远程任务失败，请稍后重试。',
+      successPrefix: '已自动处理远程任务：',
+    );
+  }
+
   Future<void> setAutoConsumeEnabled(bool enabled) async {
     state = state.copyWith(
       isAutoConsumeEnabled: enabled,
       taskFeedbackMessage: enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
       lastTaskResult: enabled ? state.lastTaskResult : null,
     );
-    _syncAutoConsumeLoop();
-
-    if (enabled &&
-        state.status == RemoteBridgeSessionStatus.ready &&
-        !state.isConsumingTask) {
-      await _consumeNextTask(
-        surfaceEmptyQueueFeedback: false,
-        failureMessage: '自动拉取远程任务失败，请稍后重试。',
-        successPrefix: '已自动处理远程任务：',
-      );
-    }
   }
 
   void clearError() {
@@ -253,37 +241,7 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
       taskFeedbackMessage: state.taskFeedbackMessage,
     );
   }
-
-  void _syncAutoConsumeLoop() {
-    final bool shouldRun =
-        state.isAutoConsumeEnabled &&
-        state.status == RemoteBridgeSessionStatus.ready;
-
-    if (!shouldRun) {
-      _autoConsumeTimer?.cancel();
-      _autoConsumeTimer = null;
-      return;
-    }
-
-    if (_autoConsumeTimer?.isActive ?? false) {
-      return;
-    }
-
-    _autoConsumeTimer = Timer.periodic(_autoConsumeInterval, (_) {
-      unawaited(
-        _consumeNextTask(
-          surfaceEmptyQueueFeedback: false,
-          failureMessage: '自动拉取远程任务失败，请稍后重试。',
-          successPrefix: '已自动处理远程任务：',
-        ),
-      );
-    });
-  }
 }
-
-final remoteBridgeAutoConsumeIntervalProvider = Provider<Duration>(
-  (_) => const Duration(seconds: 5),
-);
 
 final remoteBridgeSessionControllerProvider = NotifierProvider<
   RemoteBridgeSessionController,
