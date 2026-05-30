@@ -25,6 +25,7 @@ import 'package:toylink_ai/features/device_manager/presentation/controllers/devi
 import 'package:toylink_ai/features/device_manager/presentation/pages/adapter_verification_page.dart';
 import 'package:toylink_ai/features/device_manager/presentation/pages/device_manager_page.dart';
 import 'package:toylink_ai/features/home/presentation/pages/home_page.dart';
+import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/claude_onboarding_page.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/pages/mcp_page.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';
@@ -449,6 +450,91 @@ void main() {
     expect(find.text('最近任务处理成功'), findsOneWidget);
     expect(find.textContaining('get_status'), findsOneWidget);
     expect(find.textContaining('bridge-task-9'), findsOneWidget);
+  });
+
+  testWidgets('mcp page can enable automatic remote task consume', (
+    WidgetTester tester,
+  ) async {
+    final _TaskPollingBridgeService pollingBridge = _TaskPollingBridgeService(
+      pendingTask: const RemoteBridgeTaskAssignment(
+        requestId: 'bridge-task-auto-9',
+        tool: 'stop_all',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultHardwareRepositoryProvider);
+          }),
+          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+          adapterManifestRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultAdapterManifestRepositoryProvider);
+          }),
+          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+          }),
+          verifiedAdapterRepositoryProvider.overrideWith((ref) {
+            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+          }),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+          ),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyRemoteBridgeService(),
+          ),
+          processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
+            (_) => ProcessNextRemoteBridgeTaskUseCase(
+              remoteBridgeService: pollingBridge,
+              assignmentHandler: RemoteBridgeTaskAssignmentHandler(
+                consumeTask: ({
+                  String? requestId,
+                  required String tool,
+                  Map<String, Object?> input = const <String, Object?>{},
+                }) async {
+                  return RemoteBridgeTaskResult(
+                    ok: true,
+                    requestId: requestId,
+                    tool: tool,
+                    result: const <String, Object?>{'stopped': true},
+                  );
+                },
+              ),
+            ),
+          ),
+          remoteBridgeAutoConsumeIntervalProvider.overrideWith(
+            (_) => const Duration(milliseconds: 20),
+          ),
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: McpPage()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('自动拉取远程任务'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(find.textContaining('已自动处理远程任务'), findsOneWidget);
+    expect(find.textContaining('stop_all'), findsOneWidget);
+    expect(find.textContaining('bridge-task-auto-9'), findsOneWidget);
   });
 
   testWidgets('claude onboarding page blocks entry when local setup is incomplete', (

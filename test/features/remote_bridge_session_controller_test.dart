@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,23 +80,7 @@ void main() {
         overrides: [
           remoteBridgeServiceProvider.overrideWith((_) => bridgeService),
           processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
-            (_) => ProcessNextRemoteBridgeTaskUseCase(
-              remoteBridgeService: bridgeService,
-              assignmentHandler: RemoteBridgeTaskAssignmentHandler(
-                consumeTask: ({
-                  String? requestId,
-                  required String tool,
-                  Map<String, Object?> input = const <String, Object?>{},
-                }) async {
-                  return RemoteBridgeTaskResult(
-                    ok: true,
-                    requestId: requestId,
-                    tool: tool,
-                    result: input,
-                  );
-                },
-              ),
-            ),
+            (_) => _testProcessUseCase(bridgeService),
           ),
         ],
       );
@@ -122,25 +108,7 @@ void main() {
         overrides: [
           remoteBridgeServiceProvider.overrideWith((_) => bridgeService),
           processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
-            (_) => ProcessNextRemoteBridgeTaskUseCase(
-              remoteBridgeService: bridgeService,
-              assignmentHandler: RemoteBridgeTaskAssignmentHandler(
-                consumeTask: ({
-                  String? requestId,
-                  required String tool,
-                  Map<String, Object?> input = const <String, Object?>{},
-                }) async {
-                  return RemoteBridgeTaskResult(
-                    ok: true,
-                    requestId: requestId,
-                    tool: tool,
-                    result: const <String, Object?>{
-                      'deviceId': 'mock-sosexy-001',
-                    },
-                  );
-                },
-              ),
-            ),
+            (_) => _testProcessUseCase(bridgeService),
           ),
         ],
       );
@@ -156,7 +124,64 @@ void main() {
       expect(state.lastTaskResult?.requestId, 'bridge-task-7');
       expect(state.taskFeedbackMessage, contains('get_status'));
     });
+
+    test('auto consume fetches ready task after enabling loop', () async {
+      final _TaskQueueBridgeService bridgeService = _TaskQueueBridgeService(
+        pendingTask: const RemoteBridgeTaskAssignment(
+          requestId: 'bridge-task-auto-1',
+          tool: 'stop_all',
+        ),
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith((_) => bridgeService),
+          processNextRemoteBridgeTaskUseCaseProvider.overrideWith(
+            (_) => _testProcessUseCase(bridgeService),
+          ),
+          remoteBridgeAutoConsumeIntervalProvider.overrideWith(
+            (_) => const Duration(milliseconds: 20),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(remoteBridgeSessionControllerProvider.notifier)
+          .setAutoConsumeEnabled(true);
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+
+      final RemoteBridgeSessionState state = container.read(
+        remoteBridgeSessionControllerProvider,
+      );
+      expect(state.isAutoConsumeEnabled, isTrue);
+      expect(state.lastTaskResult?.requestId, 'bridge-task-auto-1');
+      expect(state.taskFeedbackMessage, contains('已自动处理远程任务'));
+    });
   });
+}
+
+ProcessNextRemoteBridgeTaskUseCase _testProcessUseCase(
+  RemoteBridgeService bridgeService,
+) {
+  return ProcessNextRemoteBridgeTaskUseCase(
+    remoteBridgeService: bridgeService,
+    assignmentHandler: RemoteBridgeTaskAssignmentHandler(
+      consumeTask: ({
+        String? requestId,
+        required String tool,
+        Map<String, Object?> input = const <String, Object?>{},
+      }) async {
+        return RemoteBridgeTaskResult(
+          ok: true,
+          requestId: requestId,
+          tool: tool,
+          result: tool == 'get_status'
+              ? const <String, Object?>{'deviceId': 'mock-sosexy-001'}
+              : const <String, Object?>{'stopped': true},
+        );
+      },
+    ),
+  );
 }
 
 class _FailingBridgeService implements RemoteBridgeService {
@@ -184,7 +209,7 @@ class _FailingBridgeService implements RemoteBridgeService {
     _session = const RemoteBridgeSession(
       status: RemoteBridgeSessionStatus.error,
       lastErrorCode: 'bridge_start_failed',
-      lastErrorMessage: '妗ユ帴杩炴帴澶辫触',
+      lastErrorMessage: 'bridge start failed',
     );
     throw StateError('bridge start failed');
   }
@@ -223,7 +248,7 @@ class _TaskQueueBridgeService implements RemoteBridgeService {
 
   @override
   Future<RemoteBridgeTaskAssignment?> fetchNextTask() async {
-    final next = pendingTask;
+    final RemoteBridgeTaskAssignment? next = pendingTask;
     pendingTask = null;
     return next;
   }

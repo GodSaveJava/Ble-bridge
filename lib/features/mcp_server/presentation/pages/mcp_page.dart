@@ -385,6 +385,57 @@ class McpPage extends ConsumerWidget {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  '自动拉取远程任务',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  bridgeState.isAutoConsumeEnabled
+                                      ? '已开启。Bridge 就绪时会按安全节奏自动拉取白名单任务。'
+                                      : '默认关闭。建议先手动验证闭环，再开启自动拉取。',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Switch(
+                            value: bridgeState.isAutoConsumeEnabled,
+                            onChanged: bridgeState.isBusy ||
+                                    bridgeState.isConsumingTask ||
+                                    (bridgeState.status !=
+                                            RemoteBridgeSessionStatus.ready &&
+                                        !bridgeState.isAutoConsumeEnabled)
+                                ? null
+                                : (bool enabled) => ref
+                                      .read(
+                                        remoteBridgeSessionControllerProvider
+                                            .notifier,
+                                      )
+                                      .setAutoConsumeEnabled(enabled),
+                          ),
+                        ],
+                      ),
+                    ),
                     if (bridgeState.taskFeedbackMessage != null) ...<Widget>[
                       const SizedBox(height: 12),
                       Container(
