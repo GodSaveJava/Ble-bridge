@@ -7,19 +7,26 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import '../../application/mcp/mcp_tool_router.dart';
 import '../../application/mcp/remote_bridge_tool_call_handler.dart';
+import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/mcp_service.dart';
+
+typedef RemoteBridgeTaskAssignmentCallback =
+    Future<RemoteBridgeTaskResult> Function(Object? payload);
 
 class LocalMcpHttpService implements McpService {
   LocalMcpHttpService({
     required McpToolRouter toolRouter,
     required RemoteBridgeToolCallHandler remoteBridgeToolCallHandler,
+    RemoteBridgeTaskAssignmentCallback? remoteBridgeTaskAssignmentHandler,
     this.host = '127.0.0.1',
     this.port = 8765,
   }) : _toolRouter = toolRouter,
-       _remoteBridgeToolCallHandler = remoteBridgeToolCallHandler;
+       _remoteBridgeToolCallHandler = remoteBridgeToolCallHandler,
+       _remoteBridgeTaskAssignmentHandler = remoteBridgeTaskAssignmentHandler;
 
   final McpToolRouter _toolRouter;
   final RemoteBridgeToolCallHandler _remoteBridgeToolCallHandler;
+  final RemoteBridgeTaskAssignmentCallback? _remoteBridgeTaskAssignmentHandler;
   final String host;
   final int port;
 
@@ -102,6 +109,11 @@ class LocalMcpHttpService implements McpService {
     if (request.url.path == 'mobile-bridge/tool-call' &&
         request.method == 'POST') {
       return _handleRemoteBridgeToolCall(request);
+    }
+
+    if (request.url.path == 'mobile-bridge/task-assignment' &&
+        request.method == 'POST') {
+      return _handleRemoteBridgeTaskAssignment(request);
     }
 
     return _errorResponse(
@@ -202,6 +214,36 @@ class LocalMcpHttpService implements McpService {
     }
   }
 
+  Future<Response> _handleRemoteBridgeTaskAssignment(Request request) async {
+    final RemoteBridgeTaskAssignmentCallback? handler =
+        _remoteBridgeTaskAssignmentHandler;
+    if (handler == null) {
+      return _errorResponse(
+        HttpStatus.serviceUnavailable,
+        code: 'bridge_task_assignment_unavailable',
+        message: 'Remote bridge task assignment is not configured.',
+        recoverable: true,
+      );
+    }
+
+    try {
+      final dynamic json = jsonDecode(await request.readAsString());
+      final RemoteBridgeTaskResult result = await handler(json);
+      return _buildRemoteBridgeTaskResultResponse(result);
+    } on FormatException {
+      return _buildRemoteBridgeTaskResultResponse(
+        await handler(null),
+      );
+    } catch (_) {
+      return _errorResponse(
+        HttpStatus.internalServerError,
+        code: 'bridge_task_assignment_failed',
+        message: 'Unexpected remote bridge task assignment error.',
+        recoverable: false,
+      );
+    }
+  }
+
   Response _buildToolResultResponse(McpToolResult result) {
     if (result.ok) {
       return _jsonResponse(HttpStatus.ok, <String, Object?>{
@@ -216,6 +258,28 @@ class LocalMcpHttpService implements McpService {
       details: result.data,
       recoverable: true,
     );
+  }
+
+  Response _buildRemoteBridgeTaskResultResponse(RemoteBridgeTaskResult result) {
+    if (result.ok) {
+      return _jsonResponse(HttpStatus.ok, <String, Object?>{
+        'ok': true,
+        'requestId': result.requestId,
+        'tool': result.tool,
+        'result': result.result,
+      });
+    }
+
+    return _jsonResponse(HttpStatus.badRequest, <String, Object?>{
+      'ok': false,
+      'requestId': result.requestId,
+      'tool': result.tool,
+      'error': <String, Object?>{
+        'code': result.errorCode ?? 'bridge_task_assignment_failed',
+        'message': result.errorMessage ?? 'Remote bridge task assignment failed.',
+        'recoverable': true,
+      },
+    });
   }
 
   Response _validationError(String message) {

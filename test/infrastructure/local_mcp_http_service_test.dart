@@ -7,10 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/domain/entities/verified_adapter_record.dart';
 import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository.dart';
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
+import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
+import 'package:toylink_ai/domain/services/remote_bridge_task_executor.dart';
 import 'package:toylink_ai/infrastructure/mcp/local_mcp_http_service.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
@@ -415,6 +419,89 @@ void main() {
         );
       },
     );
+
+    test(
+      'supports remote bridge task assignment payload and reports result upstream',
+      () async {
+        final _RecordingBridgeService bridgeService = _RecordingBridgeService(
+          toolNames: const <String>['get_status', 'stop_all'],
+        );
+        final container = ProviderContainer(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith(
+              (_) => MockHardwareRepository(),
+            ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
+            verifiedAdapterRepositoryProvider.overrideWith(
+              (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
+            ),
+            remoteBridgeServiceProvider.overrideWith((_) => bridgeService),
+            remoteBridgeTaskExecutorProvider.overrideWith(
+              (_) => const _FakeRemoteBridgeTaskExecutor(
+                result: RemoteBridgeTaskResult(
+                  ok: true,
+                  requestId: 'bridge-task-1',
+                  tool: 'get_status',
+                  result: <String, dynamic>{'deviceId': 'mock-sosexy-001'},
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = container.read(mcpToolRouterProvider);
+        final bridgeHandler = container.read(
+          remoteBridgeToolCallHandlerProvider,
+        );
+        final assignmentHandler = container.read(
+          remoteBridgeTaskAssignmentHandlerProvider,
+        );
+        final service = LocalMcpHttpService(
+          toolRouter: router,
+          remoteBridgeToolCallHandler: bridgeHandler,
+          remoteBridgeTaskAssignmentHandler: assignmentHandler.handle,
+          host: '127.0.0.1',
+          port: 8878,
+        );
+        addTearDown(service.stop);
+
+        await service.start();
+
+        final client = HttpClient();
+        addTearDown(client.close);
+
+        final request = await client.postUrl(
+          Uri.parse('http://127.0.0.1:8878/mobile-bridge/task-assignment'),
+        );
+        request.headers.contentType = ContentType.json;
+        request.write(
+          jsonEncode(<String, Object?>{
+            'requestId': 'bridge-task-1',
+            'tool': 'get_status',
+          }),
+        );
+        final response = await request.close();
+        final body = await utf8.decodeStream(response);
+        final Map<String, dynamic> json =
+            jsonDecode(body) as Map<String, dynamic>;
+
+        expect(response.statusCode, HttpStatus.ok);
+        expect(json['ok'], true);
+        expect(json['requestId'], 'bridge-task-1');
+        expect(
+          (json['result'] as Map<String, dynamic>)['deviceId'],
+          'mock-sosexy-001',
+        );
+        expect(bridgeService.reportedResults, hasLength(1));
+        expect(bridgeService.reportedResults.single.requestId, 'bridge-task-1');
+      },
+    );
   });
 }
 
@@ -514,6 +601,65 @@ class _InMemoryActiveBindingRepository
   @override
   Stream<List<ActiveAdapterBinding>> watchAll() async* {
     yield _bindings.values.toList();
+  }
+}
+
+class _RecordingBridgeService implements RemoteBridgeService {
+  _RecordingBridgeService({required List<String> toolNames})
+    : _session = RemoteBridgeSession(
+        status: RemoteBridgeSessionStatus.ready,
+        bridgeSessionId: 'bridge-session-test',
+        connectorInfo: RemoteBridgeConnectorInfo(
+          connectorUrl: 'https://bridge.toylink.local/mcp/claude',
+          connectorToken: 'toy-connector-token',
+          toolNames: toolNames,
+        ),
+      );
+
+  final RemoteBridgeSession _session;
+  final List<RemoteBridgeTaskResult> reportedResults = <RemoteBridgeTaskResult>[];
+
+  @override
+  RemoteBridgeSession get currentSession => _session;
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<void> refreshConnector() async {}
+
+  @override
+  Future<void> reportTaskResult(RemoteBridgeTaskResult result) async {
+    reportedResults.add(result);
+  }
+
+  @override
+  Future<void> startSession() async {}
+
+  @override
+  Future<void> stopSession() async {}
+
+  @override
+  Stream<RemoteBridgeSession> watchSession() async* {
+    yield _session;
+  }
+}
+
+class _FakeRemoteBridgeTaskExecutor implements RemoteBridgeTaskExecutor {
+  const _FakeRemoteBridgeTaskExecutor({required this.result});
+
+  final RemoteBridgeTaskResult result;
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<RemoteBridgeTaskResult> execute({
+    String? requestId,
+    required String tool,
+    Map<String, Object?> input = const <String, Object?>{},
+  }) async {
+    return result;
   }
 }
 

@@ -54,6 +54,10 @@ final defaultMcpServiceProvider = Provider<McpService>((ref) {
   return LocalMcpHttpService(
     toolRouter: ref.watch(mcpToolRouterProvider),
     remoteBridgeToolCallHandler: ref.watch(remoteBridgeToolCallHandlerProvider),
+    remoteBridgeTaskAssignmentHandler: (Object? payload) {
+      final handler = ref.read(remoteBridgeTaskAssignmentHandlerProvider);
+      return handler.handle(payload);
+    },
   );
 });
 
