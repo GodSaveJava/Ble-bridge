@@ -594,6 +594,8 @@ void main() {
     );
 
     expect(find.text(_kClaudeReadyTitle), findsOneWidget);
+    expect(find.text(_kClaudeHealthReadyTitle), findsOneWidget);
+    expect(find.text(_kClaudeHealthReadySummary), findsOneWidget);
     expect(find.text(_kOnboardingStepPrepare), findsOneWidget);
     expect(find.text(_kOnboardingStepAddConnector), findsOneWidget);
     expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
@@ -1337,8 +1339,8 @@ const String _kViewClaudeConnectorInfo = '查看接入信息';
 const String _kResetClaudeSetup = '重置 Claude 接入状态';
 const String _kClaudeHealthCheckTitle = 'Claude 接入自检';
 const String _kClaudeHealthPendingTitle = '还差 Claude 侧配置';
-const String _kClaudeHealthReadyTitle = 'Claude 接入健康';
-const String _kClaudeHealthReadySummary = '现在可以回到 Claude 原对话继续使用。';
+const String _kClaudeHealthReadyTitle = '桥接连接正常';
+const String _kClaudeHealthReadySummary = '桥接会话已经在线，可以继续使用当前 connector 信息。';
 
 class _ReadyRemoteBridgeService implements RemoteBridgeService {
   @override
