@@ -9,6 +9,7 @@ import 'package:toylink_ai/application/use_cases/process_next_remote_bridge_task
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
+import 'package:toylink_ai/domain/repositories/remote_bridge_auto_consume_repository.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_task_pump_controller.dart';
@@ -160,6 +161,55 @@ void main() {
       expect(state.lastTaskResult?.requestId, 'bridge-task-auto-1');
       expect(state.taskFeedbackMessage, contains('已自动处理远程任务'));
     });
+
+    test('hydrates auto consume preference from repository', () async {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeAutoConsumeRepositoryProvider.overrideWith(
+            (_) => _InMemoryRemoteBridgeAutoConsumeRepository(enabled: true),
+          ),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(remoteBridgeSessionControllerProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final RemoteBridgeSessionState state = container.read(
+        remoteBridgeSessionControllerProvider,
+      );
+      expect(state.isAutoConsumeEnabled, isTrue);
+      expect(state.taskFeedbackMessage, isNotNull);
+    });
+
+    test('setAutoConsumeEnabled persists preference in repository', () async {
+      final _InMemoryRemoteBridgeAutoConsumeRepository repository =
+          _InMemoryRemoteBridgeAutoConsumeRepository();
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeAutoConsumeRepositoryProvider.overrideWith(
+            (_) => repository,
+          ),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(remoteBridgeSessionControllerProvider.notifier)
+          .setAutoConsumeEnabled(true);
+
+      expect(await repository.loadEnabled(), isTrue);
+      expect(
+        container.read(remoteBridgeSessionControllerProvider).isAutoConsumeEnabled,
+        isTrue,
+      );
+    });
   });
 }
 
@@ -271,5 +321,26 @@ class _TaskQueueBridgeService implements RemoteBridgeService {
   @override
   Stream<RemoteBridgeSession> watchSession() async* {
     yield currentSession;
+  }
+}
+
+class _InMemoryRemoteBridgeAutoConsumeRepository
+    implements RemoteBridgeAutoConsumeRepository {
+  _InMemoryRemoteBridgeAutoConsumeRepository({bool enabled = false})
+    : _enabled = enabled;
+
+  bool _enabled;
+
+  @override
+  Future<bool> loadEnabled() async => _enabled;
+
+  @override
+  Future<void> reset() async {
+    _enabled = false;
+  }
+
+  @override
+  Future<void> saveEnabled(bool enabled) async {
+    _enabled = enabled;
   }
 }

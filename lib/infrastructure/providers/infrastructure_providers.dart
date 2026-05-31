@@ -6,6 +6,7 @@ import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
 import '../../domain/repositories/claude_connector_onboarding_repository.dart';
+import '../../domain/repositories/remote_bridge_auto_consume_repository.dart';
 import '../../domain/repositories/hardware_repository.dart';
 import '../../domain/repositories/remote_bridge_config_repository.dart';
 import '../../domain/repositories/verified_adapter_repository.dart';
@@ -31,6 +32,7 @@ import '../storage/shared_prefs_active_adapter_binding_repository.dart';
 import '../storage/shared_prefs_adapter_manifest_repository.dart';
 import '../storage/shared_prefs_background_stability_checklist_repository.dart';
 import '../storage/shared_prefs_claude_connector_onboarding_repository.dart';
+import '../storage/shared_prefs_remote_bridge_auto_consume_repository.dart';
 import '../storage/shared_prefs_remote_bridge_config_repository.dart';
 import '../storage/shared_prefs_verified_adapter_repository.dart';
 
@@ -182,4 +184,9 @@ final defaultClaudeConnectorOnboardingRepositoryProvider =
 final defaultRemoteBridgeConfigRepositoryProvider =
     Provider<RemoteBridgeConfigRepository>((_) {
       return SharedPrefsRemoteBridgeConfigRepository();
+    });
+
+final defaultRemoteBridgeAutoConsumeRepositoryProvider =
+    Provider<RemoteBridgeAutoConsumeRepository>((_) {
+      return SharedPrefsRemoteBridgeAutoConsumeRepository();
     });

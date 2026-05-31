@@ -4,7 +4,7 @@ class AppTheme {
   const AppTheme._();
 
   // Premium Warm & Minimalist Palette
-  static const Color _primary = Color(0xFFD6A3A3); // Dusty Blush / Rose
+  static const Color _primary = Color(0xFFC8B4BA); // Cooler Mauve / 藕粉色
   static const Color _background = Color(0xFFFDFBFB); // Warm Off-White
   static const Color _surface = Color(0xFFFFFFFF);
   static const Color _error = Color(0xFFE63946); // Highly visible red for emergency stop
@@ -32,11 +32,18 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: _surface,
         elevation: 4,
-        shadowColor: Colors.black.withValues(alpha: 0.04),
+        shadowColor: Colors.black.withOpacity(0.05),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20), // Large premium rounding
         ),
         margin: EdgeInsets.zero,
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+        },
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

@@ -77,6 +77,9 @@ void main() {
         remoteBridgeConfigRepositoryProvider.overrideWith((ref) {
           return ref.watch(defaultRemoteBridgeConfigRepositoryProvider);
         }),
+        remoteBridgeAutoConsumeRepositoryProvider.overrideWith((ref) {
+          return ref.watch(defaultRemoteBridgeAutoConsumeRepositoryProvider);
+        }),
       ],
       child: const ToyLinkApp(),
     ),

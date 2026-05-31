@@ -18,6 +18,7 @@ import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
 import '../../domain/repositories/claude_connector_onboarding_repository.dart';
+import '../../domain/repositories/remote_bridge_auto_consume_repository.dart';
 import '../../domain/entities/active_adapter_binding.dart';
 import '../../domain/entities/adapter_manifest.dart';
 import '../../domain/entities/device_status.dart';
@@ -35,6 +36,7 @@ import '../../domain/services/remote_bridge_service.dart';
 import '../../domain/services/remote_bridge_task_executor.dart';
 import '../use_cases/manage_remote_bridge_session_use_case.dart';
 import '../use_cases/manage_remote_bridge_config_use_case.dart';
+import '../use_cases/manage_remote_bridge_auto_consume_use_case.dart';
 import '../use_cases/test_remote_bridge_connection_use_case.dart';
 import '../use_cases/execute_remote_bridge_task_use_case.dart';
 import '../use_cases/consume_remote_bridge_task_use_case.dart';
@@ -73,6 +75,11 @@ final remoteBridgeConfigRepositoryProvider =
       throw UnimplementedError(
         'Provide a concrete RemoteBridgeConfigRepository in infrastructure.',
       );
+    });
+
+final remoteBridgeAutoConsumeRepositoryProvider =
+    Provider<RemoteBridgeAutoConsumeRepository>((_) {
+      return _InMemoryRemoteBridgeAutoConsumeRepository();
     });
 
 final adapterManifestRepositoryProvider = Provider<AdapterManifestRepository>((
@@ -326,6 +333,13 @@ final manageRemoteBridgeConfigUseCaseProvider =
       );
     });
 
+final manageRemoteBridgeAutoConsumeUseCaseProvider =
+    Provider<ManageRemoteBridgeAutoConsumeUseCase>((ref) {
+      return ManageRemoteBridgeAutoConsumeUseCase(
+        repository: ref.watch(remoteBridgeAutoConsumeRepositoryProvider),
+      );
+    });
+
 final testRemoteBridgeConnectionUseCaseProvider =
     Provider<TestRemoteBridgeConnectionUseCase>((ref) {
       return TestRemoteBridgeConnectionUseCase(
@@ -454,4 +468,25 @@ VerifiedAdapterRecord? _findVerifiedRecord({
     }
   }
   return null;
+}
+
+class _InMemoryRemoteBridgeAutoConsumeRepository
+    implements RemoteBridgeAutoConsumeRepository {
+  _InMemoryRemoteBridgeAutoConsumeRepository({bool enabled = false})
+    : _enabled = enabled;
+
+  bool _enabled;
+
+  @override
+  Future<bool> loadEnabled() async => _enabled;
+
+  @override
+  Future<void> reset() async {
+    _enabled = false;
+  }
+
+  @override
+  Future<void> saveEnabled(bool enabled) async {
+    _enabled = enabled;
+  }
 }

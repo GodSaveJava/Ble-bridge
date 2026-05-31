@@ -104,6 +104,7 @@ class RemoteBridgeSessionState {
 
 class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
   StreamSubscription<RemoteBridgeSession>? _subscription;
+  bool _autoConsumePreferenceLoaded = false;
 
   @override
   RemoteBridgeSessionState build() {
@@ -115,6 +116,7 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
     ref.onDispose(() {
       _subscription?.cancel();
     });
+    _loadAutoConsumePreferenceOnce();
     return RemoteBridgeSessionState.fromSession(useCase.currentSession);
   }
 
@@ -177,11 +179,23 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
   }
 
   Future<void> setAutoConsumeEnabled(bool enabled) async {
-    state = state.copyWith(
-      isAutoConsumeEnabled: enabled,
-      taskFeedbackMessage: enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
-      lastTaskResult: enabled ? state.lastTaskResult : null,
-    );
+    try {
+      await ref.read(manageRemoteBridgeAutoConsumeUseCaseProvider).saveEnabled(
+            enabled,
+          );
+      state = state.copyWith(
+        isAutoConsumeEnabled: enabled,
+        taskFeedbackMessage:
+            enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
+        lastTaskResult: enabled ? state.lastTaskResult : null,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        taskFeedbackMessage: enabled
+            ? '自动拉取启用失败，请稍后重试。'
+            : '自动拉取关闭失败，请稍后重试。',
+      );
+    }
   }
 
   void clearError() {
@@ -240,6 +254,43 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
       lastTaskResult: state.lastTaskResult,
       taskFeedbackMessage: state.taskFeedbackMessage,
     );
+  }
+
+  void _loadAutoConsumePreferenceOnce() {
+    if (_autoConsumePreferenceLoaded) {
+      return;
+    }
+    _autoConsumePreferenceLoaded = true;
+    unawaited(_hydrateAutoConsumePreference());
+  }
+
+  Future<void> _hydrateAutoConsumePreference() async {
+    try {
+      final bool enabled = await ref
+          .read(manageRemoteBridgeAutoConsumeUseCaseProvider)
+          .loadEnabled();
+      if (!ref.mounted || state.isAutoConsumeEnabled == enabled) {
+        return;
+      }
+      if (state.isAutoConsumeEnabled && !enabled) {
+        return;
+      }
+      state = state.copyWith(
+        isAutoConsumeEnabled: enabled,
+        taskFeedbackMessage: enabled
+            ? '已恢复自动拉取远程任务。'
+            : state.taskFeedbackMessage,
+      );
+    } catch (_) {
+      if (!ref.mounted) {
+        return;
+      }
+      if (!state.isAutoConsumeEnabled) {
+        state = state.copyWith(
+          taskFeedbackMessage: '自动拉取设置读取失败，已保持关闭。',
+        );
+      }
+    }
   }
 }
 
