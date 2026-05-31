@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../application/providers/application_providers.dart';
 import '../../../../core/security/app_lock_controller.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
+import '../../../../domain/services/remote_bridge_service.dart';
 import '../../../mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 
@@ -16,6 +18,11 @@ class SettingsPage extends ConsumerWidget {
     final RemoteBridgeSessionState bridgeState = ref.watch(
       remoteBridgeSessionControllerProvider,
     );
+    final Object remoteBridgeService = ref.watch(remoteBridgeServiceProvider);
+    final RemoteBridgeRuntimeSource bridgeSource =
+        remoteBridgeService is RemoteBridgeServiceDiagnostics
+        ? remoteBridgeService.runtimeSource
+        : RemoteBridgeRuntimeSource.unknown;
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -78,6 +85,14 @@ class SettingsPage extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Card(
+              child: ListTile(
+                title: const Text('当前 Bridge 来源'),
+                subtitle: Text(_bridgeSourceDescription(bridgeSource)),
+                trailing: Text(_bridgeSourceLabel(bridgeSource)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
               child: SwitchListTile(
                 title: const Text('自动拉取远程任务'),
                 subtitle: Text(
@@ -121,4 +136,22 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _bridgeSourceLabel(RemoteBridgeRuntimeSource source) {
+  return switch (source) {
+    RemoteBridgeRuntimeSource.mock => '来源：本地 mock',
+    RemoteBridgeRuntimeSource.dartDefine => '来源：dart-define',
+    RemoteBridgeRuntimeSource.savedConfig => '来源：真实 Bridge',
+    RemoteBridgeRuntimeSource.unknown => '来源：未知',
+  };
+}
+
+String _bridgeSourceDescription(RemoteBridgeRuntimeSource source) {
+  return switch (source) {
+    RemoteBridgeRuntimeSource.mock => '当前仍在使用本地 mock 桥接，只适合开发和演示。',
+    RemoteBridgeRuntimeSource.dartDefine => '当前通过启动参数注入真实 Bridge，适合开发阶段手动联调。',
+    RemoteBridgeRuntimeSource.savedConfig => '当前优先使用你在设置页保存的真实 Bridge 配置。',
+    RemoteBridgeRuntimeSource.unknown => '当前桥接来源无法识别，请检查运行配置。',
+  };
 }

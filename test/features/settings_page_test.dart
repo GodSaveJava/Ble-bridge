@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:toylink_ai/application/providers/application_providers.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
 import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import 'package:toylink_ai/features/settings/presentation/pages/settings_page.dart';
+import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';
 
 void main() {
-  testWidgets('settings page shows bridge status and auto consume note', (
+  testWidgets('settings page shows bridge status and source', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
           remoteBridgeSessionControllerProvider.overrideWith(
             _ReadyRemoteBridgeSessionController.new,
           ),
@@ -23,8 +28,9 @@ void main() {
 
     expect(find.text('当前 Bridge 状态'), findsOneWidget);
     expect(find.text('Bridge 已就绪，自动拉取会在安全节奏下运行。'), findsOneWidget);
+    expect(find.text('当前 Bridge 来源'), findsOneWidget);
+    expect(find.text('来源：本地 mock'), findsOneWidget);
     expect(find.text('自动拉取远程任务'), findsOneWidget);
-    expect(find.text('已恢复自动拉取远程任务。'), findsOneWidget);
     expect(
       find.descendant(
         of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
@@ -40,6 +46,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
           remoteBridgeSessionControllerProvider.overrideWith(
             _OfflineRemoteBridgeSessionController.new,
           ),
@@ -52,6 +61,8 @@ void main() {
       find.text('当前 Bridge 还未就绪，先去 MCP 页或桥接配置页把连接准备好，再开启这里的自动拉取。'),
       findsOneWidget,
     );
+    expect(find.text('来源：本地 mock'), findsOneWidget);
+
     final Finder switchFinder = find.descendant(
       of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
       matching: find.byType(Switch),
@@ -65,6 +76,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
           remoteBridgeSessionControllerProvider.overrideWith(
             _ReadyRemoteBridgeSessionController.new,
           ),
@@ -73,15 +87,16 @@ void main() {
       ),
     );
 
-    await tester.tap(
-      find.descendant(
-        of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
-        matching: find.byType(Switch),
-      ),
+    final Finder switchFinder = find.descendant(
+      of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
+      matching: find.byType(Switch),
     );
+    expect(tester.widget<Switch>(switchFinder).value, isTrue);
+
+    await tester.tap(switchFinder);
     await tester.pump();
 
-    expect(find.text('已关闭自动拉取远程任务。'), findsOneWidget);
+    expect(tester.widget<Switch>(switchFinder).value, isFalse);
   });
 }
 
@@ -98,10 +113,7 @@ class _ReadyRemoteBridgeSessionController
 
   @override
   Future<void> setAutoConsumeEnabled(bool enabled) async {
-    state = state.copyWith(
-      isAutoConsumeEnabled: enabled,
-      taskFeedbackMessage: enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
-    );
+    state = state.copyWith(isAutoConsumeEnabled: enabled);
   }
 }
 
