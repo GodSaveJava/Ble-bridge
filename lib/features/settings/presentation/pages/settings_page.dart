@@ -6,7 +6,9 @@ import '../../../../application/providers/application_providers.dart';
 import '../../../../core/security/app_lock_controller.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
+import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
 import '../../../../shared/widgets/toylink_background.dart';
+import '../../../mcp_server/presentation/controllers/remote_bridge_diagnostics_controller.dart';
 import '../../../mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -23,6 +25,9 @@ class SettingsPage extends ConsumerWidget {
         remoteBridgeService is RemoteBridgeServiceDiagnostics
         ? remoteBridgeService.runtimeSource
         : RemoteBridgeRuntimeSource.unknown;
+    final RemoteBridgeDiagnostics bridgeDiagnostics = ref.watch(
+      remoteBridgeDiagnosticsProvider,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -80,6 +85,47 @@ class SettingsPage extends ConsumerWidget {
                 trailing: FilledButton.tonal(
                   onPressed: () => context.push('/mcp'),
                   child: const Text('去 MCP 页'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      '桥接诊断',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    BridgeDiagnosticsBanner(
+                      diagnostics: bridgeDiagnostics,
+                      onActionPressed: () {
+                        switch (bridgeDiagnostics.action) {
+                          case RemoteBridgeDiagnosticsAction
+                              .restartBridgeSession:
+                            ref
+                                .read(
+                                  remoteBridgeSessionControllerProvider
+                                      .notifier,
+                                )
+                                .startSession();
+                          case RemoteBridgeDiagnosticsAction.openBridgeSettings:
+                            if (bridgeDiagnostics.actionRoute case final String route) {
+                              context.push(route);
+                            }
+                          case RemoteBridgeDiagnosticsAction.openDeviceScan:
+                            if (bridgeDiagnostics.actionRoute case final String route) {
+                              context.push(route);
+                            }
+                          case null:
+                            break;
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),

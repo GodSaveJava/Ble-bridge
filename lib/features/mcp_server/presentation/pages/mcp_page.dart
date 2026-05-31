@@ -6,6 +6,7 @@ import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
+import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/claude_connector_health_controller.dart';
 import '../controllers/remote_bridge_diagnostics_controller.dart';
@@ -272,7 +273,7 @@ class McpPage extends ConsumerWidget {
                     const SizedBox(height: 12),
                     _NextStepBanner(message: _bridgeGuidanceText(bridgeState)),
                     const SizedBox(height: 12),
-                    _BridgeDiagnosticsBanner(
+                    BridgeDiagnosticsBanner(
                       diagnostics: bridgeDiagnostics,
                       onActionPressed: () {
                         switch (bridgeDiagnostics.action) {
@@ -649,76 +650,6 @@ class _NextStepBanner extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(message),
-        ],
-      ),
-    );
-  }
-}
-
-class _BridgeDiagnosticsBanner extends StatelessWidget {
-  const _BridgeDiagnosticsBanner({
-    required this.diagnostics,
-    required this.onActionPressed,
-  });
-
-  final RemoteBridgeDiagnostics diagnostics;
-  final VoidCallback onActionPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final bool isWarning =
-        diagnostics.action != null || diagnostics.title.contains('失败');
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isWarning
-            ? colorScheme.errorContainer.withValues(alpha: 0.82)
-            : colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            diagnostics.title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: isWarning
-                  ? colorScheme.onErrorContainer
-                  : colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            diagnostics.summary,
-            style: TextStyle(
-              color: isWarning
-                  ? colorScheme.onErrorContainer
-                  : colorScheme.onSurface,
-            ),
-          ),
-          if (diagnostics.lastSyncLabel case final String label) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isWarning
-                    ? colorScheme.onErrorContainer
-                    : colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-          if (diagnostics.actionLabel != null &&
-              diagnostics.action != null) ...<Widget>[
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: onActionPressed,
-              child: Text(diagnostics.actionLabel!),
-            ),
-          ],
         ],
       ),
     );

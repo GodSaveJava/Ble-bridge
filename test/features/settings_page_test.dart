@@ -27,6 +27,14 @@ void main() {
     );
 
     expect(find.widgetWithText(SwitchListTile, '启用应用锁'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('自动拉取远程任务'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     expect(
       find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
       findsOneWidget,
