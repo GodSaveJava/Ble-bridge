@@ -7,7 +7,7 @@ import 'package:toylink_ai/features/mcp_server/presentation/controllers/remote_b
 import 'package:toylink_ai/features/settings/presentation/pages/settings_page.dart';
 
 void main() {
-  testWidgets('settings page shows auto consume preference and restore note', (
+  testWidgets('settings page shows bridge status and auto consume note', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -21,6 +21,8 @@ void main() {
       ),
     );
 
+    expect(find.text('当前 Bridge 状态'), findsOneWidget);
+    expect(find.text('Bridge 已就绪，自动拉取会在安全节奏下运行。'), findsOneWidget);
     expect(find.text('自动拉取远程任务'), findsOneWidget);
     expect(find.text('已恢复自动拉取远程任务。'), findsOneWidget);
     expect(

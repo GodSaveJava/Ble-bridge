@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/security/app_lock_controller.dart';
+import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 
@@ -57,6 +58,21 @@ class SettingsPage extends ConsumerWidget {
                 trailing: FilledButton.tonal(
                   onPressed: () => context.push('/settings/bridge'),
                   child: const Text('去配置'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                title: const Text('当前 Bridge 状态'),
+                subtitle: Text(
+                  bridgeState.status == RemoteBridgeSessionStatus.ready
+                      ? 'Bridge 已就绪，自动拉取会在安全节奏下运行。'
+                      : 'Bridge 还未就绪，先去 MCP 页面确认连接或回到桥接配置页测试连接。',
+                ),
+                trailing: FilledButton.tonal(
+                  onPressed: () => context.push('/mcp'),
+                  child: const Text('去 MCP 页'),
                 ),
               ),
             ),
