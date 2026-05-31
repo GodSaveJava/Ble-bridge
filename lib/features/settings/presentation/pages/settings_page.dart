@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/security/app_lock_controller.dart';
+import '../../../mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -10,7 +11,10 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lockState = ref.watch(appLockControllerProvider);
+    final AppLockState lockState = ref.watch(appLockControllerProvider);
+    final RemoteBridgeSessionState bridgeState = ref.watch(
+      remoteBridgeSessionControllerProvider,
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -56,6 +60,32 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            Card(
+              child: SwitchListTile(
+                title: const Text('自动拉取远程任务'),
+                subtitle: Text(
+                  bridgeState.isAutoConsumeEnabled
+                      ? '已开启。Bridge 就绪时会按安全节奏自动拉取白名单任务，并在重启后自动恢复。'
+                      : '默认关闭。建议先在 MCP 页手动验证闭环，再在这里开启。',
+                ),
+                value: bridgeState.isAutoConsumeEnabled,
+                onChanged: bridgeState.isBusy || bridgeState.isConsumingTask
+                    ? null
+                    : (bool enabled) => ref
+                          .read(remoteBridgeSessionControllerProvider.notifier)
+                          .setAutoConsumeEnabled(enabled),
+              ),
+            ),
+            if (bridgeState.taskFeedbackMessage != null) ...<Widget>[
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  title: const Text('自动拉取状态'),
+                  subtitle: Text(bridgeState.taskFeedbackMessage!),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             const Card(
               child: ListTile(
