@@ -596,8 +596,8 @@ void main() {
     expect(find.text(_kClaudeReadyTitle), findsOneWidget);
     expect(find.text(_kOnboardingStepPrepare), findsOneWidget);
     expect(find.text(_kOnboardingStepAddConnector), findsOneWidget);
-    expect(find.text(_kConnectorUrlReady), findsOneWidget);
-    expect(find.text(_kConnectorTokenReady), findsOneWidget);
+    expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
+    expect(find.text(_kOnboardingConnectorTokenReady), findsOneWidget);
     expect(find.text(_kCopyConnectorUrl), findsOneWidget);
     expect(find.text(_kCopyConnectorToken), findsOneWidget);
     expect(find.text(_kTroubleshootingTitle), findsOneWidget);
@@ -638,6 +638,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(_kCopyConnectorUrl), findsOneWidget);
     expect(find.text(_kCopyConnectorToken), findsOneWidget);
+    expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
+    expect(find.text(_kOnboardingConnectorTokenReady), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text(_kFinishedClaudeSetup),
@@ -1239,8 +1241,8 @@ class _VerifiedAdapterVerificationController
 }
 
 const String _kDeviceStatus = '\u8bbe\u5907\u72b6\u6001';
-const String _kMcpService = 'MCP \u670d\u52a1';
-const String _kViewAdapterStatus = '\u67e5\u770b\u9002\u914d\u5668\u72b6\u6001';
+const String _kMcpService = 'MCP 桥接服务';
+const String _kViewAdapterStatus = '适配器状态';
 const String _kGoBindAdapter = '\u53bb\u7ed1\u5b9a\u9002\u914d\u5668';
 const String _kGoReverify = '\u53bb\u91cd\u65b0\u9a8c\u8bc1';
 const String _kVerificationGuide = '\u9a8c\u8bc1\u8bf4\u660e';
@@ -1320,10 +1322,13 @@ const String _kGoConfigureClaude = '去配置 Claude';
 const String _kClaudeOnboardingTitle = 'Claude 接入向导';
 const String _kClaudeBlockedTitle = '还不能开始 Claude 接入';
 const String _kClaudeReadyTitle = '现在可以开始接入 Claude';
-const String _kOnboardingStepPrepare = '第 1 步：确认本地准备';
-const String _kOnboardingStepAddConnector = '第 3 步：去 Claude 添加 connector';
-const String _kCopyConnectorUrl = '复制接入地址';
-const String _kCopyConnectorToken = '复制接入令牌';
+const String _kOnboardingStepPrepare = '1. 确认本地准备';
+const String _kOnboardingStepAddConnector = '3. 去 Claude 添加 connector';
+const String _kOnboardingConnectorUrlReady =
+    'https://bridge.toylink.local/mcp/claude';
+const String _kOnboardingConnectorTokenReady = 'toy_...eady';
+const String _kCopyConnectorUrl = '接入地址 (Connector URL)';
+const String _kCopyConnectorToken = '接入令牌 (Connector Token)';
 const String _kTroubleshootingTitle = '常见问题排查';
 const String _kFinishedClaudeSetup = '我已完成 Claude 配置';
 const String _kClaudeSetupCompleteTitle = 'Claude 接入已准备完成';
