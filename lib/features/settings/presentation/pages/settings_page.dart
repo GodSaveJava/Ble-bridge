@@ -83,10 +83,17 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: Text(
                   bridgeState.isAutoConsumeEnabled
                       ? '已开启。Bridge 就绪时会按安全节奏自动拉取白名单任务，并在重启后自动恢复。'
-                      : '默认关闭。建议先在 MCP 页手动验证闭环，再在这里开启。',
+                      : bridgeState.status == RemoteBridgeSessionStatus.ready
+                      ? '默认关闭。建议先在 MCP 页手动验证闭环，再在这里开启。'
+                      : '当前 Bridge 还未就绪，先去 MCP 页或桥接配置页把连接准备好，再开启这里的自动拉取。',
                 ),
                 value: bridgeState.isAutoConsumeEnabled,
-                onChanged: bridgeState.isBusy || bridgeState.isConsumingTask
+                onChanged:
+                    bridgeState.isBusy ||
+                        bridgeState.isConsumingTask ||
+                        (bridgeState.status !=
+                                RemoteBridgeSessionStatus.ready &&
+                            !bridgeState.isAutoConsumeEnabled)
                     ? null
                     : (bool enabled) => ref
                           .read(remoteBridgeSessionControllerProvider.notifier)

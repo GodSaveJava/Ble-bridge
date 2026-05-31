@@ -14,7 +14,7 @@ void main() {
       ProviderScope(
         overrides: [
           remoteBridgeSessionControllerProvider.overrideWith(
-            _FakeRemoteBridgeSessionController.new,
+            _ReadyRemoteBridgeSessionController.new,
           ),
         ],
         child: const MaterialApp(home: SettingsPage()),
@@ -34,6 +34,31 @@ void main() {
     );
   });
 
+  testWidgets('settings page disables auto consume when bridge is not ready', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          remoteBridgeSessionControllerProvider.overrideWith(
+            _OfflineRemoteBridgeSessionController.new,
+          ),
+        ],
+        child: const MaterialApp(home: SettingsPage()),
+      ),
+    );
+
+    expect(
+      find.text('当前 Bridge 还未就绪，先去 MCP 页或桥接配置页把连接准备好，再开启这里的自动拉取。'),
+      findsOneWidget,
+    );
+    final Finder switchFinder = find.descendant(
+      of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
+      matching: find.byType(Switch),
+    );
+    expect(tester.widget<Switch>(switchFinder).onChanged, isNull);
+  });
+
   testWidgets('settings page updates auto consume preference', (
     WidgetTester tester,
   ) async {
@@ -41,7 +66,7 @@ void main() {
       ProviderScope(
         overrides: [
           remoteBridgeSessionControllerProvider.overrideWith(
-            _FakeRemoteBridgeSessionController.new,
+            _ReadyRemoteBridgeSessionController.new,
           ),
         ],
         child: const MaterialApp(home: SettingsPage()),
@@ -60,7 +85,8 @@ void main() {
   });
 }
 
-class _FakeRemoteBridgeSessionController extends RemoteBridgeSessionController {
+class _ReadyRemoteBridgeSessionController
+    extends RemoteBridgeSessionController {
   @override
   RemoteBridgeSessionState build() {
     return const RemoteBridgeSessionState(
@@ -75,6 +101,17 @@ class _FakeRemoteBridgeSessionController extends RemoteBridgeSessionController {
     state = state.copyWith(
       isAutoConsumeEnabled: enabled,
       taskFeedbackMessage: enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
+    );
+  }
+}
+
+class _OfflineRemoteBridgeSessionController
+    extends RemoteBridgeSessionController {
+  @override
+  RemoteBridgeSessionState build() {
+    return const RemoteBridgeSessionState(
+      status: RemoteBridgeSessionStatus.offline,
+      isAutoConsumeEnabled: false,
     );
   }
 }
