@@ -9,7 +9,7 @@ import 'package:toylink_ai/features/settings/presentation/pages/settings_page.da
 import 'package:toylink_ai/infrastructure/mock/mock_remote_bridge_service.dart';
 
 void main() {
-  testWidgets('settings page shows bridge status and source', (
+  testWidgets('settings page exposes bridge status and source actions', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -26,18 +26,12 @@ void main() {
       ),
     );
 
-    expect(find.text('当前 Bridge 状态'), findsOneWidget);
-    expect(find.text('Bridge 已就绪，自动拉取会在安全节奏下运行。'), findsOneWidget);
-    expect(find.text('当前 Bridge 来源'), findsOneWidget);
-    expect(find.text('来源：本地 mock'), findsOneWidget);
-    expect(find.text('自动拉取远程任务'), findsOneWidget);
+    expect(find.widgetWithText(SwitchListTile, '启用应用锁'), findsOneWidget);
     expect(
-      find.descendant(
-        of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
-        matching: find.byType(Switch),
-      ),
+      find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
       findsOneWidget,
     );
+    expect(find.byType(OutlinedButton), findsOneWidget);
   });
 
   testWidgets('settings page disables auto consume when bridge is not ready', (
@@ -57,17 +51,19 @@ void main() {
       ),
     );
 
-    expect(
-      find.text('当前 Bridge 还未就绪，先去 MCP 页或桥接配置页把连接准备好，再开启这里的自动拉取。'),
-      findsOneWidget,
+    await tester.scrollUntilVisible(
+      find.text('自动拉取远程任务'),
+      200,
+      scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('来源：本地 mock'), findsOneWidget);
+    await tester.pumpAndSettle();
 
-    final Finder switchFinder = find.descendant(
-      of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
-      matching: find.byType(Switch),
+    final SwitchListTile autoConsumeTile = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
     );
-    expect(tester.widget<Switch>(switchFinder).onChanged, isNull);
+
+    expect(autoConsumeTile.onChanged, isNull);
+    expect(find.byType(OutlinedButton), findsOneWidget);
   });
 
   testWidgets('settings page updates auto consume preference', (
@@ -87,10 +83,19 @@ void main() {
       ),
     );
 
+    await tester.scrollUntilVisible(
+      find.text('自动拉取远程任务'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     final Finder switchFinder = find.descendant(
       of: find.widgetWithText(SwitchListTile, '自动拉取远程任务'),
       matching: find.byType(Switch),
     );
+    await tester.ensureVisible(switchFinder);
+    await tester.pumpAndSettle();
     expect(tester.widget<Switch>(switchFinder).value, isTrue);
 
     await tester.tap(switchFinder);

@@ -6,8 +6,8 @@ import '../../../../application/providers/application_providers.dart';
 import '../../../../core/security/app_lock_controller.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
-import '../../../mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 import '../../../../shared/widgets/toylink_background.dart';
+import '../../../mcp_server/presentation/controllers/remote_bridge_session_controller.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -75,7 +75,7 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: Text(
                   bridgeState.status == RemoteBridgeSessionStatus.ready
                       ? 'Bridge 已就绪，自动拉取会在安全节奏下运行。'
-                      : 'Bridge 还未就绪，先去 MCP 页面确认连接或回到桥接配置页测试连接。',
+                      : 'Bridge 还未就绪，先去 MCP 页或桥接配置页把连接准备好，再开启自动拉取。',
                 ),
                 trailing: FilledButton.tonal(
                   onPressed: () => context.push('/mcp'),
@@ -91,6 +91,48 @@ class SettingsPage extends ConsumerWidget {
                 trailing: Text(_bridgeSourceLabel(bridgeSource)),
               ),
             ),
+            if (bridgeSource == RemoteBridgeRuntimeSource.savedConfig &&
+                bridgeState.status !=
+                    RemoteBridgeSessionStatus.ready) ...<Widget>[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: <Widget>[
+                    OutlinedButton(
+                      onPressed: () => context.push('/mcp'),
+                      child: const Text('去 MCP 页'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => context.push('/settings/bridge'),
+                      child: const Text('去桥接配置'),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (bridgeSource == RemoteBridgeRuntimeSource.mock ||
+                bridgeSource == RemoteBridgeRuntimeSource.unknown) ...<Widget>[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: () => context.push('/settings/bridge'),
+                  child: const Text('去桥接配置'),
+                ),
+              ),
+            ] else if (bridgeState.status ==
+                RemoteBridgeSessionStatus.ready) ...<Widget>[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: () => context.push('/mcp'),
+                  child: const Text('去 MCP 页'),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Card(
               child: SwitchListTile(
