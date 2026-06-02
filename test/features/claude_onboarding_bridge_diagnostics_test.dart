@@ -27,6 +27,7 @@ void main() {
             (_) => const RemoteBridgeDiagnostics(
               title: '玩具连接已断开',
               summary: '远程桥接仍在线，但当前手机没有连着可控制的玩具。',
+              isWarning: true,
               lastSyncLabel: '最近同步：2026-06-02 10:00',
               action: RemoteBridgeDiagnosticsAction.openDeviceScan,
               actionLabel: '去重新连接设备',

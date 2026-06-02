@@ -15,6 +15,7 @@ class RemoteBridgeDiagnostics {
   const RemoteBridgeDiagnostics({
     required this.title,
     required this.summary,
+    this.isWarning = false,
     this.lastSyncLabel,
     this.action,
     this.actionLabel,
@@ -23,6 +24,7 @@ class RemoteBridgeDiagnostics {
 
   final String title;
   final String summary;
+  final bool isWarning;
   final String? lastSyncLabel;
   final RemoteBridgeDiagnosticsAction? action;
   final String? actionLabel;
@@ -48,6 +50,7 @@ final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((
       title: '桥接保活失败',
       summary:
           '上一段桥接会话曾成功建立，但后续保活刷新失败。请先尝试重新启动桥接会话；如果仍失败，再检查网络、后台保活和远程 Bridge 配置。',
+      isWarning: true,
       lastSyncLabel: lastSyncLabel,
       action: RemoteBridgeDiagnosticsAction.restartBridgeSession,
       actionLabel: '重新启动桥接会话',
@@ -67,6 +70,7 @@ final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((
       title: '玩具连接已断开',
       summary:
           '远程桥接仍然在线，但当前手机没有连着可控制的玩具。请先重新连接设备，再回到 Claude 原对话继续使用。',
+      isWarning: true,
       lastSyncLabel: lastSyncLabel,
       action: RemoteBridgeDiagnosticsAction.openDeviceScan,
       actionLabel: '去重新连接设备',

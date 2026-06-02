@@ -15,8 +15,7 @@ class BridgeDiagnosticsBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final bool isWarning =
-        diagnostics.action != null || diagnostics.title.contains('失败');
+    final bool isWarning = diagnostics.isWarning;
 
     return Container(
       width: double.infinity,

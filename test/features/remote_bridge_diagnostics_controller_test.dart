@@ -43,6 +43,7 @@ void main() {
     expect(diagnostics.title, '桥接保活失败');
     expect(diagnostics.summary, contains('重新启动桥接会话'));
     expect(diagnostics.lastSyncLabel, '最近同步：2026-05-25 10:08');
+    expect(diagnostics.isWarning, isTrue);
     expect(diagnostics.actionLabel, '重新启动桥接会话');
     expect(
       diagnostics.action,
@@ -86,6 +87,7 @@ void main() {
     expect(diagnostics.title, '玩具连接已断开');
     expect(diagnostics.summary, contains('重新连接设备'));
     expect(diagnostics.lastSyncLabel, '最近同步：2026-05-25 10:09');
+    expect(diagnostics.isWarning, isTrue);
     expect(diagnostics.actionLabel, '去重新连接设备');
     expect(
       diagnostics.action,
@@ -130,6 +132,7 @@ void main() {
 
     expect(diagnostics.title, '桥接连接正常');
     expect(diagnostics.lastSyncLabel, '最近同步：2026-05-25 10:10');
+    expect(diagnostics.isWarning, isFalse);
     expect(diagnostics.actionLabel, isNull);
   });
 }
