@@ -6,6 +6,7 @@ import '../../domain/entities/remote_bridge_session.dart';
 import '../../domain/entities/remote_bridge_task_assignment.dart';
 import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/remote_bridge_service.dart';
+import 'remote_bridge_protocol.dart';
 
 class HttpRemoteBridgeService
     implements RemoteBridgeService, RemoteBridgeServiceDiagnostics {
@@ -75,10 +76,8 @@ class HttpRemoteBridgeService
 
     try {
       final Map<String, dynamic> response = await _postJson(
-        path: '/mobile-bridge/session/$bridgeSessionId/refresh',
-        body: <String, Object?>{
-          'clientId': _clientId,
-        },
+        path: RemoteBridgeProtocol.sessionRefreshPath(bridgeSessionId),
+        body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
       _emit(_sessionFromResponse(response));
       _startKeepAliveTimer();
@@ -97,10 +96,8 @@ class HttpRemoteBridgeService
 
     try {
       final Map<String, dynamic>? response = await _postJsonOrNull(
-        path: '/mobile-bridge/session/$bridgeSessionId/next-task',
-        body: <String, Object?>{
-          'clientId': _clientId,
-        },
+        path: RemoteBridgeProtocol.sessionNextTaskPath(bridgeSessionId),
+        body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
       if (response == null || response.isEmpty) {
         return null;
@@ -155,16 +152,8 @@ class HttpRemoteBridgeService
 
     try {
       await _postJson(
-        path: '/mobile-bridge/session/$bridgeSessionId/task-result',
-        body: <String, Object?>{
-          'clientId': _clientId,
-          'requestId': result.requestId,
-          'tool': result.tool,
-          'ok': result.ok,
-          'result': result.result,
-          'errorCode': result.errorCode,
-          'errorMessage': result.errorMessage,
-        },
+        path: RemoteBridgeProtocol.sessionTaskResultPath(bridgeSessionId),
+        body: RemoteBridgeProtocol.taskResultRequestBody(_clientId, result),
       );
       _emit(
         _session.copyWith(
@@ -189,10 +178,8 @@ class HttpRemoteBridgeService
 
     try {
       final Map<String, dynamic> response = await _postJson(
-        path: '/mobile-bridge/session/start',
-        body: <String, Object?>{
-          'clientId': _clientId,
-        },
+        path: RemoteBridgeProtocol.sessionStartPath,
+        body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
       _emit(_sessionFromResponse(response));
       _startKeepAliveTimer();
@@ -217,7 +204,7 @@ class HttpRemoteBridgeService
     }
 
     try {
-      await _postWithoutBody('/mobile-bridge/session/$bridgeSessionId/stop');
+      await _postWithoutBody(RemoteBridgeProtocol.sessionStopPath(bridgeSessionId));
       _emit(
         RemoteBridgeSession(
           status: RemoteBridgeSessionStatus.offline,
@@ -321,11 +308,16 @@ class HttpRemoteBridgeService
 
   RemoteBridgeSession _sessionFromResponse(Map<String, dynamic> json) {
     final String bridgeSessionId =
-        json['bridgeSessionId'] as String? ?? _session.bridgeSessionId ?? '';
-    final String connectorUrl = json['connectorUrl'] as String? ?? '';
-    final String connectorToken = json['connectorToken'] as String? ?? '';
+        json[RemoteBridgeProtocol.bridgeSessionIdField] as String? ??
+            _session.bridgeSessionId ??
+            '';
+    final String connectorUrl =
+        json[RemoteBridgeProtocol.connectorUrlField] as String? ?? '';
+    final String connectorToken =
+        json[RemoteBridgeProtocol.connectorTokenField] as String? ?? '';
     final List<String> toolNames =
-        (json['toolNames'] as List<dynamic>? ?? const <dynamic>[])
+        (json[RemoteBridgeProtocol.toolNamesField] as List<dynamic>? ??
+                const <dynamic>[])
             .map((dynamic item) => item.toString())
             .toList();
 
@@ -396,10 +388,8 @@ class HttpRemoteBridgeService
     _keepAliveInFlight = true;
     try {
       final Map<String, dynamic> response = await _postJson(
-        path: '/mobile-bridge/session/$bridgeSessionId/refresh',
-        body: <String, Object?>{
-          'clientId': _clientId,
-        },
+        path: RemoteBridgeProtocol.sessionRefreshPath(bridgeSessionId),
+        body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
       _emit(_sessionFromResponse(response));
     } on Object catch (error) {
