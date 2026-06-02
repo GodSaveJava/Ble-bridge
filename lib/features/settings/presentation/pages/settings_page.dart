@@ -7,6 +7,7 @@ import '../../../../core/security/app_lock_controller.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
 import '../../../../shared/widgets/bridge_source_info.dart';
+import '../../../../shared/widgets/bridge_session_copy.dart';
 import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../../../mcp_server/presentation/controllers/remote_bridge_diagnostics_controller.dart';
@@ -79,9 +80,7 @@ class SettingsPage extends ConsumerWidget {
               child: ListTile(
                 title: const Text('当前 Bridge 状态'),
                 subtitle: Text(
-                  bridgeState.status == RemoteBridgeSessionStatus.ready
-                      ? 'Bridge 已就绪，自动拉取会在安全节奏下运行。'
-                      : 'Bridge 还未就绪，先去 MCP 页或桥接配置页把连接准备好，再开启自动拉取。',
+                  '${bridgeSessionStatusLabel(bridgeState.status)}。${bridgeSessionGuidanceText(bridgeState.status)}',
                 ),
                 trailing: FilledButton.tonal(
                   onPressed: () => context.push('/mcp'),

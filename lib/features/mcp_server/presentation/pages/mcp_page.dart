@@ -7,6 +7,7 @@ import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
 import '../../../../shared/widgets/bridge_source_info.dart';
+import '../../../../shared/widgets/bridge_session_copy.dart';
 import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/claude_connector_health_controller.dart';
@@ -217,7 +218,7 @@ class McpPage extends ConsumerWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
-                        _StatusChip(label: _bridgeStatusLabel(bridgeState.status)),
+                        _StatusChip(label: bridgeSessionStatusLabel(bridgeState.status)),
                         _StatusChip(label: bridgeSourceLabel(bridgeSource)),
                         _StatusChip(
                           label: bridgeState.canOnboardClaude
@@ -272,7 +273,9 @@ class McpPage extends ConsumerWidget {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    _NextStepBanner(message: _bridgeGuidanceText(bridgeState)),
+                    _NextStepBanner(
+                      message: bridgeSessionGuidanceText(bridgeState.status),
+                    ),
                     const SizedBox(height: 12),
                     BridgeDiagnosticsBanner(
                       diagnostics: bridgeDiagnostics,
@@ -811,16 +814,6 @@ String _aiControlStatusText(
   return mcpRunning ? 'AI 控制已可用' : '等待启动 MCP';
 }
 
-String _bridgeStatusLabel(RemoteBridgeSessionStatus status) {
-  return switch (status) {
-    RemoteBridgeSessionStatus.offline => '桥接未启动',
-    RemoteBridgeSessionStatus.connecting => '桥接连接中',
-    RemoteBridgeSessionStatus.ready => '桥接已就绪',
-    RemoteBridgeSessionStatus.busy => '桥接处理中',
-    RemoteBridgeSessionStatus.error => '桥接异常',
-  };
-}
-
 String _claudeHealthStatusLabel(ClaudeConnectorHealthStatus status) {
   return switch (status) {
     ClaudeConnectorHealthStatus.blocked => '自检未通过',
@@ -829,17 +822,3 @@ String _claudeHealthStatusLabel(ClaudeConnectorHealthStatus status) {
   };
 }
 
-String _bridgeGuidanceText(RemoteBridgeSessionState state) {
-  switch (state.status) {
-    case RemoteBridgeSessionStatus.offline:
-      return '先启动桥接会话。接入地址和令牌生成后，你才能去 Claude 里添加 connector。';
-    case RemoteBridgeSessionStatus.connecting:
-      return '桥接正在建立会话，请稍等片刻，不要重复点击。';
-    case RemoteBridgeSessionStatus.ready:
-      return '接入信息已经准备好了。下一步可以复制这些信息，并按教程去 Claude 完成一次 connector 配置。';
-    case RemoteBridgeSessionStatus.busy:
-      return '桥接正在刷新接入信息，请稍等当前操作完成。';
-    case RemoteBridgeSessionStatus.error:
-      return '桥接会话出现异常。请重新启动桥接会话；如果仍然失败，再检查网络和后台保活状态。';
-  }
-}
