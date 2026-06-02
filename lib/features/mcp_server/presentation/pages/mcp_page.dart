@@ -6,6 +6,7 @@ import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
+import '../../../../shared/widgets/bridge_source_info.dart';
 import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../controllers/claude_connector_health_controller.dart';
@@ -217,7 +218,7 @@ class McpPage extends ConsumerWidget {
                       runSpacing: 8,
                       children: <Widget>[
                         _StatusChip(label: _bridgeStatusLabel(bridgeState.status)),
-                        _StatusChip(label: _bridgeSourceLabel(bridgeSource)),
+                        _StatusChip(label: bridgeSourceLabel(bridgeSource)),
                         _StatusChip(
                           label: bridgeState.canOnboardClaude
                               ? (claudeSetupCompleted
@@ -250,7 +251,7 @@ class McpPage extends ConsumerWidget {
                       Text('工具数量：${bridgeState.toolNames.length}'),
                     ],
                     const SizedBox(height: 4),
-                    Text('当前桥接来源：${_bridgeSourceDescription(bridgeSource)}'),
+                    Text('当前桥接来源：${bridgeSourceDescription(bridgeSource)}'),
                     if (bridgeSource == RemoteBridgeRuntimeSource.savedConfig &&
                         (bridgeState.status == RemoteBridgeSessionStatus.offline ||
                             bridgeState.status == RemoteBridgeSessionStatus.error)) ...<Widget>[
@@ -817,26 +818,6 @@ String _bridgeStatusLabel(RemoteBridgeSessionStatus status) {
     RemoteBridgeSessionStatus.ready => '桥接已就绪',
     RemoteBridgeSessionStatus.busy => '桥接处理中',
     RemoteBridgeSessionStatus.error => '桥接异常',
-  };
-}
-
-String _bridgeSourceLabel(RemoteBridgeRuntimeSource source) {
-  return switch (source) {
-    RemoteBridgeRuntimeSource.mock => '来源：本地 mock',
-    RemoteBridgeRuntimeSource.dartDefine => '来源：dart-define',
-    RemoteBridgeRuntimeSource.savedConfig => '来源：真实 Bridge',
-    RemoteBridgeRuntimeSource.unknown => '来源：未知',
-  };
-}
-
-String _bridgeSourceDescription(RemoteBridgeRuntimeSource source) {
-  return switch (source) {
-    RemoteBridgeRuntimeSource.mock => '当前仍在使用本地 mock 桥接，只适合开发和演示。',
-    RemoteBridgeRuntimeSource.dartDefine =>
-      '当前通过启动参数注入真实 Bridge，适合开发阶段手动联调。',
-    RemoteBridgeRuntimeSource.savedConfig =>
-      '当前优先使用你在设置页保存的真实 Bridge 配置。',
-    RemoteBridgeRuntimeSource.unknown => '当前桥接来源无法识别，请检查运行配置。',
   };
 }
 
