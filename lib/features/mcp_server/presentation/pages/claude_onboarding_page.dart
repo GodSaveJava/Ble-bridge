@@ -232,22 +232,12 @@ class _ReadyStateContent extends StatelessWidget {
                 const SizedBox(height: 12),
                 BridgeDiagnosticsBanner(
                   diagnostics: bridgeDiagnostics,
-                  onActionPressed: () {
-                    switch (bridgeDiagnostics.action) {
-                      case RemoteBridgeDiagnosticsAction.restartBridgeSession:
-                        unawaited(onRestartBridgeSession());
-                      case RemoteBridgeDiagnosticsAction.openBridgeSettings:
-                        if (bridgeDiagnostics.actionRoute case final String route) {
-                          context.push(route);
-                        }
-                      case RemoteBridgeDiagnosticsAction.openDeviceScan:
-                        if (bridgeDiagnostics.actionRoute case final String route) {
-                          context.push(route);
-                        }
-                      case null:
-                        break;
-                    }
-                  },
+                  onActionPressed: () => handleRemoteBridgeDiagnosticsAction(
+                    context: context,
+                    diagnostics: bridgeDiagnostics,
+                    onRestartBridgeSession: () =>
+                        unawaited(onRestartBridgeSession()),
+                  ),
                 ),
               ],
             ),

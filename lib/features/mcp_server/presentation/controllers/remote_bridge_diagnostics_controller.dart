@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
@@ -107,6 +109,27 @@ final remoteBridgeDiagnosticsProvider = Provider<RemoteBridgeDiagnostics>((
     ),
   };
 });
+
+void handleRemoteBridgeDiagnosticsAction({
+  required BuildContext context,
+  required RemoteBridgeDiagnostics diagnostics,
+  VoidCallback? onRestartBridgeSession,
+}) {
+  switch (diagnostics.action) {
+    case RemoteBridgeDiagnosticsAction.restartBridgeSession:
+      onRestartBridgeSession?.call();
+    case RemoteBridgeDiagnosticsAction.openBridgeSettings:
+      if (diagnostics.actionRoute case final String route) {
+        context.push(route);
+      }
+    case RemoteBridgeDiagnosticsAction.openDeviceScan:
+      if (diagnostics.actionRoute case final String route) {
+        context.push(route);
+      }
+    case null:
+      break;
+  }
+}
 
 String _formatBridgeTimestamp(DateTime time) {
   String twoDigits(int value) => value.toString().padLeft(2, '0');

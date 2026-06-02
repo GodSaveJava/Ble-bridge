@@ -275,28 +275,15 @@ class McpPage extends ConsumerWidget {
                     const SizedBox(height: 12),
                     BridgeDiagnosticsBanner(
                       diagnostics: bridgeDiagnostics,
-                      onActionPressed: () {
-                        switch (bridgeDiagnostics.action) {
-                          case RemoteBridgeDiagnosticsAction
-                              .restartBridgeSession:
-                            ref
-                                .read(
-                                  remoteBridgeSessionControllerProvider
-                                      .notifier,
-                                )
-                                .startSession();
-                          case RemoteBridgeDiagnosticsAction.openBridgeSettings:
-                            if (bridgeDiagnostics.actionRoute case final String route) {
-                              context.push(route);
-                            }
-                          case RemoteBridgeDiagnosticsAction.openDeviceScan:
-                            if (bridgeDiagnostics.actionRoute case final String route) {
-                              context.push(route);
-                            }
-                          case null:
-                            break;
-                        }
-                      },
+                      onActionPressed: () => handleRemoteBridgeDiagnosticsAction(
+                        context: context,
+                        diagnostics: bridgeDiagnostics,
+                        onRestartBridgeSession: () => ref
+                            .read(
+                              remoteBridgeSessionControllerProvider.notifier,
+                            )
+                            .startSession(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
