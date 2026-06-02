@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_session.dart';
+import 'package:toylink_ai/domain/entities/remote_bridge_task_assignment.dart';
 import 'package:toylink_ai/domain/entities/remote_bridge_task_result.dart';
 import 'package:toylink_ai/infrastructure/bridge/remote_bridge_protocol.dart';
 
@@ -49,5 +51,42 @@ void main() {
         'errorMessage': null,
       },
     );
+  });
+
+  test('remote bridge protocol parses session response payload', () {
+    final RemoteBridgeSession session = RemoteBridgeProtocol.parseSessionResponse(
+      <String, dynamic>{
+        'bridgeSessionId': 'bridge-session-1',
+        'connectorUrl': 'https://bridge.toylink.local/mcp/claude',
+        'connectorToken': 'token-1',
+        'toolNames': <String>['get_status', 'stop_all'],
+      },
+      fallback: const RemoteBridgeSession(
+        status: RemoteBridgeSessionStatus.offline,
+        bridgeSessionId: 'fallback-session',
+      ),
+    );
+
+    expect(session.status, RemoteBridgeSessionStatus.ready);
+    expect(session.bridgeSessionId, 'bridge-session-1');
+    expect(session.connectorInfo?.connectorUrl, 'https://bridge.toylink.local/mcp/claude');
+    expect(session.connectorInfo?.connectorToken, 'token-1');
+    expect(session.connectorInfo?.toolNames, <String>['get_status', 'stop_all']);
+  });
+
+  test('remote bridge protocol parses task assignment payload', () {
+    final RemoteBridgeTaskAssignment? assignment =
+        RemoteBridgeProtocol.parseTaskAssignmentResponse(
+      <String, dynamic>{
+        'requestId': 'task-1',
+        'tool': 'get_status',
+        'input': <String, Object?>{'source': 'bridge'},
+      },
+    );
+
+    expect(assignment, isNotNull);
+    expect(assignment?.requestId, 'task-1');
+    expect(assignment?.tool, 'get_status');
+    expect(assignment?.input, <String, Object?>{'source': 'bridge'});
   });
 }

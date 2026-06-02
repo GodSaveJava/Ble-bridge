@@ -1,3 +1,5 @@
+import '../../domain/entities/remote_bridge_session.dart';
+import '../../domain/entities/remote_bridge_task_assignment.dart';
 import '../../domain/entities/remote_bridge_task_result.dart';
 
 abstract final class RemoteBridgeProtocol {
@@ -52,5 +54,60 @@ abstract final class RemoteBridgeProtocol {
       errorCodeField: result.errorCode,
       errorMessageField: result.errorMessage,
     };
+  }
+
+  static RemoteBridgeSession parseSessionResponse(
+    Map<String, dynamic> json, {
+    required RemoteBridgeSession fallback,
+  }) {
+    final String bridgeSessionId =
+        json[bridgeSessionIdField] as String? ?? fallback.bridgeSessionId ?? '';
+    final String connectorUrl =
+        json[connectorUrlField] as String? ?? '';
+    final String connectorToken =
+        json[connectorTokenField] as String? ?? '';
+    final List<String> toolNames =
+        (json[toolNamesField] as List<dynamic>? ?? const <dynamic>[])
+            .map((dynamic item) => item.toString())
+            .toList();
+
+    return RemoteBridgeSession(
+      status: RemoteBridgeSessionStatus.ready,
+      bridgeSessionId: bridgeSessionId,
+      connectorInfo: RemoteBridgeConnectorInfo(
+        connectorUrl: connectorUrl,
+        connectorToken: connectorToken,
+        toolNames: toolNames,
+      ),
+      lastUpdatedAt: DateTime.now(),
+    );
+  }
+
+  static RemoteBridgeTaskAssignment? parseTaskAssignmentResponse(
+    Map<String, dynamic>? json,
+  ) {
+    if (json == null || json.isEmpty) {
+      return null;
+    }
+
+    final Object? requestId = json[requestIdField];
+    final Object? tool = json[toolField];
+    final Object? input = json[inputField];
+    if (requestId is! String || requestId.isEmpty) {
+      return null;
+    }
+    if (tool is! String || tool.isEmpty) {
+      return null;
+    }
+    if (input != null && input is! Map<String, dynamic>) {
+      return null;
+    }
+
+    return RemoteBridgeTaskAssignment(
+      requestId: requestId,
+      tool: tool,
+      input: (input as Map<String, dynamic>? ?? const <String, dynamic>{})
+          .cast<String, Object?>(),
+    );
   }
 }

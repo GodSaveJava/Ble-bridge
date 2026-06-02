@@ -79,7 +79,12 @@ class HttpRemoteBridgeService
         path: RemoteBridgeProtocol.sessionRefreshPath(bridgeSessionId),
         body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
-      _emit(_sessionFromResponse(response));
+      _emit(
+        RemoteBridgeProtocol.parseSessionResponse(
+          response,
+          fallback: _session,
+        ),
+      );
       _startKeepAliveTimer();
     } on Object catch (error) {
       _stopKeepAliveTimer();
@@ -99,20 +104,9 @@ class HttpRemoteBridgeService
         path: RemoteBridgeProtocol.sessionNextTaskPath(bridgeSessionId),
         body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
-      if (response == null || response.isEmpty) {
-        return null;
-      }
-
-      final Object? requestId = response['requestId'];
-      final Object? tool = response['tool'];
-      final Object? input = response['input'];
-      if (requestId is! String || requestId.isEmpty) {
-        return null;
-      }
-      if (tool is! String || tool.isEmpty) {
-        return null;
-      }
-      if (input != null && input is! Map<String, dynamic>) {
+      final RemoteBridgeTaskAssignment? task =
+          RemoteBridgeProtocol.parseTaskAssignmentResponse(response);
+      if (task == null) {
         return null;
       }
 
@@ -123,12 +117,7 @@ class HttpRemoteBridgeService
         ),
       );
 
-      return RemoteBridgeTaskAssignment(
-        requestId: requestId,
-        tool: tool,
-        input: (input as Map<String, dynamic>? ?? const <String, dynamic>{})
-            .cast<String, Object?>(),
-      );
+      return task;
     } on Object catch (error) {
       _emit(_errorSession('bridge_task_fetch_failed', error));
       return null;
@@ -181,7 +170,12 @@ class HttpRemoteBridgeService
         path: RemoteBridgeProtocol.sessionStartPath,
         body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
-      _emit(_sessionFromResponse(response));
+      _emit(
+        RemoteBridgeProtocol.parseSessionResponse(
+          response,
+          fallback: _session,
+        ),
+      );
       _startKeepAliveTimer();
     } on Object catch (error) {
       _stopKeepAliveTimer();
@@ -306,33 +300,6 @@ class HttpRemoteBridgeService
     }
   }
 
-  RemoteBridgeSession _sessionFromResponse(Map<String, dynamic> json) {
-    final String bridgeSessionId =
-        json[RemoteBridgeProtocol.bridgeSessionIdField] as String? ??
-            _session.bridgeSessionId ??
-            '';
-    final String connectorUrl =
-        json[RemoteBridgeProtocol.connectorUrlField] as String? ?? '';
-    final String connectorToken =
-        json[RemoteBridgeProtocol.connectorTokenField] as String? ?? '';
-    final List<String> toolNames =
-        (json[RemoteBridgeProtocol.toolNamesField] as List<dynamic>? ??
-                const <dynamic>[])
-            .map((dynamic item) => item.toString())
-            .toList();
-
-    return RemoteBridgeSession(
-      status: RemoteBridgeSessionStatus.ready,
-      bridgeSessionId: bridgeSessionId,
-      connectorInfo: RemoteBridgeConnectorInfo(
-        connectorUrl: connectorUrl,
-        connectorToken: connectorToken,
-        toolNames: toolNames,
-      ),
-      lastUpdatedAt: DateTime.now(),
-    );
-  }
-
   RemoteBridgeSession _errorSession(String code, Object error) {
     return _session.copyWith(
       status: RemoteBridgeSessionStatus.error,
@@ -391,7 +358,12 @@ class HttpRemoteBridgeService
         path: RemoteBridgeProtocol.sessionRefreshPath(bridgeSessionId),
         body: RemoteBridgeProtocol.sessionRequestBody(_clientId),
       );
-      _emit(_sessionFromResponse(response));
+      _emit(
+        RemoteBridgeProtocol.parseSessionResponse(
+          response,
+          fallback: _session,
+        ),
+      );
     } on Object catch (error) {
       _stopKeepAliveTimer();
       if (!_isDisposed) {
