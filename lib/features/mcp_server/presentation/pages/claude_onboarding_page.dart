@@ -237,7 +237,13 @@ class _ReadyStateContent extends StatelessWidget {
                       case RemoteBridgeDiagnosticsAction.restartBridgeSession:
                         unawaited(onRestartBridgeSession());
                       case RemoteBridgeDiagnosticsAction.openBridgeSettings:
+                        if (bridgeDiagnostics.actionRoute case final String route) {
+                          context.push(route);
+                        }
                       case RemoteBridgeDiagnosticsAction.openDeviceScan:
+                        if (bridgeDiagnostics.actionRoute case final String route) {
+                          context.push(route);
+                        }
                       case null:
                         break;
                     }
