@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/controllers/remote_bridge_config_controller.dart';
 import '../../application/providers/application_providers.dart';
+import '../../domain/entities/remote_bridge_config.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
@@ -81,6 +82,10 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
     'TOYLINK_REMOTE_BRIDGE_CLIENT_TOKEN',
     defaultValue: '',
   );
+  const bool allowMockRemoteBridge = bool.fromEnvironment(
+    'TOYLINK_ALLOW_MOCK_REMOTE_BRIDGE',
+    defaultValue: false,
+  );
 
   final bool useSavedRemoteBridge =
       configAsync.hasValue &&
@@ -112,7 +117,21 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
     return service;
   }
 
-  final MockRemoteBridgeService service = MockRemoteBridgeService();
+  if (allowMockRemoteBridge) {
+    final MockRemoteBridgeService service = MockRemoteBridgeService();
+    ref.onDispose(service.dispose);
+    return service;
+  }
+
+  final RemoteBridgeConfig productionConfig = RemoteBridgeConfig.production();
+  final HttpRemoteBridgeService service = HttpRemoteBridgeService(
+    baseUrl: Uri.parse(productionConfig.normalizedBaseUrl),
+    clientId: productionConfig.normalizedClientId,
+    runtimeSource: RemoteBridgeRuntimeSource.savedConfig,
+    clientToken: productionConfig.normalizedClientToken.isEmpty
+        ? null
+        : productionConfig.normalizedClientToken,
+  );
   ref.onDispose(service.dispose);
   return service;
 });

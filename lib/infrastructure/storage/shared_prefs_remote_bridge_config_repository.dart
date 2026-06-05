@@ -28,15 +28,20 @@ class SharedPrefsRemoteBridgeConfigRepository
     final String? raw = prefs.getString(_storageKey);
     final String? token = await _secureStorage.read(key: _tokenStorageKey);
     if (raw == null || raw.isEmpty) {
-      _cache = RemoteBridgeConfig(clientToken: token ?? '').normalized();
+      _cache = RemoteBridgeConfig.production(clientToken: token ?? '').normalized();
       return _cache!;
     }
     final Map<String, Object?> decoded =
         (jsonDecode(raw) as Map).cast<String, Object?>();
-    _cache = RemoteBridgeConfig.fromJson(<String, Object?>{
+    final RemoteBridgeConfig loaded = RemoteBridgeConfig.fromJson(<String, Object?>{
       ...decoded,
       'clientToken': token ?? '',
     }).normalized();
+    if (!_shouldUseLoadedConfig(loaded)) {
+      _cache = RemoteBridgeConfig.production(clientToken: token ?? '').normalized();
+      return _cache!;
+    }
+    _cache = loaded;
     return _cache!;
   }
 
@@ -45,7 +50,7 @@ class SharedPrefsRemoteBridgeConfigRepository
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
     await _secureStorage.delete(key: _tokenStorageKey);
-    _cache = const RemoteBridgeConfig();
+    _cache = const RemoteBridgeConfig.production();
   }
 
   @override
@@ -69,5 +74,16 @@ class SharedPrefsRemoteBridgeConfigRepository
       );
     }
     _cache = normalized;
+  }
+
+  bool _shouldUseLoadedConfig(RemoteBridgeConfig config) {
+    if (!config.enabled || config.normalizedBaseUrl.isEmpty) {
+      return false;
+    }
+    if (config.normalizedBaseUrl ==
+        RemoteBridgeConfig.productionBridgeBaseUrl) {
+      return true;
+    }
+    return !config.normalizedBaseUrl.contains('bridge.toylink.local');
   }
 }

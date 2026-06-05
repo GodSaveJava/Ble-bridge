@@ -1,16 +1,25 @@
 class RemoteBridgeConfig {
+  static const String productionBridgeBaseUrl = 'http://47.95.242.29:8100';
+  static const String productionClientId = 'toylink-mobile-dev';
+
   const RemoteBridgeConfig({
     this.enabled = false,
     this.baseUrl = '',
-    this.clientId = 'toylink-mobile-dev',
+    this.clientId = productionClientId,
     this.clientToken = '',
   });
+
+  const RemoteBridgeConfig.production({
+    this.clientToken = '',
+    this.clientId = productionClientId,
+  })  : enabled = true,
+        baseUrl = productionBridgeBaseUrl;
 
   factory RemoteBridgeConfig.fromJson(Map<String, Object?> json) {
     return RemoteBridgeConfig(
       enabled: json['enabled'] as bool? ?? false,
       baseUrl: json['baseUrl'] as String? ?? '',
-      clientId: json['clientId'] as String? ?? 'toylink-mobile-dev',
+      clientId: json['clientId'] as String? ?? productionClientId,
       clientToken: json['clientToken'] as String? ?? '',
     );
   }
@@ -48,7 +57,7 @@ class RemoteBridgeConfig {
       enabled: enabled,
       baseUrl: normalizedBaseUrl,
       clientId: normalizedClientId.isEmpty
-          ? 'toylink-mobile-dev'
+          ? productionClientId
           : normalizedClientId,
       clientToken: normalizedClientToken,
     );

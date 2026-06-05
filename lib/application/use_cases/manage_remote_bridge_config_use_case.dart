@@ -18,6 +18,6 @@ class ManageRemoteBridgeConfigUseCase {
 
   Future<RemoteBridgeConfig> reset() async {
     await _repository.reset();
-    return const RemoteBridgeConfig();
+    return const RemoteBridgeConfig.production();
   }
 }

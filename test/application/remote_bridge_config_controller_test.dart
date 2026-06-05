@@ -86,8 +86,8 @@ void main() {
       final RemoteBridgeConfig config = container.read(
         remoteBridgeConfigControllerProvider,
       ).requireValue;
-      expect(config.enabled, isFalse);
-      expect(config.baseUrl, isEmpty);
+      expect(config.enabled, isTrue);
+      expect(config.baseUrl, RemoteBridgeConfig.productionBridgeBaseUrl);
     });
   });
 }
@@ -103,7 +103,7 @@ class _InMemoryRemoteBridgeConfigRepository
 
   @override
   Future<void> reset() async {
-    current = const RemoteBridgeConfig();
+    current = const RemoteBridgeConfig.production();
   }
 
   @override

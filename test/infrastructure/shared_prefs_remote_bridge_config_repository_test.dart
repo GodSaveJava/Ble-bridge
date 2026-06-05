@@ -14,10 +14,11 @@ void main() {
       repository = SharedPrefsRemoteBridgeConfigRepository();
     });
 
-    test('loads default config when storage is empty', () async {
+    test('loads production config when storage is empty', () async {
       final RemoteBridgeConfig config = await repository.load();
 
-      expect(config.enabled, isFalse);
+      expect(config.enabled, isTrue);
+      expect(config.baseUrl, RemoteBridgeConfig.productionBridgeBaseUrl);
       expect(config.clientId, 'toylink-mobile-dev');
       expect(config.clientToken, isEmpty);
     });
@@ -52,9 +53,23 @@ void main() {
       await repository.reset();
       final RemoteBridgeConfig reloaded = await repository.load();
 
-      expect(reloaded.enabled, isFalse);
-      expect(reloaded.baseUrl, isEmpty);
+      expect(reloaded.enabled, isTrue);
+      expect(reloaded.baseUrl, RemoteBridgeConfig.productionBridgeBaseUrl);
       expect(reloaded.clientToken, isEmpty);
+    });
+
+    test('migrates legacy mock config to production defaults', () async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'remote_bridge_config_v1',
+        '{"enabled":true,"baseUrl":"https://bridge.toylink.local","clientId":"device-a"}',
+      );
+
+      final RemoteBridgeConfig config = await repository.load();
+
+      expect(config.enabled, isTrue);
+      expect(config.baseUrl, RemoteBridgeConfig.productionBridgeBaseUrl);
+      expect(config.clientId, RemoteBridgeConfig.productionClientId);
     });
   });
 }
