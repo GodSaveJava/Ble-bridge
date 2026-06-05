@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "adapterId": "sosexy.official.v1",
+  "displayName": "SOSEXY 啵啵贝（官方模板）",
+  "protocolKey": "sosexy_verified_v1",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "adapterKind": "codecBacked",
+  "source": "official",
+  "codecKey": "sosexy_verified_v1",
+  "bleNamePrefixes": [
+    "SOSEXY"
+  ],
+  "matching": {
+    "serviceUuids": [
+      "0000ee01-0000-1000-8000-00805f9b34fb"
+    ],
+    "manufacturerDataPattern": null,
+    "priority": 100
+  },
+  "gatt": {
+    "serviceUuid": "0000ee01-0000-1000-8000-00805f9b34fb",
+    "writeCharacteristicUuid": "0000ee03-0000-1000-8000-00805f9b34fb",
+    "notifyCharacteristicUuid": "0000ee02-0000-1000-8000-00805f9b34fb",
+    "writeWithoutResponse": false
+  },
+  "connection": {
+    "requiresBonding": false,
+    "requestMtu": 185,
+    "notifyRequired": true
+  },
+  "capabilities": {
+    "supportsSuck": true,
+    "supportsVibe": true,
+    "supportsEms": true,
+    "supportsSetAll": true,
+    "supportsStopAll": true
+  },
+  "ranges": {
+    "suckIntensity": {
+      "min": 0,
+      "max": 100
+    },
+    "vibeIntensity": {
+      "min": 0,
+      "max": 100
+    },
+    "emsIntensity": {
+      "min": 0,
+      "max": 20
+    },
+    "mode": {
+      "min": 1,
+      "max": 4
+    }
+  },
+  "notes": "根据公开教程整理的可导入官方模板。GATT 与能力边界已整理为可直接导入的 JSON；字节级协议后续仍可根据 HCI 结果继续校正。"
+}

@@ -13,9 +13,10 @@ class SosexyProtocolCodec {
       'suck',
     );
     return _buildPacket(
-      channel: SosexyChannel.ch01,
-      mode: mode,
-      intensity: intensity,
+      groups: <_ChannelValue>[
+        _ChannelValue(SosexyChannel.suckIntensity, intensity),
+        _ChannelValue(SosexyChannel.suckMode, mode),
+      ],
     );
   }
 
@@ -28,9 +29,10 @@ class SosexyProtocolCodec {
       'vibe',
     );
     return _buildPacket(
-      channel: SosexyChannel.ch03,
-      mode: mode,
-      intensity: intensity,
+      groups: <_ChannelValue>[
+        _ChannelValue(SosexyChannel.vibeIntensity, intensity),
+        _ChannelValue(SosexyChannel.vibeMode, mode),
+      ],
     );
   }
 
@@ -43,13 +45,14 @@ class SosexyProtocolCodec {
       'ems',
     );
     return _buildPacket(
-      channel: SosexyChannel.ch07,
-      mode: mode,
-      intensity: intensity,
+      groups: <_ChannelValue>[
+        _ChannelValue(SosexyChannel.emsIntensity, intensity),
+        _ChannelValue(SosexyChannel.emsMode, mode),
+      ],
     );
   }
 
-  /// MVP strategy: protocol-combined packet is unknown, so encode as sequence.
+  /// The tutorial sample shows a single packet carrying all three channels.
   List<List<int>> buildSetAllCommand({
     required int suck,
     required int vibe,
@@ -58,39 +61,64 @@ class SosexyProtocolCodec {
     required int vibeMode,
     required int emsMode,
   }) {
+    _validateMode(suckMode);
+    _validateMode(vibeMode);
+    _validateMode(emsMode);
+    _validateRange(
+      suck,
+      SosexyProtocolSpec.minSuck,
+      SosexyProtocolSpec.maxSuck,
+      'suck',
+    );
+    _validateRange(
+      vibe,
+      SosexyProtocolSpec.minVibe,
+      SosexyProtocolSpec.maxVibe,
+      'vibe',
+    );
+    _validateRange(
+      ems,
+      SosexyProtocolSpec.minEms,
+      SosexyProtocolSpec.maxEms,
+      'ems',
+    );
     return <List<int>>[
-      buildSuckCommand(suck, suckMode),
-      buildVibeCommand(vibe, vibeMode),
-      buildEmsCommand(ems, emsMode),
+      _buildPacket(
+        groups: <_ChannelValue>[
+          _ChannelValue(SosexyChannel.vibeIntensity, vibe),
+          _ChannelValue(SosexyChannel.vibeMode, vibeMode),
+          _ChannelValue(SosexyChannel.emsIntensity, ems),
+          _ChannelValue(SosexyChannel.emsMode, emsMode),
+          _ChannelValue(SosexyChannel.suckIntensity, suck),
+          _ChannelValue(SosexyChannel.suckMode, suckMode),
+        ],
+      ),
     ];
   }
 
   List<int> buildStopAllCommand() {
-    // inferred: zero all channels through a dedicated system mode marker.
-    return <int>[
-      SosexyProtocolSpec.header0,
-      SosexyProtocolSpec.header1,
-      0x00,
-      0x00,
-      0x00,
-      SosexyProtocolSpec.tail,
-    ];
+    // Tutorial sample keeps stop_all as a dedicated packet that zeroes the
+    // intensity channels while preserving mode selections.
+    return _buildPacket(
+      groups: <_ChannelValue>[
+        const _ChannelValue(SosexyChannel.vibeIntensity, 0),
+        const _ChannelValue(SosexyChannel.emsIntensity, 0),
+        const _ChannelValue(SosexyChannel.suckIntensity, 0),
+      ],
+    );
   }
 
-  List<int> _buildPacket({
-    required SosexyChannel channel,
-    required int mode,
-    required int intensity,
-  }) {
-    // Format is centralized here to make byte-level protocol review auditable.
-    return <int>[
+  List<int> _buildPacket({required List<_ChannelValue> groups}) {
+    final List<int> bytes = <int>[
+      SosexyProtocolSpec.sequenceByte,
       SosexyProtocolSpec.header0,
       SosexyProtocolSpec.header1,
-      channel.value,
-      mode,
-      intensity,
-      SosexyProtocolSpec.tail,
+      groups.length,
     ];
+    for (final _ChannelValue group in groups) {
+      bytes.addAll(group.toBytes());
+    }
+    return bytes;
   }
 
   void _validateMode(int mode) {
@@ -115,5 +143,21 @@ class SosexyProtocolCodec {
         },
       );
     }
+  }
+}
+
+class _ChannelValue {
+  const _ChannelValue(this.channel, this.value);
+
+  final SosexyChannel channel;
+  final int value;
+
+  List<int> toBytes() {
+    return <int>[
+      SosexyProtocolSpec.groupPrefix,
+      channel.value,
+      SosexyProtocolSpec.groupMarker,
+      value,
+    ];
   }
 }

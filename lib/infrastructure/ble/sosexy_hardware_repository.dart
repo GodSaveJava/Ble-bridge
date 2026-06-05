@@ -134,7 +134,7 @@ class SosexyHardwareRepository implements HardwareRepository {
           ? 'SOSEXY'
           : result.device.platformName,
       bleNamePrefix: 'SOSEXY',
-      protocolKey: 'sosexy',
+      protocolKey: 'sosexy_verified_v1',
       isKnownTemplate: true,
       rssi: result.rssi,
     );

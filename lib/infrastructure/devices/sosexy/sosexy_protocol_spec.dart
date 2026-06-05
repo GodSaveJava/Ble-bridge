@@ -1,7 +1,10 @@
 enum SosexyChannel {
-  ch01(0x01),
-  ch03(0x03),
-  ch07(0x07);
+  vibeIntensity(0x01),
+  vibeMode(0x02),
+  emsIntensity(0x03),
+  emsMode(0x04),
+  suckIntensity(0x07),
+  suckMode(0x08);
 
   const SosexyChannel(this.value);
   final int value;
@@ -10,14 +13,16 @@ enum SosexyChannel {
 /// Byte-level protocol assumptions for SOSEXY.
 ///
 /// This file is the single source of truth for protocol constants so we can
-/// swap inferred values after hardware verification without touching callers.
+/// swap tutorial-derived values after hardware verification without touching
+/// callers.
 class SosexyProtocolSpec {
   const SosexyProtocolSpec._();
 
-  // inferred packet layout: [header0, header1, channel, mode, intensity, tail]
-  static const int header0 = 0x55;
-  static const int header1 = 0xAA;
-  static const int tail = 0xFF;
+  static const int sequenceByte = 0x00;
+  static const int header0 = 0x01;
+  static const int header1 = 0x00;
+  static const int groupPrefix = 0x00;
+  static const int groupMarker = 0x11;
 
   static const int minMode = 1;
   static const int maxMode = 4;
