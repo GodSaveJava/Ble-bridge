@@ -1,0 +1,17 @@
+services:
+  bridge:
+    build:
+      context: .
+    image: toylink-bridge-server:latest
+    container_name: toylink-bridge
+    restart: unless-stopped
+    ports:
+      - "${BRIDGE_PORT:-8100}:8100"
+    environment:
+      BRIDGE_HOST: 0.0.0.0
+      BRIDGE_PORT: ${BRIDGE_PORT:-8100}
+      BRIDGE_PUBLIC_BASE_URL: ${BRIDGE_PUBLIC_BASE_URL:-http://127.0.0.1:8100}
+      BRIDGE_CONNECTOR_PATH: ${BRIDGE_CONNECTOR_PATH:-/mcp/claude}
+      BRIDGE_SHARED_TOKEN: ${BRIDGE_SHARED_TOKEN:-}
+      BRIDGE_DEBUG_TOKEN: ${BRIDGE_DEBUG_TOKEN:-}
+      BRIDGE_TOOL_NAMES: ${BRIDGE_TOOL_NAMES:-get_status,stop_all,set_suck,set_vibe,set_ems,set_all}

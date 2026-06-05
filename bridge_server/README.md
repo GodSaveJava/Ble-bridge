@@ -24,6 +24,23 @@ Default listens on `0.0.0.0:8100`.
 
 ## Docker
 
+### Option 1: Docker Compose
+
+```bash
+cd bridge_server
+copy .env.example .env
+docker compose up -d --build
+```
+
+Then check:
+
+```bash
+curl http://47.95.242.29:8100/health
+curl http://47.95.242.29:8100/mcp/claude
+```
+
+### Option 2: Plain Docker
+
 ```bash
 cd bridge_server
 docker build -t toylink-bridge-server .
@@ -33,3 +50,26 @@ docker run --rm -p 8100:8100 \
 ```
 
 If you put Nginx in front of it, point the upstream to the container's `8100` port.
+
+### Export / import the image
+
+Build and save locally:
+
+```bash
+cd bridge_server
+docker build -t toylink-bridge-server:latest .
+docker save toylink-bridge-server:latest -o toylink-bridge-server.tar
+```
+
+Copy `toylink-bridge-server.tar` to the server and load it:
+
+```bash
+docker load -i toylink-bridge-server.tar
+docker run -d --name toylink-bridge \
+  -p 8100:8100 \
+  --restart unless-stopped \
+  -e BRIDGE_PUBLIC_BASE_URL=http://47.95.242.29:8100 \
+  -e BRIDGE_SHARED_TOKEN=change-me-for-app \
+  -e BRIDGE_DEBUG_TOKEN=change-me-for-debug \
+  toylink-bridge-server:latest
+```
