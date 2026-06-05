@@ -1,0 +1,11 @@
+name: toylink_bridge_server
+description: Minimal Remote Bridge server for ToyLink AI.
+publish_to: "none"
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+
+dev_dependencies:
+  test: ^1.26.3
