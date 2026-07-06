@@ -19,7 +19,7 @@ Phase 0: 工程基线恢复（in progress）。
   - [x] Android main Manifest 补 `INTERNET` 与 foreground service 声明
   - [x] 建立 `docs/evidence/phase-0-1-evidence-manifest-template.md`
   - [x] 补根 README 的干净环境、测试、mock/real BLE、Bridge 联调说明
-  - [x] 恢复 Git 仓库并记录 branch / commit；已配置 remote，但当前凭据无法访问
+  - [x] 恢复 Git 仓库、配置 remote，并推送到 `origin/main`
   - [ ] 修复 Flutter / Dart PATH
   - [ ] 跑通并归档 `flutter analyze`
   - [ ] 跑通并归档 `flutter test`
@@ -42,9 +42,7 @@ Phase 0: 工程基线恢复（in progress）。
 ## Current Blockers
 
 - 当前 PowerShell 找不到 `flutter` / `dart`，无法运行 Phase 0 自动化验证。
-- Git 已恢复为本地仓库，当前 branch 为 `main`，已有本地基线提交。
-- 已配置 `origin=https://github.com/GodSaveJava/Ble-bridge.git`，远端现在可读。
-- 本地 HEAD `3fa0c8c` 已接入远端历史；`git push -u origin main` 返回 403，当前 GitHub 凭据 `magiccat997-gif` 没有该仓库写权限。
+- Git 已恢复并推送到 `origin/main`，当前本地与远端一致，HEAD 为 `0413d91`。
 - 没有 2026-07-06 当天测试证据；历史 `docs/evidence/worktree-audit-2026-07-04.md` 不可替代当天验收。
 - Phase 1 之前不得开放远程 `set_*`；本地 MCP 当前仍暴露 `set_*`，必须作为安全 V0 高优先级修复。
 
