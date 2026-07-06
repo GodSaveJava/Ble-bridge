@@ -1,0 +1,6 @@
+.dart_tool/
+build/
+.packages
+.env
+*.tar
+docker-compose.override.yml
