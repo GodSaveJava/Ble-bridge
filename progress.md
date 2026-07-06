@@ -25,4 +25,5 @@
   - Ran `git init`.
   - Created initial baseline commit `15af36b Initial restored ToyLink baseline`.
   - Confirmed `git status --short --branch` now reports branch `main`.
-  - No remote is configured yet; formal remote URL was not present in the handoff docs.
+  - Added `origin` as `https://github.com/GodSaveJava/Ble-bridge.git`.
+  - `git fetch origin --prune` and `git ls-remote origin` failed with `Repository not found`; push is blocked until the remote URL or GitHub access is fixed.

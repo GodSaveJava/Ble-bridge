@@ -6,7 +6,7 @@
 |---|---|
 | Date | 2026-07-06 |
 | Workspace | `C:\Users\NPC\Desktop\Ble-bridge-main` |
-| Git repository | Local repository restored with `git init`; no remote configured |
+| Git repository | Local repository restored with `git init`; `origin` configured but inaccessible |
 | Branch | `main` |
 | Commit | `15af36b` |
 | Dirty working tree | Clean immediately after initial baseline commit; documentation updates followed |
@@ -20,6 +20,9 @@
 | `git status --short --branch` | repo root | 1 | BLOCKED | `fatal: not a git repository (or any of the parent directories): .git` |
 | `git init` | repo root | 0 | PASS | Initialized local repository in `.git/`. |
 | `git commit -m "Initial restored ToyLink baseline"` | repo root | 0 | PASS | Created baseline commit `15af36b`. |
+| `git remote add origin https://github.com/GodSaveJava/Ble-bridge.git` | repo root | 0 | PASS | Added `origin`. |
+| `git fetch origin --prune` | repo root | 1 | BLOCKED | `remote: Repository not found.` |
+| `git ls-remote origin` | repo root | 1 | BLOCKED | `remote: Repository not found.` |
 | `where.exe flutter` | repo root | 1 | BLOCKED | `INFO: Could not find files for the given pattern(s).` |
 | `where.exe dart` | repo root | 1 | BLOCKED | `INFO: Could not find files for the given pattern(s).` |
 | `flutter analyze` | repo root | 1 | BLOCKED | `flutter : The term 'flutter' is not recognized...` |
@@ -50,4 +53,4 @@
 | Phase 0 status | BLOCKED |
 | Safety V0 status | BLOCKED |
 | Release allowed | no |
-| Blocking reasons | Flutter/Dart unavailable; no current automated test evidence; no real-device evidence; remote URL still not configured. |
+| Blocking reasons | Flutter/Dart unavailable; no current automated test evidence; no real-device evidence; remote access blocked by `Repository not found`. |
