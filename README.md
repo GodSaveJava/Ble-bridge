@@ -67,6 +67,8 @@ flutter run `
 
 Formal release requires HTTPS and token authentication. Safety V0 only exposes `get_status` and `stop_all`; remote `set_*` tools are blocked until Phase 3 gates are complete.
 
+For BYO-AI integrations, treat Phase 1 / Safety V0 as a status-and-emergency-stop connector only. A user's own AI web/app must not be documented or configured as if it can call arbitrary hardware controls; `set_suck`, `set_vibe`, `set_ems`, and `set_all` remain unavailable over the remote connector until the Phase 3 safety gates in `docs/22` are satisfied.
+
 ## Bridge Server
 
 The Dart bridge server lives in `bridge_server/`.

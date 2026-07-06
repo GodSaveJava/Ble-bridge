@@ -63,3 +63,13 @@
   - Safety V0 focused Flutter tests: PASS, 50 tests.
   - Full `flutter test`: PASS, 189 tests.
   - `cd bridge_server; dart test`: PASS, 10 tests.
+- Continued Phase 1 Safety V0 execution:
+  - Added remote/MCP end-to-end `stop_all` preemption coverage through `/mobile-bridge/tool-call`.
+  - The test verifies a pending non-stop SOSEXY BLE write is superseded and the next device write is the stop packet.
+  - Updated BYO-AI Connector user/developer docs to state Phase 1 only exposes `get_status` and `stop_all`; remote `set_*` remains Phase 3-gated.
+- Verification:
+  - `flutter test test\infrastructure\local_mcp_http_service_test.dart`: PASS, 9 tests.
+  - Safety V0 focused Flutter tests: PASS, 51 tests.
+  - `flutter analyze`: PASS.
+  - Full `flutter test`: PASS, 190 tests.
+  - `cd bridge_server; dart test`: PASS, 10 tests.

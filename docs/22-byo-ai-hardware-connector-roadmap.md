@@ -31,7 +31,8 @@ ToyLink 不是聊天替代品，不迁移聊天记录、角色关系或记忆体
 - 不通过读屏、浏览器注入、模拟点击、劫持闭源聊天网页来判断 AI 意图。
 - Bridge 只转发任务和返回结果，不连接 BLE、不保存原始协议、不绕过 App 本地安全规则。
 - 所有硬件控制必须在 ToyLink App 本地经过 `SafetyGuard`、adapter verification、active device resolution 和 AppLock 控制边界。
-- 安全 V0 只开放 `get_status` 和 `stop_all`。`set_suck`、`set_vibe`、`set_ems`、`set_all` 不得远程开放，除非完成安全评审、真机证据和回滚开关。
+- Phase 1 / 安全 V0 的远程 Connector 只开放 `get_status` 和 `stop_all`。用户自己的 AI web/app 在此阶段只能查看脱敏状态和触发急停，不能调用任意硬件控制。
+- `set_suck`、`set_vibe`、`set_ems`、`set_all` 不得远程开放，除非 Phase 3 门禁满足：安全评审、真机证据、急停优先级验证、能力/范围校验和回滚开关全部完成。
 - 当前公网 HTTP Bridge 只允许作为内测环境。正式发布环境必须使用 HTTPS 和 token 鉴权。
 - 不上传 BLE 原始 ID、原始控制日志、亲密使用历史。对外返回设备别名或脱敏状态。
 - GPT / ChatGPT 支持是后续接入目标之一，但不改变 ToyLink 的定位：优先连接用户已有 AI 环境，而不是把用户迁入 ToyLink 内聊天。
@@ -75,6 +76,7 @@ ToyLink 不是聊天替代品，不迁移聊天记录、角色关系或记忆体
 - AppLock 接入控制链：locked 时拒绝控制类工具。
 - Remote Bridge allowlist 固定为 `get_status,stop_all`。
 - 产品文案改成“可查看状态并急停”，不宣称已开放远程刺激控制。
+- 接入教程、schema 示例和页面状态不得暗示用户自己的 AI web/app 已能调用 `set_*` 或任意硬件控制。
 
 完成标准：公网内测环境可安全演示 `get_status` 和 `stop_all`，且不能远程调用 `set_*`。
 
@@ -101,6 +103,7 @@ ToyLink 不是聊天替代品，不迁移聊天记录、角色关系或记忆体
 - 控制工具必须有回滚开关，可以一键恢复到安全 V0。
 
 完成标准：真机低强度控制可复现，急停优先级验证通过，失败时不会继续落地旧命令。
+在这些门禁满足前，所有用户/开发者接入文档仍必须按 Phase 1 / Safety V0 口径描述：远程只允许 `get_status` 和 `stop_all`。
 
 ### Phase 4: GPT / 多平台正式支持
 
@@ -132,4 +135,3 @@ ToyLink 不是聊天替代品，不迁移聊天记录、角色关系或记忆体
 3. 补充 Remote Bridge session / token 生命周期设计。
 4. 修 Android foreground service Manifest 与权限流程。
 5. 将首页、MCP 页、AI 接入向导文案改为安全 V0：`get_status + stop_all`。
-

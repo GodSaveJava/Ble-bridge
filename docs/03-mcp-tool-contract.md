@@ -10,6 +10,17 @@ It is the contract between:
 - ToyLink AI application services
 - active device control flow
 
+## Remote Connector Scope
+
+This document is the full local application tool contract. It is not the Phase 1 / Safety V0 remote BYO-AI connector allowlist.
+
+For user-facing AI web/app integrations, Phase 1 / Safety V0 must expose only:
+
+- `get_status`
+- `stop_all`
+
+Remote `set_suck`, `set_vibe`, `set_ems`, and `set_all` are not available until the Phase 3 gates in [docs/22-byo-ai-hardware-connector-roadmap.md](22-byo-ai-hardware-connector-roadmap.md) are satisfied. Do not publish connector schemas, onboarding copy, or examples that imply a user's own AI web/app can call arbitrary hardware controls during Phase 1 / Safety V0.
+
 ## Transport
 
 Initial transport target:
@@ -58,6 +69,8 @@ Recommended error codes:
 - `mcp_internal_error`
 
 ## Tool Definitions
+
+The `set_*` tools below describe local/runtime capabilities and future gated remote candidates. They must not be advertised by the Phase 1 / Safety V0 remote connector.
 
 ### set_suck
 
@@ -265,7 +278,8 @@ Recommended structured content:
 
 At MCP service startup:
 
-- register all supported tools
+- local development MCP may register all supported local tools
+- remote BYO-AI connector sessions must register only the current allowlist; in Phase 1 / Safety V0 that allowlist is `get_status,stop_all`
 - tool behavior should resolve against current active device at call time
 - do not require server restart when active device changes
 

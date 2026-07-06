@@ -17,7 +17,9 @@
 - 仍缺少当天真机证据：扫描、连接、adapter binding、低强度验证、急停、后台保活、Bridge 调用截图或日志 manifest。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。
-- Phase 1 仍不能整体判 PASS：缺真机 BLE 证据、Android 后台保活证据、`stop_all` 远程/MCP 端到端抢占证据，以及用户接入文档更新。
+- `stop_all` 远程/MCP 端到端抢占证据已补：远程 `/mobile-bridge/tool-call` 可触发设备层 stop 包，并 supersede pending 非 stop 写入。
+- 用户接入文档已收紧为 Phase 1 / Safety V0 口径：远程只开放 `get_status` 和 `stop_all`，不得暗示 `set_*` 已开放。
+- Phase 1 仍不能整体判 PASS：缺真机 BLE 证据和 Android 后台保活证据。
 
 ## Review Notes
 

@@ -37,8 +37,8 @@ Phase 0 已完成代码/测试/CI 基线，但 Android cmdline-tools、真机 BL
   - [x] 本地 MCP 加鉴权，Phase 1 默认只暴露 `get_status,stop_all`
   - [x] AppLock 接入控制授权链，locked 时只放行 `stop_all`
   - [x] 远程 `get_status` / task result 脱敏，不上传 BLE raw id / GATT 指纹
-  - [ ] `stop_all` 高优先级抢占路径与测试证据
-  - [ ] 更新面向用户的 BYO-AI Connector 接入文档，避免暗示远程 `set_*` 已开放
+  - [x] `stop_all` 高优先级抢占路径与测试证据
+  - [x] 更新面向用户的 BYO-AI Connector 接入文档，避免暗示远程 `set_*` 已开放
 - [ ] Phase 2：BYO-AI 接入层
 - [ ] Phase 3：低强度控制开放
 - [ ] Phase 4：GPT / 多平台正式支持
@@ -49,7 +49,7 @@ Phase 0 已完成代码/测试/CI 基线，但 Android cmdline-tools、真机 BL
 - `flutter doctor -v` 仍提示 Android cmdline-tools 缺失；真机 Android 构建和 BLE 实测前必须补齐。
 - 当前 Codex 进程没有继承新的用户 PATH；新 PowerShell 或重启 Codex 后应能直接找到 `flutter` / `dart`。
 - 没有 2026-07-06 真机 BLE 扫描、连接、adapter verification、急停、后台保活证据。
-- Phase 1 自动化安全基线已通过，但真机 BLE 和 `stop_all` 端到端抢占证据仍缺失。
+- Phase 1 软件侧安全基线已通过，包含 `stop_all` 远程/MCP 端到端抢占测试；真机 BLE 与 Android 后台保活证据仍缺失。
 
 ## Governing Documents
 
@@ -69,7 +69,6 @@ Phase 0 已完成代码/测试/CI 基线，但 Android cmdline-tools、真机 BL
 
 ## Next Execution Order
 
-1. 补 `stop_all` 远程/MCP 端到端抢占测试，必要时加 device command epoch guard。
-2. 更新 BYO-AI Connector 文档，明确 Phase 1 只开放 `get_status,stop_all`。
-3. 补 Android cmdline-tools，开始真机 BLE 扫描、连接、adapter verification、急停与后台保活证据。
-4. 全量回归后再评估 Phase 1 是否可判 PASS。
+1. 补 Android cmdline-tools，开始真机 BLE 扫描、连接、adapter verification、急停与后台保活证据。
+2. 全量回归后再评估 Phase 1 是否可判 PASS。
+3. Phase 1 真机证据通过后，进入 Phase 2：BYO-AI 接入层。
