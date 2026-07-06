@@ -17,7 +17,9 @@ Do not claim Phase 0 or Safety V0 is complete until the evidence manifest for th
 - Dart SDK
 - Android toolchain for real-device verification
 
-Current known blocker in this workspace: this directory is not a Git repository, and `flutter` / `dart` were not available in the current PowerShell PATH during the 2026-07-06 review.
+Current known blocker in this workspace: `flutter` / `dart` were not available in the current PowerShell PATH during the 2026-07-06 review.
+
+Git has been restored as a local repository. No remote is configured yet because the formal repository URL was not present in the handoff docs.
 
 ## Verification Commands
 

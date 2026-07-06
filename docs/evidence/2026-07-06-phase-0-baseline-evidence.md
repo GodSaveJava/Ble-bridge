@@ -6,10 +6,10 @@
 |---|---|
 | Date | 2026-07-06 |
 | Workspace | `C:\Users\NPC\Desktop\Ble-bridge-main` |
-| Git repository | BLOCKED: current directory is not a Git repository |
-| Branch | BLOCKED |
-| Commit | BLOCKED |
-| Dirty working tree | UNKNOWN |
+| Git repository | Local repository restored with `git init`; no remote configured |
+| Branch | `main` |
+| Commit | `15af36b` |
+| Dirty working tree | Clean immediately after initial baseline commit; documentation updates followed |
 | Hardware mode | App now exposes `Mock BLE` / `Real BLE`; current build not run in this shell |
 | Bridge mode | Default app behavior changed to disabled/offline unless explicitly configured |
 
@@ -18,6 +18,8 @@
 | Command | Working Directory | Exit Code | Result | Evidence |
 |---|---|---|---|---|
 | `git status --short --branch` | repo root | 1 | BLOCKED | `fatal: not a git repository (or any of the parent directories): .git` |
+| `git init` | repo root | 0 | PASS | Initialized local repository in `.git/`. |
+| `git commit -m "Initial restored ToyLink baseline"` | repo root | 0 | PASS | Created baseline commit `15af36b`. |
 | `where.exe flutter` | repo root | 1 | BLOCKED | `INFO: Could not find files for the given pattern(s).` |
 | `where.exe dart` | repo root | 1 | BLOCKED | `INFO: Could not find files for the given pattern(s).` |
 | `flutter analyze` | repo root | 1 | BLOCKED | `flutter : The term 'flutter' is not recognized...` |
@@ -48,4 +50,4 @@
 | Phase 0 status | BLOCKED |
 | Safety V0 status | BLOCKED |
 | Release allowed | no |
-| Blocking reasons | Missing Git baseline; Flutter/Dart unavailable; no real-device evidence. |
+| Blocking reasons | Flutter/Dart unavailable; no current automated test evidence; no real-device evidence; remote URL still not configured. |

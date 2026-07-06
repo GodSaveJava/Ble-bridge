@@ -21,3 +21,8 @@
   - `where.exe flutter` / `where.exe dart` found no executables.
   - `flutter analyze` failed with command-not-found.
   - `cd bridge_server; dart test` failed with command-not-found.
+- Restored Git as a local repository:
+  - Ran `git init`.
+  - Created initial baseline commit `15af36b Initial restored ToyLink baseline`.
+  - Confirmed `git status --short --branch` now reports branch `main`.
+  - No remote is configured yet; formal remote URL was not present in the handoff docs.
