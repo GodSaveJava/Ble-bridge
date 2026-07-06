@@ -1,7 +1,6 @@
 .dart_tool/
 build/
 .packages
-pubspec.lock
 .env
 *.tar
 docker-compose.override.yml

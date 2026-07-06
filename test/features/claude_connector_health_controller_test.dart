@@ -48,46 +48,51 @@ void main() {
     expect(health.summary, contains('Claude'));
   });
 
-  test('reports ready when device bridge and Claude onboarding are complete', () async {
-    final ProviderContainer container = ProviderContainer(
-      overrides: [
-        activeDeviceAdapterReadinessProvider.overrideWith(
-          (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-            ActiveDeviceAdapterReadiness(
-              state: ActiveDeviceAdapterReadinessState.verified,
-              deviceId: 'device-a',
-              adapterId: 'generic.triple_channel.v1',
-              adapterDisplayName: '通用三通道模板',
+  test(
+    'reports ready when device bridge and Claude onboarding are complete',
+    () async {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          activeDeviceAdapterReadinessProvider.overrideWith(
+            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+              ActiveDeviceAdapterReadiness(
+                state: ActiveDeviceAdapterReadinessState.verified,
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                adapterDisplayName: '通用三通道模板',
+              ),
             ),
           ),
-        ),
-        remoteBridgeServiceProvider.overrideWith((_) => _ReadyBridgeService()),
-        claudeConnectorOnboardingRepositoryProvider.overrideWith(
-          (_) => _InMemoryClaudeConnectorOnboardingRepository(
-            record: ClaudeConnectorOnboardingRecord(
-              deviceId: 'device-a',
-              adapterId: 'generic.triple_channel.v1',
-              completedAt: DateTime(2026),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _ReadyBridgeService(),
+          ),
+          claudeConnectorOnboardingRepositoryProvider.overrideWith(
+            (_) => _InMemoryClaudeConnectorOnboardingRepository(
+              record: ClaudeConnectorOnboardingRecord(
+                deviceId: 'device-a',
+                adapterId: 'generic.triple_channel.v1',
+                completedAt: DateTime(2026),
+              ),
             ),
           ),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
+        ],
+      );
+      addTearDown(container.dispose);
 
-    await container
-        .read(claudeConnectorOnboardingControllerProvider.notifier)
-        .load();
+      await container
+          .read(claudeConnectorOnboardingControllerProvider.notifier)
+          .load();
 
-    final AsyncValue<ClaudeConnectorHealthCheck> healthAsync = container.read(
-      claudeConnectorHealthCheckProvider,
-    );
-    final ClaudeConnectorHealthCheck health = healthAsync.requireValue;
+      final AsyncValue<ClaudeConnectorHealthCheck> healthAsync = container.read(
+        claudeConnectorHealthCheckProvider,
+      );
+      final ClaudeConnectorHealthCheck health = healthAsync.requireValue;
 
-    expect(health.status, ClaudeConnectorHealthStatus.ready);
-    expect(health.isHealthy, isTrue);
-    expect(health.summary, contains('Claude 原对话'));
-  });
+      expect(health.status, ClaudeConnectorHealthStatus.ready);
+      expect(health.isHealthy, isTrue);
+      expect(health.summary, contains('Claude 原对话'));
+    },
+  );
 }
 
 class _ReadyBridgeService implements RemoteBridgeService {
@@ -98,14 +103,7 @@ class _ReadyBridgeService implements RemoteBridgeService {
     connectorInfo: RemoteBridgeConnectorInfo(
       connectorUrl: 'https://bridge.toylink.local/mcp/claude',
       connectorToken: 'toy_bridge_token_ready',
-      toolNames: <String>[
-        'set_suck',
-        'set_vibe',
-        'set_ems',
-        'set_all',
-        'stop_all',
-        'get_status',
-      ],
+      toolNames: <String>['get_status', 'stop_all'],
     ),
   );
 

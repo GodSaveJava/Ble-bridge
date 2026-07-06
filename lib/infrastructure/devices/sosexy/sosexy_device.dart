@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../../core/error/failure.dart';
@@ -10,13 +11,33 @@ import '../../../domain/entities/safety_policy.dart';
 import 'sosexy_gatt_profile.dart';
 import 'sosexy_protocol_codec.dart';
 
+typedef SosexyBleWriter =
+    Future<void> Function(
+      List<int> payload, {
+      required bool withoutResponse,
+      required int timeout,
+    });
+
 class SosexyDevice implements ToyDevice {
   SosexyDevice({
     required this.id,
     this.name = 'SOSEXY Device',
     SosexyProtocolCodec? codec,
   }) : _codec = codec ?? const SosexyProtocolCodec(),
+       _bleWriter = null,
        _status = DeviceStatus.disconnected(deviceId: id);
+
+  @visibleForTesting
+  SosexyDevice.test({
+    required this.id,
+    required SosexyBleWriter writer,
+    this.name = 'SOSEXY Device',
+    SosexyProtocolCodec? codec,
+  }) : _codec = codec ?? const SosexyProtocolCodec(),
+       _bleWriter = writer,
+       _status = DeviceStatus.disconnected(
+         deviceId: id,
+       ).copyWith(isConnected: true);
 
   @override
   final String id;
@@ -25,6 +46,7 @@ class SosexyDevice implements ToyDevice {
   final String name;
 
   final SosexyProtocolCodec _codec;
+  final SosexyBleWriter? _bleWriter;
   final Queue<_QueuedCommand> _queue = Queue<_QueuedCommand>();
   final StreamController<DeviceStatus> _statusController =
       StreamController<DeviceStatus>.broadcast();
@@ -117,7 +139,12 @@ class SosexyDevice implements ToyDevice {
   Future<void> disconnect() async {
     final device = _device;
     _writeCharacteristic = null;
-    _queue.clear();
+    _failQueuedCommands(
+      const Failure(
+        code: FailureCode.deviceDisconnected,
+        message: 'SOSEXY device disconnected before command could be sent.',
+      ),
+    );
     await _connectionStateSub?.cancel();
     _connectionStateSub = null;
     if (device != null) {
@@ -190,7 +217,13 @@ class SosexyDevice implements ToyDevice {
   @override
   Future<void> stopAll() async {
     // Stop command must preempt pending non-stop writes.
-    _queue.removeWhere((cmd) => !cmd.isStop);
+    _failQueuedCommands(
+      const Failure(
+        code: FailureCode.deviceWrite,
+        message: 'SOSEXY command superseded by stop_all.',
+      ),
+      onlyNonStop: true,
+    );
     await _enqueue(_codec.buildStopAllCommand(), isStop: true);
     _status = _status.copyWith(
       suckIntensity: 0,
@@ -233,7 +266,8 @@ class SosexyDevice implements ToyDevice {
   }
 
   Future<void> _enqueue(List<int> bytes, {required bool isStop}) async {
-    if (!_status.isConnected || _writeCharacteristic == null) {
+    if (!_status.isConnected ||
+        (_writeCharacteristic == null && _bleWriter == null)) {
       throw const Failure(
         code: FailureCode.deviceDisconnected,
         message: 'SOSEXY device is not connected.',
@@ -256,11 +290,7 @@ class SosexyDevice implements ToyDevice {
       while (_queue.isNotEmpty) {
         final cmd = _queue.removeFirst();
         try {
-          await _writeCharacteristic!.write(
-            cmd.payload,
-            withoutResponse: SosexyGattProfile.writeWithoutResponse,
-            timeout: SosexyGattProfile.writeTimeout.inMilliseconds,
-          );
+          await _writePayload(cmd.payload);
           cmd.completer.complete();
         } catch (error) {
           if (!cmd.completer.isCompleted) {
@@ -276,6 +306,34 @@ class SosexyDevice implements ToyDevice {
       }
     } finally {
       _draining = false;
+    }
+  }
+
+  Future<void> _writePayload(List<int> payload) {
+    final writer = _bleWriter;
+    if (writer != null) {
+      return writer(
+        payload,
+        withoutResponse: SosexyGattProfile.writeWithoutResponse,
+        timeout: SosexyGattProfile.writeTimeout.inMilliseconds,
+      );
+    }
+    return _writeCharacteristic!.write(
+      payload,
+      withoutResponse: SosexyGattProfile.writeWithoutResponse,
+      timeout: SosexyGattProfile.writeTimeout.inMilliseconds,
+    );
+  }
+
+  void _failQueuedCommands(Failure failure, {bool onlyNonStop = false}) {
+    final superseded = _queue
+        .where((cmd) => !onlyNonStop || !cmd.isStop)
+        .toList(growable: false);
+    _queue.removeWhere((cmd) => !onlyNonStop || !cmd.isStop);
+    for (final cmd in superseded) {
+      if (!cmd.completer.isCompleted) {
+        cmd.completer.completeError(failure);
+      }
     }
   }
 }

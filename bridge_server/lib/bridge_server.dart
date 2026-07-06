@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 class BridgeServerConfig {
   const BridgeServerConfig({
@@ -11,23 +10,21 @@ class BridgeServerConfig {
     this.connectorPath = '/mcp/claude',
     this.sharedToken = '',
     this.debugToken = '',
-    this.toolNames = const <String>[
-      'get_status',
-      'stop_all',
-      'set_suck',
-      'set_vibe',
-      'set_ems',
-      'set_all',
-    ],
+    this.toolNames = safeDefaultToolNames,
   });
+
+  static const List<String> safeDefaultToolNames = <String>[
+    'get_status',
+    'stop_all',
+  ];
 
   factory BridgeServerConfig.fromEnvironment() {
     return BridgeServerConfig(
       host: Platform.environment['BRIDGE_HOST'] ?? '0.0.0.0',
       port: int.tryParse(Platform.environment['BRIDGE_PORT'] ?? '') ?? 8100,
       publicBaseUrl: Platform.environment['BRIDGE_PUBLIC_BASE_URL'] ?? '',
-      connectorPath: Platform.environment['BRIDGE_CONNECTOR_PATH'] ??
-          '/mcp/claude',
+      connectorPath:
+          Platform.environment['BRIDGE_CONNECTOR_PATH'] ?? '/mcp/claude',
       sharedToken: Platform.environment['BRIDGE_SHARED_TOKEN'] ?? '',
       debugToken: Platform.environment['BRIDGE_DEBUG_TOKEN'] ?? '',
       toolNames: _parseToolNames(Platform.environment['BRIDGE_TOOL_NAMES']),
@@ -46,21 +43,16 @@ class BridgeServerConfig {
     if (publicBaseUrl.trim().isNotEmpty) {
       return Uri.parse(publicBaseUrl.trim());
     }
-    final String scheme =
-        requestUri.scheme.isNotEmpty ? requestUri.scheme : 'http';
+    final String scheme = requestUri.scheme.isNotEmpty
+        ? requestUri.scheme
+        : 'http';
     final String host = requestUri.host.isNotEmpty
         ? requestUri.host
         : requestUri.authority.isNotEmpty
         ? requestUri.authority
         : '127.0.0.1';
-    final int port = requestUri.hasPort
-        ? requestUri.port
-        : this.port;
-    return Uri(
-      scheme: scheme,
-      host: host,
-      port: port,
-    );
+    final int port = requestUri.hasPort ? requestUri.port : this.port;
+    return Uri(scheme: scheme, host: host, port: port);
   }
 
   Uri resolveConnectorUrl(Uri requestUri) {
@@ -76,14 +68,7 @@ class BridgeServerConfig {
 
   static List<String> _parseToolNames(String? raw) {
     if (raw == null || raw.trim().isEmpty) {
-      return const <String>[
-        'get_status',
-        'stop_all',
-        'set_suck',
-        'set_vibe',
-        'set_ems',
-        'set_all',
-      ];
+      return safeDefaultToolNames;
     }
     return raw
         .split(',')
@@ -103,50 +88,63 @@ class BridgeServer {
   int _connectorCounter = 0;
 
   Future<HttpServer> bind() async {
+    _validateBindSecurity();
     final HttpServer server = await HttpServer.bind(config.host, config.port);
     server.listen(_handleRequest);
     return server;
+  }
+
+  void _validateBindSecurity() {
+    final String normalizedHost = config.host.trim().toLowerCase();
+    final bool isLoopbackHost =
+        normalizedHost == '127.0.0.1' ||
+        normalizedHost == 'localhost' ||
+        normalizedHost == '::1';
+    final Uri? publicUri = config.publicBaseUrl.trim().isEmpty
+        ? null
+        : Uri.tryParse(config.publicBaseUrl.trim());
+    final String publicHost = publicUri?.host.toLowerCase() ?? '';
+    final bool isLoopbackPublicBase =
+        publicHost.isEmpty ||
+        publicHost == '127.0.0.1' ||
+        publicHost == 'localhost' ||
+        publicHost == '::1';
+
+    if ((!isLoopbackHost || !isLoopbackPublicBase) &&
+        config.sharedToken.trim().isEmpty) {
+      throw StateError(
+        'BRIDGE_SHARED_TOKEN is required when binding a public bridge.',
+      );
+    }
   }
 
   void _handleRequest(HttpRequest request) async {
     final String path = request.uri.path;
     try {
       if (_isBridgePath(path) && !_isAuthenticated(request)) {
-        await _writeJson(
-          request,
-          HttpStatus.unauthorized,
-          <String, Object?>{
-            'ok': false,
-            'errorCode': 'unauthorized',
-            'errorMessage': 'Missing or invalid bridge token.',
-          },
-        );
+        await _writeJson(request, HttpStatus.unauthorized, <String, Object?>{
+          'ok': false,
+          'errorCode': 'unauthorized',
+          'errorMessage': 'Missing or invalid bridge token.',
+        });
         return;
       }
 
       if (request.method == 'GET' && path == '/health') {
-        await _writeJson(
-          request,
-          200,
-          <String, Object?>{
-            'ok': true,
-            'service': 'toylink-bridge-server',
-          },
-        );
+        await _writeJson(request, 200, <String, Object?>{
+          'ok': true,
+          'service': 'toylink-bridge-server',
+        });
         return;
       }
 
       if (request.method == 'GET' && path == config.connectorPath) {
-        await _writeJson(
-          request,
-          200,
-          <String, Object?>{
-            'ok': true,
-            'service': 'toylink-bridge-server',
-            'connectorPath': config.connectorPath,
-            'bridgeBaseUrl': config.publicBaseUrl.trim(),
-          },
-        );
+        await _writeJson(request, 200, <String, Object?>{
+          'ok': true,
+          'service': 'toylink-bridge-server',
+          'connectorPath': config.connectorPath,
+          'bridgeBaseUrl': config.publicBaseUrl.trim(),
+        });
         return;
       }
 
@@ -189,15 +187,11 @@ class BridgeServer {
         return;
       }
 
-      await _writeJson(
-        request,
-        HttpStatus.notFound,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'not_found',
-          'errorMessage': 'Unknown path: $path',
-        },
-      );
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'not_found',
+        'errorMessage': 'Unknown path: $path',
+      });
     } on Object catch (error, stackTrace) {
       stderr.writeln('Bridge server error: $error');
       stderr.writeln(stackTrace);
@@ -216,8 +210,9 @@ class BridgeServer {
   }
 
   Uri? _matchSessionPath(String path) {
-    final List<String> segments =
-        Uri.parse(path).pathSegments.where((String s) => s.isNotEmpty).toList();
+    final List<String> segments = Uri.parse(
+      path,
+    ).pathSegments.where((String s) => s.isNotEmpty).toList();
     if (segments.length == 4 &&
         segments[0] == 'mobile-bridge' &&
         segments[1] == 'session') {
@@ -236,7 +231,8 @@ class BridgeServer {
     if (config.sharedToken.isEmpty) {
       return true;
     }
-    final String token = request.headers.value(HttpHeaders.authorizationHeader) ??
+    final String token =
+        request.headers.value(HttpHeaders.authorizationHeader) ??
         request.headers.value('x-bridge-token') ??
         '';
     return token == 'Bearer ${config.sharedToken}' ||
@@ -247,15 +243,11 @@ class BridgeServer {
     final Map<String, Object?> body = await _readJson(request);
     final String clientId = (body['clientId'] as String? ?? '').trim();
     if (clientId.isEmpty) {
-      await _writeJson(
-        request,
-        HttpStatus.badRequest,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'invalid_request',
-          'errorMessage': 'clientId is required.',
-        },
-      );
+      await _writeJson(request, HttpStatus.badRequest, <String, Object?>{
+        'ok': false,
+        'errorCode': 'invalid_request',
+        'errorMessage': 'clientId is required.',
+      });
       return;
     }
 
@@ -274,11 +266,7 @@ class BridgeServer {
     );
     _sessions[bridgeSessionId] = session;
 
-    await _writeJson(
-      request,
-      HttpStatus.ok,
-      session.toJson(),
-    );
+    await _writeJson(request, HttpStatus.ok, session.toJson());
   }
 
   Future<void> _handleRefresh(
@@ -287,15 +275,11 @@ class BridgeServer {
   ) async {
     final _BridgeSession? session = _sessions[bridgeSessionId];
     if (session == null) {
-      await _writeJson(
-        request,
-        HttpStatus.notFound,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'bridge_session_missing',
-          'errorMessage': 'Bridge session not found.',
-        },
-      );
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'bridge_session_missing',
+        'errorMessage': 'Bridge session not found.',
+      });
       return;
     }
 
@@ -314,15 +298,11 @@ class BridgeServer {
   ) async {
     final _BridgeSession? session = _sessions[bridgeSessionId];
     if (session == null) {
-      await _writeJson(
-        request,
-        HttpStatus.notFound,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'bridge_session_missing',
-          'errorMessage': 'Bridge session not found.',
-        },
-      );
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'bridge_session_missing',
+        'errorMessage': 'Bridge session not found.',
+      });
       return;
     }
 
@@ -332,11 +312,7 @@ class BridgeServer {
       return;
     }
 
-    await _writeJson(
-      request,
-      HttpStatus.ok,
-      task.toJson(),
-    );
+    await _writeJson(request, HttpStatus.ok, task.toJson());
   }
 
   Future<void> _handleTaskResult(
@@ -345,15 +321,11 @@ class BridgeServer {
   ) async {
     final _BridgeSession? session = _sessions[bridgeSessionId];
     if (session == null) {
-      await _writeJson(
-        request,
-        HttpStatus.notFound,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'bridge_session_missing',
-          'errorMessage': 'Bridge session not found.',
-        },
-      );
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'bridge_session_missing',
+        'errorMessage': 'Bridge session not found.',
+      });
       return;
     }
 
@@ -362,31 +334,20 @@ class BridgeServer {
       lastTaskResult: body,
       updatedAt: DateTime.now(),
     );
-    await _writeJson(
-      request,
-      HttpStatus.ok,
-      <String, Object?>{
-        'ok': true,
-        'bridgeSessionId': bridgeSessionId,
-      },
-    );
+    await _writeJson(request, HttpStatus.ok, <String, Object?>{
+      'ok': true,
+      'bridgeSessionId': bridgeSessionId,
+    });
   }
 
-  Future<void> _handleStop(
-    HttpRequest request,
-    String bridgeSessionId,
-  ) async {
+  Future<void> _handleStop(HttpRequest request, String bridgeSessionId) async {
     final _BridgeSession? session = _sessions[bridgeSessionId];
     if (session == null) {
-      await _writeJson(
-        request,
-        HttpStatus.notFound,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'bridge_session_missing',
-          'errorMessage': 'Bridge session not found.',
-        },
-      );
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'bridge_session_missing',
+        'errorMessage': 'Bridge session not found.',
+      });
       return;
     }
 
@@ -394,50 +355,49 @@ class BridgeServer {
       status: 'offline',
       updatedAt: DateTime.now(),
     );
-    await _writeJson(
-      request,
-      HttpStatus.noContent,
-      <String, Object?>{},
-    );
+    await _writeJson(request, HttpStatus.noContent, <String, Object?>{});
   }
 
   Future<void> _handleDebugEnqueue(HttpRequest request) async {
+    if (config.debugToken.trim().isEmpty) {
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'not_found',
+        'errorMessage': 'Unknown path: ${request.uri.path}',
+      });
+      return;
+    }
+
     if (config.debugToken.isNotEmpty) {
-      final String token = request.headers.value(HttpHeaders.authorizationHeader) ??
+      final String token =
+          request.headers.value(HttpHeaders.authorizationHeader) ??
           request.headers.value('x-debug-token') ??
           '';
       if (token != 'Bearer ${config.debugToken}' &&
           token != config.debugToken) {
-        await _writeJson(
-          request,
-          HttpStatus.unauthorized,
-          <String, Object?>{
-            'ok': false,
-            'errorCode': 'unauthorized',
-            'errorMessage': 'Invalid debug token.',
-          },
-        );
+        await _writeJson(request, HttpStatus.unauthorized, <String, Object?>{
+          'ok': false,
+          'errorCode': 'unauthorized',
+          'errorMessage': 'Invalid debug token.',
+        });
         return;
       }
     }
 
     final Map<String, Object?> body = await _readJson(request);
-    final String bridgeSessionId = (body['bridgeSessionId'] as String? ?? '').trim();
+    final String bridgeSessionId = (body['bridgeSessionId'] as String? ?? '')
+        .trim();
     final String requestId = (body['requestId'] as String? ?? '').trim();
     final String tool = (body['tool'] as String? ?? '').trim();
     final Map<String, Object?> input =
         (body['input'] as Map?)?.cast<String, Object?>() ??
         const <String, Object?>{};
     if (bridgeSessionId.isEmpty || requestId.isEmpty || tool.isEmpty) {
-      await _writeJson(
-        request,
-        HttpStatus.badRequest,
-        <String, Object?>{
-          'ok': false,
-          'errorCode': 'invalid_request',
-          'errorMessage': 'bridgeSessionId, requestId and tool are required.',
-        },
-      );
+      await _writeJson(request, HttpStatus.badRequest, <String, Object?>{
+        'ok': false,
+        'errorCode': 'invalid_request',
+        'errorMessage': 'bridgeSessionId, requestId and tool are required.',
+      });
       return;
     }
 
@@ -446,15 +406,11 @@ class BridgeServer {
       tool: tool,
       input: input,
     );
-    await _writeJson(
-      request,
-      HttpStatus.ok,
-      <String, Object?>{
-        'ok': true,
-        'bridgeSessionId': bridgeSessionId,
-        'queued': true,
-      },
-    );
+    await _writeJson(request, HttpStatus.ok, <String, Object?>{
+      'ok': true,
+      'bridgeSessionId': bridgeSessionId,
+      'queued': true,
+    });
   }
 
   Future<Map<String, Object?>> _readJson(HttpRequest request) async {

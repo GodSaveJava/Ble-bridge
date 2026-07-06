@@ -252,59 +252,60 @@ void main() {
     expect(find.text(_kAiControlReadyHint), findsOneWidget);
   });
 
-  testWidgets('mcp page shows bridge onboarding prompt before remote session starts', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          hardwareRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultHardwareRepositoryProvider);
-          }),
-          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
-          adapterManifestRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultAdapterManifestRepositoryProvider);
-          }),
-          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
-          }),
-          verifiedAdapterRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
-          }),
-          claudeConnectorOnboardingRepositoryProvider.overrideWith(
-            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
-          ),
-          remoteBridgeServiceProvider.overrideWith(
-            (_) => MockRemoteBridgeService(),
-          ),
-          activeDeviceAdapterReadinessProvider.overrideWith(
-            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-              ActiveDeviceAdapterReadiness(
-                state: ActiveDeviceAdapterReadinessState.verified,
-                deviceId: 'device-a',
-                adapterId: 'generic.triple_channel.v1',
-                adapterDisplayName: '通用三通道模板',
+  testWidgets(
+    'mcp page shows bridge onboarding prompt before remote session starts',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultHardwareRepositoryProvider);
+            }),
+            mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+            adapterManifestRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultAdapterManifestRepositoryProvider);
+            }),
+            activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+            }),
+            verifiedAdapterRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+            }),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+            ),
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => MockRemoteBridgeService(),
+            ),
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.verified,
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterDisplayName: '通用三通道模板',
+                ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: McpPage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: McpPage()),
+        ),
+      );
 
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text(_kClaudeRemoteAccess),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(_kClaudeRemoteAccess),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text(_kClaudeRemoteAccess), findsOneWidget);
-    expect(find.text(_kBridgeOfflineChip), findsOneWidget);
-    expect(find.text(_kStartBridgeSession), findsOneWidget);
-    expect(find.text(_kConnectorUrlPending), findsOneWidget);
-  });
+      expect(find.text(_kClaudeRemoteAccess), findsOneWidget);
+      expect(find.text(_kBridgeOfflineChip), findsOneWidget);
+      expect(find.text(_kStartBridgeSession), findsOneWidget);
+      expect(find.text(_kConnectorUrlPending), findsOneWidget);
+    },
+  );
 
   testWidgets('mcp page shows connector info after remote bridge is ready', (
     WidgetTester tester,
@@ -404,20 +405,21 @@ void main() {
             (_) => ProcessNextRemoteBridgeTaskUseCase(
               remoteBridgeService: pollingBridge,
               assignmentHandler: RemoteBridgeTaskAssignmentHandler(
-                consumeTask: ({
-                  String? requestId,
-                  required String tool,
-                  Map<String, Object?> input = const <String, Object?>{},
-                }) async {
-                  return RemoteBridgeTaskResult(
-                    ok: true,
-                    requestId: requestId,
-                    tool: tool,
-                    result: const <String, Object?>{
-                      'deviceId': 'mock-sosexy-001',
+                consumeTask:
+                    ({
+                      String? requestId,
+                      required String tool,
+                      Map<String, Object?> input = const <String, Object?>{},
+                    }) async {
+                      return RemoteBridgeTaskResult(
+                        ok: true,
+                        requestId: requestId,
+                        tool: tool,
+                        result: const <String, Object?>{
+                          'deviceId': 'mock-sosexy-001',
+                        },
+                      );
                     },
-                  );
-                },
               ),
             ),
           ),
@@ -487,18 +489,19 @@ void main() {
             (_) => ProcessNextRemoteBridgeTaskUseCase(
               remoteBridgeService: pollingBridge,
               assignmentHandler: RemoteBridgeTaskAssignmentHandler(
-                consumeTask: ({
-                  String? requestId,
-                  required String tool,
-                  Map<String, Object?> input = const <String, Object?>{},
-                }) async {
-                  return RemoteBridgeTaskResult(
-                    ok: true,
-                    requestId: requestId,
-                    tool: tool,
-                    result: const <String, Object?>{'stopped': true},
-                  );
-                },
+                consumeTask:
+                    ({
+                      String? requestId,
+                      required String tool,
+                      Map<String, Object?> input = const <String, Object?>{},
+                    }) async {
+                      return RemoteBridgeTaskResult(
+                        ok: true,
+                        requestId: requestId,
+                        tool: tool,
+                        result: const <String, Object?>{'stopped': true},
+                      );
+                    },
               ),
             ),
           ),
@@ -537,189 +540,193 @@ void main() {
     expect(find.textContaining('bridge-task-auto-9'), findsOneWidget);
   });
 
-  testWidgets('claude onboarding page blocks entry when local setup is incomplete', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          remoteBridgeServiceProvider.overrideWith(
-            (_) => MockRemoteBridgeService(),
-          ),
-          claudeConnectorOnboardingRepositoryProvider.overrideWith(
-            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
-          ),
-          activeDeviceAdapterReadinessProvider.overrideWith(
-            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-              ActiveDeviceAdapterReadiness(
-                state: ActiveDeviceAdapterReadinessState.noDevice,
+  testWidgets(
+    'claude onboarding page blocks entry when local setup is incomplete',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => MockRemoteBridgeService(),
+            ),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+            ),
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.noDevice,
+                ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: ClaudeOnboardingPage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: ClaudeOnboardingPage()),
+        ),
+      );
 
-    expect(find.text(_kClaudeOnboardingTitle), findsOneWidget);
-    expect(find.text(_kClaudeBlockedTitle), findsOneWidget);
-    expect(find.text(_kGoConnectDevice), findsOneWidget);
-  });
+      expect(find.text(_kClaudeOnboardingTitle), findsOneWidget);
+      expect(find.text(_kClaudeBlockedTitle), findsOneWidget);
+      expect(find.text(_kGoConnectDevice), findsOneWidget);
+    },
+  );
 
-  testWidgets('claude onboarding page shows connector steps when bridge is ready', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          remoteBridgeServiceProvider.overrideWith(
-            (_) => _ReadyRemoteBridgeService(),
-          ),
-          claudeConnectorOnboardingRepositoryProvider.overrideWith(
-            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
-          ),
-          activeDeviceAdapterReadinessProvider.overrideWith(
-            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-              ActiveDeviceAdapterReadiness(
-                state: ActiveDeviceAdapterReadinessState.verified,
-                deviceId: 'device-a',
-                adapterId: 'generic.triple_channel.v1',
-                adapterDisplayName: '通用三通道模板',
+  testWidgets(
+    'claude onboarding page shows connector steps when bridge is ready',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => _ReadyRemoteBridgeService(),
+            ),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+            ),
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.verified,
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterDisplayName: '通用三通道模板',
+                ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: ClaudeOnboardingPage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: ClaudeOnboardingPage()),
+        ),
+      );
 
-    expect(find.text(_kClaudeReadyTitle), findsOneWidget);
-    expect(find.text(_kClaudeHealthReadyTitle), findsOneWidget);
-    expect(find.text(_kClaudeHealthReadySummary), findsOneWidget);
-    expect(find.text(_kOnboardingStepPrepare), findsOneWidget);
-    expect(find.text(_kOnboardingStepAddConnector), findsOneWidget);
-    expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
-    expect(find.text(_kOnboardingConnectorTokenReady), findsOneWidget);
-    expect(find.text(_kCopyConnectorUrl), findsOneWidget);
-    expect(find.text(_kCopyConnectorToken), findsOneWidget);
-    expect(find.text(_kTroubleshootingTitle), findsOneWidget);
-  });
+      expect(find.text(_kClaudeReadyTitle), findsOneWidget);
+      expect(find.text(_kClaudeHealthReadyTitle), findsOneWidget);
+      expect(find.text(_kClaudeHealthReadySummary), findsOneWidget);
+      expect(find.text(_kOnboardingStepPrepare), findsOneWidget);
+      expect(find.text(_kOnboardingStepAddConnector), findsOneWidget);
+      expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
+      expect(find.text(_kOnboardingConnectorTokenReady), findsOneWidget);
+      expect(find.text(_kCopyConnectorUrl), findsOneWidget);
+      expect(find.text(_kCopyConnectorToken), findsOneWidget);
+      expect(find.text(_kTroubleshootingTitle), findsOneWidget);
+    },
+  );
 
-  testWidgets('claude onboarding page shows copy actions and completion state', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          remoteBridgeServiceProvider.overrideWith(
-            (_) => _ReadyRemoteBridgeService(),
-          ),
-          claudeConnectorOnboardingRepositoryProvider.overrideWith(
-            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
-          ),
-          activeDeviceAdapterReadinessProvider.overrideWith(
-            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-              ActiveDeviceAdapterReadiness(
-                state: ActiveDeviceAdapterReadinessState.verified,
-                deviceId: 'device-a',
-                adapterId: 'generic.triple_channel.v1',
-                adapterDisplayName: '通用三通道模板',
+  testWidgets(
+    'claude onboarding page shows copy actions and completion state',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => _ReadyRemoteBridgeService(),
+            ),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+            ),
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.verified,
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterDisplayName: '通用三通道模板',
+                ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: ClaudeOnboardingPage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: ClaudeOnboardingPage()),
+        ),
+      );
 
-    await tester.scrollUntilVisible(
-      find.text(_kCopyConnectorUrl),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    expect(find.text(_kCopyConnectorUrl), findsOneWidget);
-    expect(find.text(_kCopyConnectorToken), findsOneWidget);
-    expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
-    expect(find.text(_kOnboardingConnectorTokenReady), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text(_kCopyConnectorUrl),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(_kCopyConnectorUrl), findsOneWidget);
+      expect(find.text(_kCopyConnectorToken), findsOneWidget);
+      expect(find.text(_kOnboardingConnectorUrlReady), findsOneWidget);
+      expect(find.text(_kOnboardingConnectorTokenReady), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text(_kFinishedClaudeSetup),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(_kFinishedClaudeSetup));
-    await tester.pumpAndSettle();
-    expect(find.text(_kClaudeSetupCompleteTitle), findsOneWidget);
-  });
+      await tester.scrollUntilVisible(
+        find.text(_kFinishedClaudeSetup),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_kFinishedClaudeSetup));
+      await tester.pumpAndSettle();
+      expect(find.text(_kClaudeSetupCompleteTitle), findsOneWidget);
+    },
+  );
 
-  testWidgets('mcp page shows completed Claude setup label for current device', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          hardwareRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultHardwareRepositoryProvider);
-          }),
-          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
-          adapterManifestRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultAdapterManifestRepositoryProvider);
-          }),
-          activeAdapterBindingRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
-          }),
-          verifiedAdapterRepositoryProvider.overrideWith((ref) {
-            return ref.watch(defaultVerifiedAdapterRepositoryProvider);
-          }),
-          remoteBridgeServiceProvider.overrideWith(
-            (_) => _ReadyRemoteBridgeService(),
-          ),
-          claudeConnectorOnboardingRepositoryProvider.overrideWith(
-            (_) => _InMemoryClaudeConnectorOnboardingRepository(
-              record: ClaudeConnectorOnboardingRecord(
-                deviceId: 'device-a',
-                adapterId: 'generic.triple_channel.v1',
-                completedAt: DateTime(2026),
+  testWidgets(
+    'mcp page shows completed Claude setup label for current device',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultHardwareRepositoryProvider);
+            }),
+            mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+            adapterManifestRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultAdapterManifestRepositoryProvider);
+            }),
+            activeAdapterBindingRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultActiveAdapterBindingRepositoryProvider);
+            }),
+            verifiedAdapterRepositoryProvider.overrideWith((ref) {
+              return ref.watch(defaultVerifiedAdapterRepositoryProvider);
+            }),
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => _ReadyRemoteBridgeService(),
+            ),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(
+                record: ClaudeConnectorOnboardingRecord(
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  completedAt: DateTime(2026),
+                ),
               ),
             ),
-          ),
-          activeDeviceAdapterReadinessProvider.overrideWith(
-            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-              ActiveDeviceAdapterReadiness(
-                state: ActiveDeviceAdapterReadinessState.verified,
-                deviceId: 'device-a',
-                adapterId: 'generic.triple_channel.v1',
-                adapterDisplayName: '通用三通道模板',
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.verified,
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterDisplayName: '通用三通道模板',
+                ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: McpPage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: McpPage()),
+        ),
+      );
 
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text(_kClaudeRemoteAccess),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text(_kClaudeHealthReadyTitle),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(_kClaudeRemoteAccess),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(_kClaudeHealthReadyTitle),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text(_kClaudeSetupCompletedChip), findsOneWidget);
-    expect(find.text(_kViewClaudeConnectorInfo), findsOneWidget);
-    expect(find.text(_kResetClaudeSetup), findsOneWidget);
-    expect(find.text(_kClaudeHealthReadyTitle), findsOneWidget);
-    expect(find.text(_kClaudeHealthReadySummary), findsOneWidget);
-  });
+      expect(find.text(_kClaudeSetupCompletedChip), findsOneWidget);
+      expect(find.text(_kViewClaudeConnectorInfo), findsOneWidget);
+      expect(find.text(_kResetClaudeSetup), findsOneWidget);
+      expect(find.text(_kClaudeHealthReadyTitle), findsOneWidget);
+      expect(find.text(_kClaudeHealthReadySummary), findsOneWidget);
+    },
+  );
 
   testWidgets('mcp page reset Claude onboarding returns to configure state', (
     WidgetTester tester,
@@ -792,56 +799,57 @@ void main() {
     expect(repository.record, isNull);
   });
 
-  testWidgets('mcp page shows bridge diagnostics banner when keepalive failed', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
-          remoteBridgeServiceProvider.overrideWith(
-            (_) => _RecoverableKeepaliveFailedRemoteBridgeService(),
-          ),
-          claudeConnectorOnboardingRepositoryProvider.overrideWith(
-            (_) => _InMemoryClaudeConnectorOnboardingRepository(),
-          ),
-          activeDeviceAdapterReadinessProvider.overrideWith(
-            (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
-              ActiveDeviceAdapterReadiness(
-                state: ActiveDeviceAdapterReadinessState.verified,
-                deviceId: 'device-a',
-                adapterId: 'generic.triple_channel.v1',
-                adapterDisplayName: '通用三通道模板',
+  testWidgets(
+    'mcp page shows bridge diagnostics banner when keepalive failed',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mcpServiceProvider.overrideWith((_) => _RunningMockMcpService()),
+            remoteBridgeServiceProvider.overrideWith(
+              (_) => _RecoverableKeepaliveFailedRemoteBridgeService(),
+            ),
+            claudeConnectorOnboardingRepositoryProvider.overrideWith(
+              (_) => _InMemoryClaudeConnectorOnboardingRepository(),
+            ),
+            activeDeviceAdapterReadinessProvider.overrideWith(
+              (_) => const AsyncData<ActiveDeviceAdapterReadiness>(
+                ActiveDeviceAdapterReadiness(
+                  state: ActiveDeviceAdapterReadinessState.verified,
+                  deviceId: 'device-a',
+                  adapterId: 'generic.triple_channel.v1',
+                  adapterDisplayName: '通用三通道模板',
+                ),
               ),
             ),
-          ),
-        ],
-        child: const MaterialApp(home: McpPage()),
-      ),
-    );
+          ],
+          child: const MaterialApp(home: McpPage()),
+        ),
+      );
 
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.textContaining('桥接保活失败'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.textContaining('桥接保活失败'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('桥接保活失败'), findsOneWidget);
-    expect(find.textContaining('最近同步：2026-05-24 16:10'), findsOneWidget);
-    final Finder restartBridgeButton = find.widgetWithText(
-      OutlinedButton,
-      '重新启动桥接会话',
-    );
-    expect(restartBridgeButton, findsOneWidget);
+      expect(find.textContaining('桥接保活失败'), findsOneWidget);
+      expect(find.textContaining('最近同步：2026-05-24 16:10'), findsOneWidget);
+      final Finder restartBridgeButton = find.widgetWithText(
+        OutlinedButton,
+        '重新启动桥接会话',
+      );
+      expect(restartBridgeButton, findsOneWidget);
 
-    await tester.tap(restartBridgeButton);
-    await tester.pumpAndSettle();
+      await tester.tap(restartBridgeButton);
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('桥接连接正常'), findsOneWidget);
-    expect(find.textContaining('最近同步：2026-05-24 16:12'), findsOneWidget);
-  });
+      expect(find.textContaining('桥接连接正常'), findsOneWidget);
+      expect(find.textContaining('最近同步：2026-05-24 16:12'), findsOneWidget);
+    },
+  );
 
   testWidgets('mcp page distinguishes disconnected toy from bridge failure', (
     WidgetTester tester,
@@ -878,10 +886,7 @@ void main() {
 
     expect(find.textContaining('玩具连接已断开'), findsOneWidget);
     expect(find.textContaining('重新连接设备'), findsWidgets);
-    expect(
-      find.widgetWithText(OutlinedButton, '去重新连接设备'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(OutlinedButton, '去重新连接设备'), findsOneWidget);
   });
 
   testWidgets('verification page shows beginner guidance and locked submit', (
@@ -1350,14 +1355,7 @@ class _ReadyRemoteBridgeService implements RemoteBridgeService {
     connectorInfo: const RemoteBridgeConnectorInfo(
       connectorUrl: 'https://bridge.toylink.local/mcp/claude',
       connectorToken: 'toy_bridge_token_ready',
-      toolNames: <String>[
-        'set_suck',
-        'set_vibe',
-        'set_ems',
-        'set_all',
-        'stop_all',
-        'get_status',
-      ],
+      toolNames: <String>['get_status', 'stop_all'],
     ),
   );
 
@@ -1398,14 +1396,7 @@ class _RecoverableKeepaliveFailedRemoteBridgeService
     connectorInfo: const RemoteBridgeConnectorInfo(
       connectorUrl: 'https://bridge.toylink.local/mcp/claude',
       connectorToken: 'toy_bridge_token_ready',
-      toolNames: <String>[
-        'set_suck',
-        'set_vibe',
-        'set_ems',
-        'set_all',
-        'stop_all',
-        'get_status',
-      ],
+      toolNames: <String>['get_status', 'stop_all'],
     ),
     lastErrorCode: 'bridge_keepalive_failed',
     lastErrorMessage: 'keepalive failed',
@@ -1437,14 +1428,7 @@ class _RecoverableKeepaliveFailedRemoteBridgeService
       connectorInfo: const RemoteBridgeConnectorInfo(
         connectorUrl: 'https://bridge.toylink.local/mcp/claude',
         connectorToken: 'toy_bridge_token_recovered',
-        toolNames: <String>[
-          'set_suck',
-          'set_vibe',
-          'set_ems',
-          'set_all',
-          'stop_all',
-          'get_status',
-        ],
+        toolNames: <String>['get_status', 'stop_all'],
       ),
       lastUpdatedAt: DateTime(2026, 5, 24, 16, 12),
     );

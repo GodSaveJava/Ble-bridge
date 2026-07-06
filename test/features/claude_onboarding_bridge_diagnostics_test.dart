@@ -89,14 +89,7 @@ class _ReadyRemoteBridgeService
     connectorInfo: RemoteBridgeConnectorInfo(
       connectorUrl: 'https://bridge.toylink.local/mcp/claude',
       connectorToken: 'toy_bridge_token_ready',
-      toolNames: <String>[
-        'set_suck',
-        'set_vibe',
-        'set_ems',
-        'set_all',
-        'stop_all',
-        'get_status',
-      ],
+      toolNames: <String>['get_status', 'stop_all'],
     ),
   );
 

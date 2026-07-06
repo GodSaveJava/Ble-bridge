@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
+import '../../../../shared/widgets/premium_bouncing_wrapper.dart';
 import '../../../../shared/widgets/toylink_background.dart';
 import '../../../mcp_server/presentation/controllers/mcp_service_controller.dart';
 import '../controllers/foreground_service_controller.dart';
@@ -45,47 +46,114 @@ class HomePage extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ToyLink AI')),
+      appBar: AppBar(
+        title: const Text(
+          'ToyLink AI',
+          style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        ),
+      ),
       body: ToyLinkBackground(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ), // Premium spacious padding
           children: <Widget>[
+            // DEVICE STATUS CARD
             Card(
-              child: ListTile(
-                title: const Text('设备状态'),
-                subtitle: Text(deviceSubtitle),
-                trailing: FilledButton(
-                  onPressed: () => context.push('/scan'),
-                  child: Text(deviceSubtitle.startsWith('已连接设备') ? '管理' : '连接'),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '设备状态',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            deviceSubtitle,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton(
+                      onPressed: () => context.push('/scan'),
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: Text(
+                        deviceSubtitle.startsWith('已连接设备') ? '管理' : '连接',
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+
+            // MCP SERVICE CARD
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      'MCP 服务',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
                     Text(
-                      mcpState.isRunning
-                          ? '运行中：${mcpState.endpointInfo?.host}:${mcpState.endpointInfo?.port}'
-                          : '未启动',
+                      'MCP 桥接服务',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: mcpState.isRunning
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.grey.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        mcpState.isRunning
+                            ? '运行中：${mcpState.endpointInfo?.host}:${mcpState.endpointInfo?.port}'
+                            : '未启动',
+                        style: TextStyle(
+                          color: mcpState.isRunning
+                              ? Colors.green[700]
+                              : Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
                       readinessTitle,
-                      style: Theme.of(context).textTheme.titleSmall,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(readinessSubtitle),
+                    const SizedBox(height: 8),
+                    Text(
+                      readinessSubtitle,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                     if (readinessAsync.hasError) ...<Widget>[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Text(
                         '适配器状态读取失败，请进入设备管理页检查本地数据。',
                         style: TextStyle(
@@ -93,27 +161,47 @@ class HomePage extends ConsumerWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                      spacing: 12,
+                      runSpacing: 12,
                       children: <Widget>[
                         FilledButton.tonal(
                           onPressed: () => context.push('/mcp'),
+                          style: FilledButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: const Text('打开 MCP'),
                         ),
                         OutlinedButton(
                           onPressed: () => context.push('/device-manager'),
-                          child: const Text('查看适配器状态'),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('适配器状态'),
                         ),
                         for (final _HomeAction action in readinessActions)
                           action.isPrimary
                               ? FilledButton(
                                   onPressed: () => context.push(action.route),
+                                  style: FilledButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
                                   child: Text(action.label),
                                 )
                               : OutlinedButton(
                                   onPressed: () => context.push(action.route),
+                                  style: OutlinedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
                                   child: Text(action.label),
                                 ),
                       ],
@@ -122,29 +210,42 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+
+            // BACKGROUND SERVICE CARD
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
+                    Text(
                       '后台保活',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Text('状态：${fgState.isRunning ? '运行中' : '未运行'}'),
+                    const SizedBox(height: 12),
+                    Text(
+                      '状态：${fgState.isRunning ? '运行中' : '未运行'}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                     if (fgState.lastRefreshedAt != null)
                       Text(
                         '最近刷新：${fgState.lastRefreshedAt!.hour.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.minute.toString().padLeft(2, '0')}:${fgState.lastRefreshedAt!.second.toString().padLeft(2, '0')}',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                    const SizedBox(height: 8),
-                    const Text('如果切到后台后连接容易断开，请在系统设置中关闭电池优化并允许自启动。'),
                     const SizedBox(height: 12),
+                    Text(
+                      '如果切到后台后连接容易断开，请在系统设置中关闭电池优化并允许自启动。',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 20),
                     Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                      spacing: 12,
+                      runSpacing: 12,
                       children: <Widget>[
                         FilledButton.tonal(
                           onPressed: fgState.isBusy
@@ -155,6 +256,11 @@ class HomePage extends ConsumerWidget {
                                           .notifier,
                                     )
                                     .refresh(),
+                          style: FilledButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: const Text('刷新状态'),
                         ),
                         OutlinedButton(
@@ -166,23 +272,38 @@ class HomePage extends ConsumerWidget {
                                           .notifier,
                                     )
                                     .stop(),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: const Text('停止保活'),
                         ),
                         OutlinedButton(
                           onPressed: () async {
                             await openAppSettings();
                           },
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: const Text('去系统设置'),
                         ),
                         OutlinedButton(
                           onPressed: () =>
                               context.push('/background-checklist'),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           child: const Text('验收清单'),
                         ),
                       ],
                     ),
                     if (fgState.errorMessage != null) ...<Widget>[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Text(
                         fgState.errorMessage!,
                         style: TextStyle(
@@ -194,47 +315,69 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+
+            // QUICK START CARD
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
+                    Text(
                       '一键启动',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text('自动完成：扫描设备 -> 连接设备 -> 启动后台保活 -> 启动 MCP'),
                     const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: quickStart.isRunning
-                          ? null
-                          : () async {
-                              final bool ok = await ref
-                                  .read(quickStartControllerProvider.notifier)
-                                  .runQuickStart();
-                              if (!ok || !context.mounted) {
-                                return;
-                              }
-                              await ref
-                                  .read(
-                                    foregroundServiceControllerProvider
-                                        .notifier,
-                                  )
-                                  .refresh();
-                              if (!context.mounted) {
-                                return;
-                              }
-                              context.push(
-                                '/control?returnTo=%2Fhome&returnLabel=%E8%BF%94%E5%9B%9E%E9%A6%96%E9%A1%B5',
-                              );
-                            },
-                      child: Text(quickStart.isRunning ? '启动中...' : '开始一键启动'),
+                    Text(
+                      '自动完成：扫描设备 -> 连接设备 -> 启动后台保活 -> 启动 MCP',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: quickStart.isRunning
+                            ? null
+                            : () async {
+                                final bool ok = await ref
+                                    .read(quickStartControllerProvider.notifier)
+                                    .runQuickStart();
+                                if (!ok || !context.mounted) {
+                                  return;
+                                }
+                                await ref
+                                    .read(
+                                      foregroundServiceControllerProvider
+                                          .notifier,
+                                    )
+                                    .refresh();
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                context.push(
+                                  '/control?returnTo=%2Fhome&returnLabel=%E8%BF%94%E5%9B%9E%E9%A6%96%E9%A1%B5',
+                                );
+                              },
+                        style: FilledButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: Text(
+                          quickStart.isRunning ? '启动中...' : '开始一键启动',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
                     if (quickStart.errorMessage != null) ...<Widget>[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Text(
                         quickStart.errorMessage!,
                         style: TextStyle(
@@ -246,35 +389,53 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
+
+            // QUICK NAV
+            Text(
+              '快速导航',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 12,
               children: <Widget>[
                 _QuickNavButton(
                   label: '扫描连接',
+                  icon: Icons.bluetooth_searching,
                   onTap: () => context.push('/scan'),
                 ),
                 _QuickNavButton(
                   label: '手动控制',
+                  icon: Icons.gamepad,
                   onTap: () => context.push(
                     '/control?returnTo=%2Fhome&returnLabel=%E8%BF%94%E5%9B%9E%E9%A6%96%E9%A1%B5',
                   ),
                 ),
                 _QuickNavButton(
                   label: '设备管理',
+                  icon: Icons.settings_input_component,
                   onTap: () => context.push('/device-manager'),
                 ),
                 _QuickNavButton(
                   label: '聊天',
+                  icon: Icons.chat_bubble_outline,
                   onTap: () => context.push('/chat'),
                 ),
                 _QuickNavButton(
                   label: '设置',
+                  icon: Icons.settings,
                   onTap: () => context.push('/settings'),
                 ),
               ],
             ),
+            const SizedBox(
+              height: 80,
+            ), // Extra space for the floating emergency stop bar
           ],
         ),
       ),
@@ -283,16 +444,35 @@ class HomePage extends ConsumerWidget {
 }
 
 class _QuickNavButton extends StatelessWidget {
-  const _QuickNavButton({required this.label, required this.onTap});
+  const _QuickNavButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   final String label;
+  final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 156,
-      child: OutlinedButton(onPressed: onTap, child: Text(label)),
+      width: (MediaQuery.of(context).size.width - 40 - 12) / 2, // 2 columns
+      child: PremiumBouncingWrapper(
+        onTap: onTap,
+        child: OutlinedButton.icon(
+          onPressed: onTap,
+          icon: Icon(icon, size: 18),
+          label: Text(label),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.centerLeft,
+          ),
+        ),
+      ),
     );
   }
 }

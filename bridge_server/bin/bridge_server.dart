@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import '../lib/bridge_server.dart';
+import 'package:toylink_bridge_server/bridge_server.dart';
 
 Future<void> main(List<String> args) async {
   final BridgeServerConfig config = BridgeServerConfig.fromEnvironment();

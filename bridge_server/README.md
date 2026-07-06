@@ -10,7 +10,8 @@ dart pub get
 dart run bin/bridge_server.dart
 ```
 
-Default listens on `0.0.0.0:8100`.
+Default listens on `0.0.0.0:8100`. Public/non-loopback bridge binds require
+`BRIDGE_SHARED_TOKEN`; local loopback development can run without it.
 
 ## Environment variables
 
@@ -18,9 +19,9 @@ Default listens on `0.0.0.0:8100`.
 - `BRIDGE_PORT`: bind port, default `8100`
 - `BRIDGE_PUBLIC_BASE_URL`: public base URL returned to clients, optional
 - `BRIDGE_CONNECTOR_PATH`: connector path returned in `connectorUrl`, default `/mcp/claude`
-- `BRIDGE_SHARED_TOKEN`: optional bearer token required by the mobile bridge client
-- `BRIDGE_DEBUG_TOKEN`: optional token for `/debug/enqueue`
-- `BRIDGE_TOOL_NAMES`: comma-separated tool list
+- `BRIDGE_SHARED_TOKEN`: bearer token required by the mobile bridge client when exposed publicly
+- `BRIDGE_DEBUG_TOKEN`: optional token for `/debug/enqueue`; when empty, the debug enqueue route is disabled
+- `BRIDGE_TOOL_NAMES`: comma-separated tool list, default `get_status,stop_all`
 
 ## Docker
 
@@ -29,6 +30,7 @@ Default listens on `0.0.0.0:8100`.
 ```bash
 cd bridge_server
 copy .env.example .env
+# Edit .env and replace BRIDGE_SHARED_TOKEN before exposing the service.
 docker compose up -d --build
 ```
 
@@ -46,6 +48,7 @@ cd bridge_server
 docker build -t toylink-bridge-server .
 docker run --rm -p 8100:8100 \
   -e BRIDGE_PUBLIC_BASE_URL=http://47.95.242.29:8100 \
+  -e BRIDGE_SHARED_TOKEN=change-me-for-app \
   toylink-bridge-server
 ```
 

@@ -110,14 +110,7 @@ class MockRemoteBridgeService
     return RemoteBridgeConnectorInfo(
       connectorUrl: 'https://bridge.toylink.local/mcp/claude',
       connectorToken: 'toy_bridge_token_$revision',
-      toolNames: const <String>[
-        'set_suck',
-        'set_vibe',
-        'set_ems',
-        'set_all',
-        'stop_all',
-        'get_status',
-      ],
+      toolNames: const <String>['get_status', 'stop_all'],
     );
   }
 

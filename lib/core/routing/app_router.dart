@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'app_shell.dart';
 
 import '../../features/ble_device/presentation/pages/scan_page.dart';
 import '../../features/chat/presentation/pages/chat_page.dart';
@@ -17,41 +18,46 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     routes: <RouteBase>[
-      GoRoute(path: '/', redirect: (_, _) => '/home'),
-      GoRoute(path: '/home', builder: (_, _) => const HomePage()),
-      GoRoute(path: '/scan', builder: (_, _) => const ScanPage()),
-      GoRoute(
-        path: '/control',
-        builder: (_, state) => ControlPage(
-          returnPath: state.uri.queryParameters['returnTo'],
-          returnLabel: state.uri.queryParameters['returnLabel'],
-        ),
-      ),
-      GoRoute(path: '/chat', builder: (_, _) => const ChatPage()),
-      GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
-      GoRoute(
-        path: '/settings/bridge',
-        builder: (_, _) => const RemoteBridgeConfigPage(),
-      ),
-      GoRoute(
-        path: '/background-checklist',
-        builder: (_, _) => const BackgroundStabilityChecklistPage(),
-      ),
-      GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
-      GoRoute(
-        path: '/claude-onboarding',
-        builder: (_, _) => const ClaudeOnboardingPage(),
-      ),
-      GoRoute(
-        path: '/device-manager',
-        builder: (_, _) => const DeviceManagerPage(),
-      ),
-      GoRoute(
-        path: '/verification/:adapterId',
-        builder: (context, state) {
-          final String adapterId = state.pathParameters['adapterId'] ?? '';
-          return AdapterVerificationPage(adapterId: adapterId);
-        },
+      ShellRoute(
+        builder: (context, state, child) => AppShell(child: child),
+        routes: [
+          GoRoute(path: '/', redirect: (_, _) => '/home'),
+          GoRoute(path: '/home', builder: (_, _) => const HomePage()),
+          GoRoute(path: '/scan', builder: (_, _) => const ScanPage()),
+          GoRoute(
+            path: '/control',
+            builder: (_, state) => ControlPage(
+              returnPath: state.uri.queryParameters['returnTo'],
+              returnLabel: state.uri.queryParameters['returnLabel'],
+            ),
+          ),
+          GoRoute(path: '/chat', builder: (_, _) => const ChatPage()),
+          GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+          GoRoute(
+            path: '/settings/bridge',
+            builder: (_, _) => const RemoteBridgeConfigPage(),
+          ),
+          GoRoute(
+            path: '/background-checklist',
+            builder: (_, _) => const BackgroundStabilityChecklistPage(),
+          ),
+          GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
+          GoRoute(
+            path: '/claude-onboarding',
+            builder: (_, _) => const ClaudeOnboardingPage(),
+          ),
+          GoRoute(
+            path: '/device-manager',
+            builder: (_, _) => const DeviceManagerPage(),
+          ),
+          GoRoute(
+            path: '/verification/:adapterId',
+            builder: (context, state) {
+              final String adapterId = state.pathParameters['adapterId'] ?? '';
+              return AdapterVerificationPage(adapterId: adapterId);
+            },
+          ),
+        ],
       ),
     ],
   );
