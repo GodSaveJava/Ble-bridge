@@ -2,13 +2,24 @@
 
 ## 2026-07-06
 
-- 产品定位已收敛为 BYO-AI Hardware Connector：连接用户已有 AI 聊天环境与本地硬件，而不是替代聊天。
-- 安全 V0 只开放 `get_status` 和 `stop_all`。
-- 当前 HTTP 公网 Bridge 只能作为内测环境；正式环境必须迁移到 HTTPS。
-- 后续 GPT / ChatGPT 支持应作为接入矩阵的一部分，不改变“用户继续使用原有 AI 环境”的定位。
-- 当前首要风险：公网 HTTP、token 生命周期不完整、foreground service 真机风险、本地 MCP 无鉴权、缺少当天可复现测试与真机证据。
-- DevOps 审查：当前目录不是 Git 仓库，缺少 `.git`，无法确认 remote/branch/commit；Flutter/Dart 不在 PATH，`flutter analyze`、`flutter test`、`cd bridge_server; dart test` 当前阻塞；未发现 CI 配置，根 README 交接入口不足。
-- QA 审查：`test/` 与 `bridge_server/test/` 覆盖面较广，但没有 2026-07-06 当天可复现测试记录；`docs/evidence/` 有历史文件但缺少可发布的真机证据 manifest。
-- 安全审查：默认公网 HTTP Bridge、可预测 session/token、本地 MCP 无鉴权并暴露 `set_*`、AppLock 未进入控制授权链、远程 `get_status` 可能上传 BLE raw id，都是 Phase 1 前必须处理的高风险。
-- 移动端审查：`TOYLINK_USE_REAL_BLE` 开关已存在，但 App 原先未显示当前 BLE 模式；Android main Manifest 原先缺 `INTERNET` 与 foreground service `<service>` 声明。
-- 本轮已将默认 Remote Bridge 从公网 HTTP 回落改为 disabled/offline；显式 saved config 或 dart-define 仍可启用真实 Bridge，后续 Phase 1 需要继续补 HTTPS + token 强制校验。
+- 产品定位已收敛为 **BYO-AI Hardware Connector**：连接用户已有 AI 聊天环境与本地硬件，而不是替代聊天产品。
+- 只支持有明确工具调用能力的 AI 环境：MCP、OpenAPI / REST tools、function calling、webhook。
+- 不做读屏、浏览器注入、模拟点击、劫持闭源聊天网页来推断 AI 意图。
+- 安全 V0 只允许 `get_status` 和 `stop_all`。
+- `set_suck`、`set_vibe`、`set_ems`、`set_all` 不得远程开放，除非 Phase 3 的安全评审、真机证据和回滚开关全部完成。
+- 当前公网 HTTP Bridge 只能作为内测环境；正式环境必须迁移到 HTTPS + token。
+- GPT / ChatGPT 支持应作为接入矩阵的一部分，不改变“用户继续使用原有 AI 环境”的定位。
+- Phase 0 自动化验证已通过：`flutter analyze`、`flutter test`、`bridge_server dart test` 均为 PASS。
+- 最小 CI 已建立：`.github/workflows/ci.yml` 覆盖 Flutter analyze/test 和 bridge server dart test。
+- Flutter 3.44.4 下 `CupertinoPageTransitionsBuilder` 需要显式引入 `package:flutter/cupertino.dart`；已修复。
+- 用户级 PATH 已包含 `C:\Users\NPC\dev\flutter\bin`；当前 Codex 进程没有继承，需要重启或在命令中显式重载 PATH。
+- `flutter doctor -v` 仍提示 Android cmdline-tools 缺失；这会阻塞后续 Android 真机 BLE 构建/验证。
+- 仍缺少当天真机证据：扫描、连接、adapter binding、低强度验证、急停、后台保活、Bridge 调用截图或日志 manifest。
+- 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
+
+## Review Notes
+
+- DevOps：Git 已恢复并推送到 GitHub；CI 基线已补齐，但 Android SDK 环境仍需修。
+- QA：自动化测试已有基础，Phase 1 必须继续把安全门禁转成可重复测试。
+- Security：外部入口、debug route、本地 MCP 和 token 生命周期必须安全左移，不能等发布前补。
+- Mobile：Mock/Real BLE 可见性已补，但真机 BLE 稳定性和 foreground service 还需要实测证据。

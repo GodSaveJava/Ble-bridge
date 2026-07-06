@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/controllers/remote_bridge_config_controller.dart';
 import '../../application/providers/application_providers.dart';
-import '../../domain/entities/remote_bridge_config.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
@@ -39,7 +38,9 @@ import '../storage/shared_prefs_remote_bridge_config_repository.dart';
 import '../storage/shared_prefs_verified_adapter_repository.dart';
 
 final defaultHardwareRepositoryProvider = Provider<HardwareRepository>((ref) {
-  final HardwareRuntimeMode runtimeMode = ref.watch(hardwareRuntimeModeProvider);
+  final HardwareRuntimeMode runtimeMode = ref.watch(
+    hardwareRuntimeModeProvider,
+  );
   if (runtimeMode == HardwareRuntimeMode.realBle) {
     final SosexyHardwareRepository repository = SosexyHardwareRepository();
     ref.onDispose(repository.dispose);
@@ -136,7 +137,9 @@ final defaultRemoteBridgeTaskExecutorProvider =
 
 final defaultForegroundConnectionServiceProvider =
     Provider<ForegroundConnectionService>((ref) {
-      final HardwareRuntimeMode runtimeMode = ref.watch(hardwareRuntimeModeProvider);
+      final HardwareRuntimeMode runtimeMode = ref.watch(
+        hardwareRuntimeModeProvider,
+      );
       if (runtimeMode == HardwareRuntimeMode.realBle) {
         return const AndroidForegroundConnectionService();
       }
