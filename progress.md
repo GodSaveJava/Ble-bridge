@@ -27,3 +27,6 @@
   - Confirmed `git status --short --branch` now reports branch `main`.
   - Added `origin` as `https://github.com/GodSaveJava/Ble-bridge.git`.
   - `git fetch origin --prune` and `git ls-remote origin` failed with `Repository not found`; push is blocked until the remote URL or GitHub access is fixed.
+- After the repository was made public, `git ls-remote origin` and `git fetch origin --prune` succeeded.
+- Merged local restored baseline with remote history using `git merge -s ours --allow-unrelated-histories origin/main`; local HEAD became `3fa0c8c Merge restored baseline with remote history`.
+- `git push -u origin main` failed with GitHub 403: `Permission to GodSaveJava/Ble-bridge.git denied to magiccat997-gif`; push remains blocked by write permission.

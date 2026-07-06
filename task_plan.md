@@ -43,7 +43,8 @@ Phase 0: 工程基线恢复（in progress）。
 
 - 当前 PowerShell 找不到 `flutter` / `dart`，无法运行 Phase 0 自动化验证。
 - Git 已恢复为本地仓库，当前 branch 为 `main`，已有本地基线提交。
-- 已配置 `origin=https://github.com/GodSaveJava/Ble-bridge.git`，但 `git fetch` / `git ls-remote` 返回 `Repository not found`，需要确认仓库存在性或 GitHub 凭据权限。
+- 已配置 `origin=https://github.com/GodSaveJava/Ble-bridge.git`，远端现在可读。
+- 本地 HEAD `3fa0c8c` 已接入远端历史；`git push -u origin main` 返回 403，当前 GitHub 凭据 `magiccat997-gif` 没有该仓库写权限。
 - 没有 2026-07-06 当天测试证据；历史 `docs/evidence/worktree-audit-2026-07-04.md` 不可替代当天验收。
 - Phase 1 之前不得开放远程 `set_*`；本地 MCP 当前仍暴露 `set_*`，必须作为安全 V0 高优先级修复。
 
