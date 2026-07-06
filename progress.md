@@ -30,3 +30,4 @@
 - After the repository was made public, `git ls-remote origin` and `git fetch origin --prune` succeeded.
 - Merged local restored baseline with remote history using `git merge -s ours --allow-unrelated-histories origin/main`; local HEAD became `3fa0c8c Merge restored baseline with remote history`.
 - `git push -u origin main` failed with GitHub 403: `Permission to GodSaveJava/Ble-bridge.git denied to magiccat997-gif`; push remains blocked by write permission.
+- Cleared cached GitHub HTTPS credentials with `git credential reject`; a subsequent `git push -u origin main` succeeded and set local `main` to track `origin/main`.
