@@ -7,9 +7,10 @@
 | Date | 2026-07-06 |
 | Workspace | `C:\Users\NPC\Desktop\Ble-bridge-main` |
 | Branch | `main` |
-| Base commit | `667a3fc` |
+| Base commit | `8650a0b` |
 | Hardware mode | Mock BLE only in this run |
 | Bridge mode | Local loopback + bridge server tests |
+| Android SDK | `C:\Users\NPC\AppData\Local\Android\Sdk` |
 | Release allowed | no |
 
 ## Automated Verification
@@ -21,6 +22,10 @@
 | Local MCP / remote stop preemption test | `flutter test test\infrastructure\local_mcp_http_service_test.dart` | repo root | 0 | PASS | `9` tests passed, including `/mobile-bridge/tool-call` `stop_all` preemption. |
 | Full Flutter tests | `flutter test` | repo root | 0 | PASS | `190` tests passed. |
 | Bridge server tests | `dart test` | `bridge_server` | 0 | PASS | `10` tests passed. |
+| Flutter doctor Android toolchain | `flutter doctor -v` | repo root | 0 | PASS for Android | Android toolchain reports SDK `36.0.0`, platform `android-36`, build-tools `36.0.0`, and all Android licenses accepted. |
+| Android debug APK build | `flutter build apk --debug` | repo root | 0 | PASS | Built `build\app\outputs\flutter-apk\app-debug.apk`, size `160964000` bytes. |
+| ADB device detection | `adb devices -l` | repo root | 0 | BLOCKED | No Android devices listed. |
+| Android emulator availability | `flutter emulators` | repo root | 1 | BLOCKED | `Unable to find any emulator sources`; no Android AVD available. |
 
 ## Security Gate Evidence
 
@@ -41,12 +46,14 @@
 | Remote `get_status` result is de-identified | PASS | Dispatcher/tool-call/loopback tests verify `deviceId` is absent and status remains available. |
 | Remote task result upload is de-identified | PASS | Protocol and HTTP bridge service tests verify `deviceId` is removed before upload. |
 | User-facing BYO-AI Connector docs are Safety V0 scoped | PASS | `README.md`, `docs/03-mcp-tool-contract.md`, `docs/08-page-and-interaction-flow.md`, `docs/19-claude-remote-mcp-architecture.md`, `docs/20-claude-connector-onboarding-flow.md`, and `docs/22-byo-ai-hardware-connector-roadmap.md` state Phase 1 remote connector only exposes `get_status,stop_all`. |
+| Android cmdline-tools and SDK baseline | PASS | `flutter doctor -v` now recognizes Android SDK at `C:\Users\NPC\AppData\Local\Android\Sdk`; licenses accepted. |
+| Android debug build | PASS | `flutter build apk --debug` completed successfully. |
 
 ## Remaining Blockers
 
 | Blocker | Result | Next Action |
 |---|---|---|
-| Real BLE scan/connect/adapter verification evidence | BLOCKED | Requires Android cmdline-tools and hardware run. |
+| Real BLE scan/connect/adapter verification evidence | BLOCKED | Requires an Android device with USB debugging and BLE hardware connected. |
 | Android foreground service real-device stability | BLOCKED | Run 10/30/60 minute background evidence on Android hardware. |
 
 ## Final Decision

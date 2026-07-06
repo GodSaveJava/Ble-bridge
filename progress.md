@@ -73,3 +73,12 @@
   - `flutter analyze`: PASS.
   - Full `flutter test`: PASS, 190 tests.
   - `cd bridge_server; dart test`: PASS, 10 tests.
+- Continued Android toolchain recovery:
+  - Installed Android command-line tools at `C:\Users\NPC\AppData\Local\Android\Sdk\cmdline-tools\latest`.
+  - Installed SDK packages: `platform-tools`, `platforms;android-36`, `build-tools;36.0.0`; Gradle build also installed `platforms;android-35`, `build-tools;35.0.0`, NDK `28.2.13676358`, and CMake `3.22.1`.
+  - Set Flutter Android SDK to `C:\Users\NPC\AppData\Local\Android\Sdk`.
+  - Accepted Android SDK licenses.
+  - Flutter doctor now reports Android toolchain PASS.
+  - `flutter build apk --debug`: PASS, output `build\app\outputs\flutter-apk\app-debug.apk`.
+  - `adb devices -l`: no Android device attached.
+  - `flutter emulators`: no Android AVD source available.

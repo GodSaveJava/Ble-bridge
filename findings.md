@@ -13,7 +13,9 @@
 - 最小 CI 已建立：`.github/workflows/ci.yml` 覆盖 Flutter analyze/test 和 bridge server dart test。
 - Flutter 3.44.4 下 `CupertinoPageTransitionsBuilder` 需要显式引入 `package:flutter/cupertino.dart`；已修复。
 - 用户级 PATH 已包含 `C:\Users\NPC\dev\flutter\bin`；当前 Codex 进程没有继承，需要重启或在命令中显式重载 PATH。
-- `flutter doctor -v` 仍提示 Android cmdline-tools 缺失；这会阻塞后续 Android 真机 BLE 构建/验证。
+- Android cmdline-tools 已补齐到 `C:\Users\NPC\AppData\Local\Android\Sdk`；`flutter doctor -v` Android toolchain 已通过。
+- `flutter build apk --debug` 已通过，产物为 `build\app\outputs\flutter-apk\app-debug.apk`。
+- 当前 ADB 没有检测到 Android 真机，Flutter 也没有可用 AVD；真机 BLE 验证仍需用户连接设备并打开 USB 调试。
 - 仍缺少当天真机证据：扫描、连接、adapter binding、低强度验证、急停、后台保活、Bridge 调用截图或日志 manifest。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。
