@@ -49,3 +49,17 @@
 - Ran `cd bridge_server; dart test`: PASS, `5` tests passed.
 - Added minimal GitHub Actions CI in `.github/workflows/ci.yml`.
 - Updated `docs/evidence/2026-07-06-phase-0-baseline-evidence.md`, `task_plan.md`, and `findings.md` with current Phase 0 evidence and Phase 1 entry plan.
+- Implemented Phase 1 Safety V0 automated security baseline:
+  - Bridge server filters advertised tools to `get_status,stop_all`.
+  - `/debug/enqueue` requires debug token and rejects non-allowlisted tools.
+  - Public Bridge rejects non-loopback HTTP; app Remote Bridge config requires HTTPS + token outside loopback.
+  - Bridge server session/token IDs use CSPRNG, include TTLs, and reject expired or client-mismatched sessions.
+  - Local MCP requires bearer token and defaults to `get_status,stop_all` only.
+  - AppLock now participates in MCP authorization; locked state only allows `stop_all`.
+  - Remote `get_status` and task result payloads are sanitized before returning/uploading.
+- Added `docs/evidence/2026-07-06-phase-1-safety-v0-evidence.md`.
+- Verification:
+  - `flutter analyze`: PASS.
+  - Safety V0 focused Flutter tests: PASS, 50 tests.
+  - Full `flutter test`: PASS, 189 tests.
+  - `cd bridge_server; dart test`: PASS, 10 tests.

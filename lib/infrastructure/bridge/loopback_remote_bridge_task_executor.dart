@@ -8,11 +8,13 @@ class LoopbackRemoteBridgeTaskExecutor implements RemoteBridgeTaskExecutor {
   LoopbackRemoteBridgeTaskExecutor({
     this.baseUrl = 'http://127.0.0.1:8765',
     this.path = '/mobile-bridge/tool-call',
+    this.authToken = 'toylink-local-mcp-dev-token',
     HttpClient? httpClient,
   }) : _httpClient = httpClient ?? HttpClient();
 
   final String baseUrl;
   final String path;
+  final String authToken;
   final HttpClient _httpClient;
 
   @override
@@ -24,6 +26,9 @@ class LoopbackRemoteBridgeTaskExecutor implements RemoteBridgeTaskExecutor {
     final HttpClientRequest request = await _httpClient.postUrl(_resolve());
     request.headers.contentType = ContentType.json;
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    if (authToken.isNotEmpty) {
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $authToken');
+    }
     request.write(
       jsonEncode(<String, Object?>{
         'requestId': requestId,

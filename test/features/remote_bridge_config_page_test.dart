@@ -79,6 +79,10 @@ void main() {
       find.widgetWithText(TextField, '客户端 ID'),
       'device-a',
     );
+    await tester.enterText(
+      find.widgetWithText(TextField, '客户端令牌'),
+      'secret-token',
+    );
     await tester.tap(find.text('测试连接'));
     await tester.pumpAndSettle();
 

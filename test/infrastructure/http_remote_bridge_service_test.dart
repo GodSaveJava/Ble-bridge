@@ -250,9 +250,7 @@ void main() {
       expect(requestBody['requestId'], 'bridge-task-1');
       expect(requestBody['tool'], 'get_status');
       expect(requestBody['ok'], isTrue);
-      expect(requestBody['result'], <String, dynamic>{
-        'deviceId': 'mock-sosexy-001',
-      });
+      expect(requestBody['result'], isEmpty);
       expect(service.currentSession.lastErrorCode, isNull);
     });
 

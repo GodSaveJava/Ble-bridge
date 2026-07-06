@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 class BridgeServerConfig {
   const BridgeServerConfig({
@@ -11,6 +12,9 @@ class BridgeServerConfig {
     this.sharedToken = '',
     this.debugToken = '',
     this.toolNames = safeDefaultToolNames,
+    this.allowInsecurePublicHttpForTesting = false,
+    this.sessionTtl = const Duration(hours: 1),
+    this.connectorTokenTtl = const Duration(minutes: 15),
   });
 
   static const List<String> safeDefaultToolNames = <String>[
@@ -28,6 +32,8 @@ class BridgeServerConfig {
       sharedToken: Platform.environment['BRIDGE_SHARED_TOKEN'] ?? '',
       debugToken: Platform.environment['BRIDGE_DEBUG_TOKEN'] ?? '',
       toolNames: _parseToolNames(Platform.environment['BRIDGE_TOOL_NAMES']),
+      allowInsecurePublicHttpForTesting:
+          Platform.environment['BRIDGE_ALLOW_INSECURE_PUBLIC_HTTP'] == 'true',
     );
   }
 
@@ -38,6 +44,9 @@ class BridgeServerConfig {
   final String sharedToken;
   final String debugToken;
   final List<String> toolNames;
+  final bool allowInsecurePublicHttpForTesting;
+  final Duration sessionTtl;
+  final Duration connectorTokenTtl;
 
   Uri resolvePublicBaseUri(Uri requestUri) {
     if (publicBaseUrl.trim().isNotEmpty) {
@@ -70,11 +79,18 @@ class BridgeServerConfig {
     if (raw == null || raw.trim().isEmpty) {
       return safeDefaultToolNames;
     }
-    return raw
+    final List<String> parsed = raw
         .split(',')
         .map((String value) => value.trim())
         .where((String value) => value.isNotEmpty)
         .toList(growable: false);
+    final List<String> safe = parsed
+        .where(safeDefaultToolNames.contains)
+        .toList(growable: false);
+    if (safe.isEmpty) {
+      return safeDefaultToolNames;
+    }
+    return safe;
   }
 }
 
@@ -84,8 +100,18 @@ class BridgeServer {
   final BridgeServerConfig config;
   final Map<String, _BridgeSession> _sessions = <String, _BridgeSession>{};
   final Map<String, _BridgeTask> _debugTaskQueue = <String, _BridgeTask>{};
-  int _sessionCounter = 0;
-  int _connectorCounter = 0;
+  final Random _secureRandom = Random.secure();
+
+  List<String> get _enabledToolNames {
+    final Set<String> configured = config.toolNames.toSet();
+    final List<String> safe = BridgeServerConfig.safeDefaultToolNames
+        .where(configured.contains)
+        .toList(growable: false);
+    if (safe.isEmpty) {
+      return BridgeServerConfig.safeDefaultToolNames;
+    }
+    return safe;
+  }
 
   Future<HttpServer> bind() async {
     _validateBindSecurity();
@@ -109,11 +135,21 @@ class BridgeServer {
         publicHost == '127.0.0.1' ||
         publicHost == 'localhost' ||
         publicHost == '::1';
+    final bool usesInsecurePublicHttp =
+        publicUri != null &&
+        publicUri.scheme.toLowerCase() == 'http' &&
+        !isLoopbackPublicBase;
 
     if ((!isLoopbackHost || !isLoopbackPublicBase) &&
         config.sharedToken.trim().isEmpty) {
       throw StateError(
         'BRIDGE_SHARED_TOKEN is required when binding a public bridge.',
+      );
+    }
+    if (usesInsecurePublicHttp && !config.allowInsecurePublicHttpForTesting) {
+      throw StateError(
+        'HTTPS is required for public bridge URLs. Set '
+        'BRIDGE_ALLOW_INSECURE_PUBLIC_HTTP=true only for internal testing.',
       );
     }
   }
@@ -240,6 +276,7 @@ class BridgeServer {
   }
 
   Future<void> _handleStart(HttpRequest request) async {
+    final DateTime now = DateTime.now().toUtc();
     final Map<String, Object?> body = await _readJson(request);
     final String clientId = (body['clientId'] as String? ?? '').trim();
     if (clientId.isEmpty) {
@@ -251,18 +288,19 @@ class BridgeServer {
       return;
     }
 
-    _sessionCounter += 1;
-    _connectorCounter += 1;
-    final String bridgeSessionId = 'bridge-session-$_sessionCounter';
-    final String connectorToken = 'toy_bridge_token_$_connectorCounter';
+    final String bridgeSessionId = _newOpaqueId('bridge-session');
+    final String connectorToken = _newOpaqueId('toy_bridge_token');
     final Uri connectorUrl = config.resolveConnectorUrl(request.uri);
     final _BridgeSession session = _BridgeSession(
       bridgeSessionId: bridgeSessionId,
       clientId: clientId,
       connectorToken: connectorToken,
       connectorUrl: connectorUrl.toString(),
-      toolNames: config.toolNames,
+      toolNames: _enabledToolNames,
       status: 'ready',
+      expiresAt: now.add(config.sessionTtl),
+      connectorTokenExpiresAt: now.add(config.connectorTokenTtl),
+      updatedAt: now,
     );
     _sessions[bridgeSessionId] = session;
 
@@ -273,20 +311,21 @@ class BridgeServer {
     HttpRequest request,
     String bridgeSessionId,
   ) async {
-    final _BridgeSession? session = _sessions[bridgeSessionId];
+    final Map<String, Object?> body = await _readJson(request);
+    final _BridgeSession? session = await _requireActiveSession(
+      request,
+      bridgeSessionId,
+      expectedClientId: (body['clientId'] as String? ?? '').trim(),
+    );
     if (session == null) {
-      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
-        'ok': false,
-        'errorCode': 'bridge_session_missing',
-        'errorMessage': 'Bridge session not found.',
-      });
       return;
     }
 
-    _connectorCounter += 1;
+    final DateTime now = DateTime.now().toUtc();
     final _BridgeSession refreshed = session.copyWith(
-      connectorToken: 'toy_bridge_token_$_connectorCounter',
-      updatedAt: DateTime.now(),
+      connectorToken: _newOpaqueId('toy_bridge_token'),
+      connectorTokenExpiresAt: now.add(config.connectorTokenTtl),
+      updatedAt: now,
     );
     _sessions[bridgeSessionId] = refreshed;
     await _writeJson(request, HttpStatus.ok, refreshed.toJson());
@@ -296,13 +335,13 @@ class BridgeServer {
     HttpRequest request,
     String bridgeSessionId,
   ) async {
-    final _BridgeSession? session = _sessions[bridgeSessionId];
+    final Map<String, Object?> body = await _readJson(request);
+    final _BridgeSession? session = await _requireActiveSession(
+      request,
+      bridgeSessionId,
+      expectedClientId: (body['clientId'] as String? ?? '').trim(),
+    );
     if (session == null) {
-      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
-        'ok': false,
-        'errorCode': 'bridge_session_missing',
-        'errorMessage': 'Bridge session not found.',
-      });
       return;
     }
 
@@ -319,20 +358,18 @@ class BridgeServer {
     HttpRequest request,
     String bridgeSessionId,
   ) async {
-    final _BridgeSession? session = _sessions[bridgeSessionId];
+    final Map<String, Object?> body = await _readJson(request);
+    final _BridgeSession? session = await _requireActiveSession(
+      request,
+      bridgeSessionId,
+      expectedClientId: (body['clientId'] as String? ?? '').trim(),
+    );
     if (session == null) {
-      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
-        'ok': false,
-        'errorCode': 'bridge_session_missing',
-        'errorMessage': 'Bridge session not found.',
-      });
       return;
     }
-
-    final Map<String, Object?> body = await _readJson(request);
     _sessions[bridgeSessionId] = session.copyWith(
       lastTaskResult: body,
-      updatedAt: DateTime.now(),
+      updatedAt: DateTime.now().toUtc(),
     );
     await _writeJson(request, HttpStatus.ok, <String, Object?>{
       'ok': true,
@@ -341,19 +378,19 @@ class BridgeServer {
   }
 
   Future<void> _handleStop(HttpRequest request, String bridgeSessionId) async {
-    final _BridgeSession? session = _sessions[bridgeSessionId];
+    final Map<String, Object?> body = await _readJson(request);
+    final _BridgeSession? session = await _requireActiveSession(
+      request,
+      bridgeSessionId,
+      expectedClientId: (body['clientId'] as String? ?? '').trim(),
+    );
     if (session == null) {
-      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
-        'ok': false,
-        'errorCode': 'bridge_session_missing',
-        'errorMessage': 'Bridge session not found.',
-      });
       return;
     }
 
     _sessions[bridgeSessionId] = session.copyWith(
       status: 'offline',
-      updatedAt: DateTime.now(),
+      updatedAt: DateTime.now().toUtc(),
     );
     await _writeJson(request, HttpStatus.noContent, <String, Object?>{});
   }
@@ -400,8 +437,24 @@ class BridgeServer {
       });
       return;
     }
+    if (!_enabledToolNames.contains(tool)) {
+      await _writeJson(request, HttpStatus.badRequest, <String, Object?>{
+        'ok': false,
+        'errorCode': 'tool_not_enabled_for_bridge',
+        'errorMessage': 'Debug queue only accepts Safety V0 tools.',
+        'enabledToolNames': _enabledToolNames,
+      });
+      return;
+    }
+    final _BridgeSession? session = await _requireActiveSession(
+      request,
+      bridgeSessionId,
+    );
+    if (session == null) {
+      return;
+    }
 
-    _debugTaskQueue[bridgeSessionId] = _BridgeTask(
+    _debugTaskQueue[session.bridgeSessionId] = _BridgeTask(
       requestId: requestId,
       tool: tool,
       input: input,
@@ -411,6 +464,51 @@ class BridgeServer {
       'bridgeSessionId': bridgeSessionId,
       'queued': true,
     });
+  }
+
+  Future<_BridgeSession?> _requireActiveSession(
+    HttpRequest request,
+    String bridgeSessionId, {
+    String expectedClientId = '',
+  }) async {
+    final _BridgeSession? session = _sessions[bridgeSessionId];
+    if (session == null) {
+      await _writeJson(request, HttpStatus.notFound, <String, Object?>{
+        'ok': false,
+        'errorCode': 'bridge_session_missing',
+        'errorMessage': 'Bridge session not found.',
+      });
+      return null;
+    }
+    if (session.isExpired(DateTime.now().toUtc())) {
+      _sessions.remove(bridgeSessionId);
+      _debugTaskQueue.remove(bridgeSessionId);
+      await _writeJson(request, HttpStatus.gone, <String, Object?>{
+        'ok': false,
+        'errorCode': 'bridge_session_expired',
+        'errorMessage': 'Bridge session expired.',
+      });
+      return null;
+    }
+    if (expectedClientId.isNotEmpty && expectedClientId != session.clientId) {
+      await _writeJson(request, HttpStatus.forbidden, <String, Object?>{
+        'ok': false,
+        'errorCode': 'client_session_mismatch',
+        'errorMessage': 'Client is not bound to this bridge session.',
+      });
+      return null;
+    }
+    return session;
+  }
+
+  String _newOpaqueId(String prefix) {
+    final List<int> bytes = List<int>.generate(
+      18,
+      (_) => _secureRandom.nextInt(256),
+      growable: false,
+    );
+    final String token = base64Url.encode(bytes).replaceAll('=', '');
+    return '$prefix-$token';
   }
 
   Future<Map<String, Object?>> _readJson(HttpRequest request) async {
@@ -449,6 +547,8 @@ class _BridgeSession {
     required this.toolNames,
     required this.status,
     this.lastTaskResult,
+    required this.expiresAt,
+    required this.connectorTokenExpiresAt,
     DateTime? updatedAt,
   }) : updatedAt =
            updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -460,6 +560,8 @@ class _BridgeSession {
   final List<String> toolNames;
   final String status;
   final Map<String, Object?>? lastTaskResult;
+  final DateTime expiresAt;
+  final DateTime connectorTokenExpiresAt;
   final DateTime updatedAt;
 
   _BridgeSession copyWith({
@@ -468,6 +570,8 @@ class _BridgeSession {
     List<String>? toolNames,
     String? status,
     Map<String, Object?>? lastTaskResult,
+    DateTime? expiresAt,
+    DateTime? connectorTokenExpiresAt,
     DateTime? updatedAt,
   }) {
     return _BridgeSession(
@@ -478,9 +582,14 @@ class _BridgeSession {
       toolNames: toolNames ?? this.toolNames,
       status: status ?? this.status,
       lastTaskResult: lastTaskResult ?? this.lastTaskResult,
+      expiresAt: expiresAt ?? this.expiresAt,
+      connectorTokenExpiresAt:
+          connectorTokenExpiresAt ?? this.connectorTokenExpiresAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  bool isExpired(DateTime now) => !expiresAt.isAfter(now);
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -490,6 +599,8 @@ class _BridgeSession {
       'toolNames': toolNames,
       'status': status,
       'clientId': clientId,
+      'expiresAt': expiresAt.toIso8601String(),
+      'connectorTokenExpiresAt': connectorTokenExpiresAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
   }

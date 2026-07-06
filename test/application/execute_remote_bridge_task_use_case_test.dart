@@ -11,42 +11,47 @@ import 'package:toylink_ai/domain/repositories/active_adapter_binding_repository
 import 'package:toylink_ai/domain/repositories/adapter_manifest_repository.dart';
 import 'package:toylink_ai/domain/repositories/verified_adapter_repository.dart';
 import 'package:toylink_ai/domain/services/remote_bridge_service.dart';
+import 'package:toylink_ai/domain/services/remote_bridge_task_executor.dart';
 import 'package:toylink_ai/infrastructure/bridge/loopback_remote_bridge_task_executor.dart';
 import 'package:toylink_ai/infrastructure/mcp/local_mcp_http_service.dart';
 import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
 void main() {
   group('ExecuteRemoteBridgeTaskUseCase', () {
-    test('executes get_status when bridge session is ready and tool is advertised', () async {
-      final ProviderContainer container = _buildContainer(
-        remoteBridgeService: _ReadyBridgeService(
-          toolNames: const <String>['get_status', 'stop_all'],
-        ),
-        remoteBridgeTaskExecutor: LoopbackRemoteBridgeTaskExecutor(
-          baseUrl: 'http://127.0.0.1:8883',
-        ),
-      );
-      addTearDown(container.dispose);
+    test(
+      'executes get_status when bridge session is ready and tool is advertised',
+      () async {
+        final ProviderContainer container = _buildContainer(
+          remoteBridgeService: _ReadyBridgeService(
+            toolNames: const <String>['get_status', 'stop_all'],
+          ),
+          remoteBridgeTaskExecutor: LoopbackRemoteBridgeTaskExecutor(
+            baseUrl: 'http://127.0.0.1:8883',
+          ),
+        );
+        addTearDown(container.dispose);
 
-      final service = LocalMcpHttpService(
-        toolRouter: container.read(mcpToolRouterProvider),
-        remoteBridgeToolCallHandler: container.read(
-          remoteBridgeToolCallHandlerProvider,
-        ),
-        host: '127.0.0.1',
-        port: 8883,
-      );
-      addTearDown(service.stop);
-      await service.start();
+        final service = LocalMcpHttpService(
+          toolRouter: container.read(mcpToolRouterProvider),
+          remoteBridgeToolCallHandler: container.read(
+            remoteBridgeToolCallHandlerProvider,
+          ),
+          host: '127.0.0.1',
+          port: 8883,
+        );
+        addTearDown(service.stop);
+        await service.start();
 
-      final result = await container.read(
-        executeRemoteBridgeTaskUseCaseProvider,
-      ).execute(requestId: 'exec-usecase-1', tool: 'get_status');
+        final result = await container
+            .read(executeRemoteBridgeTaskUseCaseProvider)
+            .execute(requestId: 'exec-usecase-1', tool: 'get_status');
 
-      expect(result.ok, isTrue);
-      expect(result.requestId, 'exec-usecase-1');
-      expect(result.result?['deviceId'], 'mock-sosexy-001');
-    });
+        expect(result.ok, isTrue);
+        expect(result.requestId, 'exec-usecase-1');
+        expect(result.result?['deviceId'], isNull);
+        expect(result.result?['isConnected'], isTrue);
+      },
+    );
 
     test('rejects execution when bridge session is not ready', () async {
       final ProviderContainer container = _buildContainer(
@@ -57,9 +62,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final RemoteBridgeTaskResult result = await container.read(
-        executeRemoteBridgeTaskUseCaseProvider,
-      ).execute(requestId: 'exec-usecase-2', tool: 'get_status');
+      final RemoteBridgeTaskResult result = await container
+          .read(executeRemoteBridgeTaskUseCaseProvider)
+          .execute(requestId: 'exec-usecase-2', tool: 'get_status');
 
       expect(result.ok, isFalse);
       expect(result.errorCode, 'bridge_session_not_ready');
@@ -76,19 +81,45 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final RemoteBridgeTaskResult result = await container.read(
-        executeRemoteBridgeTaskUseCaseProvider,
-      ).execute(requestId: 'exec-usecase-3', tool: 'stop_all');
+      final RemoteBridgeTaskResult result = await container
+          .read(executeRemoteBridgeTaskUseCaseProvider)
+          .execute(requestId: 'exec-usecase-3', tool: 'stop_all');
 
       expect(result.ok, isFalse);
       expect(result.errorCode, 'tool_not_advertised_by_connector');
     });
+
+    test(
+      'rejects unsafe tool before calling executor even if advertised',
+      () async {
+        final _RecordingExecutor executor = _RecordingExecutor();
+        final ProviderContainer container = _buildContainer(
+          remoteBridgeService: _ReadyBridgeService(
+            toolNames: const <String>['get_status', 'stop_all', 'set_suck'],
+          ),
+          remoteBridgeTaskExecutor: executor,
+        );
+        addTearDown(container.dispose);
+
+        final RemoteBridgeTaskResult result = await container
+            .read(executeRemoteBridgeTaskUseCaseProvider)
+            .execute(
+              requestId: 'exec-usecase-4',
+              tool: 'set_suck',
+              input: const <String, Object?>{'intensity': 10},
+            );
+
+        expect(result.ok, isFalse);
+        expect(result.errorCode, 'tool_not_enabled_for_bridge');
+        expect(executor.callCount, 0);
+      },
+    );
   });
 }
 
 ProviderContainer _buildContainer({
   required RemoteBridgeService remoteBridgeService,
-  required LoopbackRemoteBridgeTaskExecutor remoteBridgeTaskExecutor,
+  required RemoteBridgeTaskExecutor remoteBridgeTaskExecutor,
 }) {
   return ProviderContainer(
     overrides: [
@@ -103,7 +134,9 @@ ProviderContainer _buildContainer({
         (_) => _InMemoryActiveBindingRepository(),
       ),
       remoteBridgeServiceProvider.overrideWith((_) => remoteBridgeService),
-      remoteBridgeTaskExecutorProvider.overrideWith((_) => remoteBridgeTaskExecutor),
+      remoteBridgeTaskExecutorProvider.overrideWith(
+        (_) => remoteBridgeTaskExecutor,
+      ),
     ],
   );
 }
@@ -146,7 +179,8 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   Future<void> save(VerifiedAdapterRecord record) async {}
 }
 
-class _InMemoryActiveBindingRepository implements ActiveAdapterBindingRepository {
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
   @override
   Stream<List<ActiveAdapterBinding>> watchAll() async* {
     yield const <ActiveAdapterBinding>[];
@@ -231,5 +265,22 @@ class _OfflineBridgeService implements RemoteBridgeService {
   @override
   Stream<RemoteBridgeSession> watchSession() async* {
     yield currentSession;
+  }
+}
+
+class _RecordingExecutor implements RemoteBridgeTaskExecutor {
+  int callCount = 0;
+
+  @override
+  void dispose() {}
+
+  @override
+  Future<RemoteBridgeTaskResult> execute({
+    String? requestId,
+    required String tool,
+    Map<String, Object?> input = const <String, Object?>{},
+  }) async {
+    callCount += 1;
+    return RemoteBridgeTaskResult(ok: true, requestId: requestId, tool: tool);
   }
 }

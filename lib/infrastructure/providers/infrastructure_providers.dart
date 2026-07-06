@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/controllers/remote_bridge_config_controller.dart';
 import '../../application/providers/application_providers.dart';
+import '../../domain/entities/remote_bridge_config.dart';
 import '../../domain/repositories/active_adapter_binding_repository.dart';
 import '../../domain/repositories/adapter_manifest_repository.dart';
 import '../../domain/repositories/background_stability_checklist_repository.dart';
@@ -89,7 +90,8 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
   final bool useSavedRemoteBridge =
       configAsync.hasValue &&
       configAsync.requireValue.enabled &&
-      configAsync.requireValue.normalizedBaseUrl.isNotEmpty;
+      configAsync.requireValue.normalizedBaseUrl.isNotEmpty &&
+      configAsync.requireValue.isAllowedBySafetyV0EndpointPolicy;
 
   if (useSavedRemoteBridge) {
     final savedConfig = configAsync.requireValue;
@@ -105,12 +107,23 @@ final defaultRemoteBridgeServiceProvider = Provider<RemoteBridgeService>((ref) {
     return service;
   }
 
-  if (useRealRemoteBridge && baseUrl.isNotEmpty) {
+  final dartDefineConfig = RemoteBridgeConfig(
+    enabled: useRealRemoteBridge,
+    baseUrl: baseUrl,
+    clientId: clientId,
+    clientToken: clientToken,
+  ).normalized();
+
+  if (useRealRemoteBridge &&
+      dartDefineConfig.normalizedBaseUrl.isNotEmpty &&
+      dartDefineConfig.isAllowedBySafetyV0EndpointPolicy) {
     final HttpRemoteBridgeService service = HttpRemoteBridgeService(
-      baseUrl: Uri.parse(baseUrl),
-      clientId: clientId,
+      baseUrl: Uri.parse(dartDefineConfig.normalizedBaseUrl),
+      clientId: dartDefineConfig.normalizedClientId,
       runtimeSource: RemoteBridgeRuntimeSource.dartDefine,
-      clientToken: clientToken.isEmpty ? null : clientToken,
+      clientToken: dartDefineConfig.normalizedClientToken.isEmpty
+          ? null
+          : dartDefineConfig.normalizedClientToken,
     );
     ref.onDispose(service.dispose);
     return service;

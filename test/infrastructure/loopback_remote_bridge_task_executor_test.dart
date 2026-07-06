@@ -42,7 +42,8 @@ void main() {
       expect(result.ok, isTrue);
       expect(result.requestId, 'bridge-exec-1');
       expect(result.tool, 'get_status');
-      expect(result.result?['deviceId'], 'mock-sosexy-001');
+      expect(result.result?['deviceId'], isNull);
+      expect(result.result?['isConnected'], isTrue);
     });
 
     test('returns whitelist error for disabled tool', () async {
@@ -133,7 +134,8 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   Future<void> save(VerifiedAdapterRecord record) async {}
 }
 
-class _InMemoryActiveBindingRepository implements ActiveAdapterBindingRepository {
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
   @override
   Stream<List<ActiveAdapterBinding>> watchAll() async* {
     yield const <ActiveAdapterBinding>[];

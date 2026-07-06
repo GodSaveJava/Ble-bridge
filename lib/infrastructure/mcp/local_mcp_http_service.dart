@@ -7,6 +7,8 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import '../../application/mcp/mcp_tool_router.dart';
 import '../../application/mcp/remote_bridge_tool_call_handler.dart';
+import '../../application/mcp/safety_v0_tools.dart';
+import '../../domain/entities/remote_bridge_payload_sanitizer.dart';
 import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/mcp_service.dart';
 
@@ -20,6 +22,8 @@ class LocalMcpHttpService implements McpService {
     RemoteBridgeTaskAssignmentCallback? remoteBridgeTaskAssignmentHandler,
     this.host = '127.0.0.1',
     this.port = 8765,
+    this.authToken = 'toylink-local-mcp-dev-token',
+    this.enabledToolNames = SafetyV0Tools.names,
   }) : _toolRouter = toolRouter,
        _remoteBridgeToolCallHandler = remoteBridgeToolCallHandler,
        _remoteBridgeTaskAssignmentHandler = remoteBridgeTaskAssignmentHandler;
@@ -29,6 +33,8 @@ class LocalMcpHttpService implements McpService {
   final RemoteBridgeTaskAssignmentCallback? _remoteBridgeTaskAssignmentHandler;
   final String host;
   final int port;
+  final String authToken;
+  final Set<String> enabledToolNames;
 
   HttpServer? _server;
   McpEndpointInfo? _endpointInfo;
@@ -91,6 +97,15 @@ class LocalMcpHttpService implements McpService {
       });
     }
 
+    if (!_isAuthenticated(request)) {
+      return _errorResponse(
+        HttpStatus.unauthorized,
+        code: 'unauthorized',
+        message: 'Missing or invalid local MCP token.',
+        recoverable: true,
+      );
+    }
+
     if (request.url.path == 'mcp/tools' && request.method == 'GET') {
       return _jsonResponse(HttpStatus.ok, <String, Object?>{
         'ok': true,
@@ -139,6 +154,10 @@ class LocalMcpHttpService implements McpService {
       if (arguments != null && arguments is! Map<String, dynamic>) {
         return _validationError('Tool arguments must be a JSON object.');
       }
+      final Response? allowlistError = _rejectIfToolDisabled(name);
+      if (allowlistError != null) {
+        return allowlistError;
+      }
 
       final result = await _toolRouter.callTool(
         name,
@@ -171,6 +190,10 @@ class LocalMcpHttpService implements McpService {
       }
       if (input != null && input is! Map<String, dynamic>) {
         return _validationError('Input must be a JSON object.');
+      }
+      final Response? allowlistError = _rejectIfToolDisabled(tool);
+      if (allowlistError != null) {
+        return allowlistError;
       }
 
       final result = await _toolRouter.callTool(
@@ -231,9 +254,7 @@ class LocalMcpHttpService implements McpService {
       final RemoteBridgeTaskResult result = await handler(json);
       return _buildRemoteBridgeTaskResultResponse(result);
     } on FormatException {
-      return _buildRemoteBridgeTaskResultResponse(
-        await handler(null),
-      );
+      return _buildRemoteBridgeTaskResultResponse(await handler(null));
     } catch (_) {
       return _errorResponse(
         HttpStatus.internalServerError,
@@ -260,13 +281,40 @@ class LocalMcpHttpService implements McpService {
     );
   }
 
+  Response? _rejectIfToolDisabled(String toolName) {
+    if (enabledToolNames.contains(toolName)) {
+      return null;
+    }
+    return _errorResponse(
+      HttpStatus.badRequest,
+      code: 'tool_not_enabled_for_mcp_safety_v0',
+      message: 'Local MCP Safety V0 only allows get_status and stop_all.',
+      recoverable: true,
+      details: <String, Object?>{
+        'toolName': toolName,
+        'enabledToolNames': enabledToolNames.toList(growable: false),
+      },
+    );
+  }
+
+  bool _isAuthenticated(Request request) {
+    if (authToken.trim().isEmpty) {
+      return true;
+    }
+    final String token =
+        request.headers[HttpHeaders.authorizationHeader] ??
+        request.headers['x-mcp-token'] ??
+        '';
+    return token == 'Bearer $authToken' || token == authToken;
+  }
+
   Response _buildRemoteBridgeTaskResultResponse(RemoteBridgeTaskResult result) {
     if (result.ok) {
       return _jsonResponse(HttpStatus.ok, <String, Object?>{
         'ok': true,
         'requestId': result.requestId,
         'tool': result.tool,
-        'result': result.result,
+        'result': RemoteBridgePayloadSanitizer.sanitizeMap(result.result),
       });
     }
 
@@ -276,7 +324,8 @@ class LocalMcpHttpService implements McpService {
       'tool': result.tool,
       'error': <String, Object?>{
         'code': result.errorCode ?? 'bridge_task_assignment_failed',
-        'message': result.errorMessage ?? 'Remote bridge task assignment failed.',
+        'message':
+            result.errorMessage ?? 'Remote bridge task assignment failed.',
         'recoverable': true,
       },
     });
@@ -311,31 +360,16 @@ class LocalMcpHttpService implements McpService {
 
   List<Map<String, Object?>> _toolDefinitions() {
     return <Map<String, Object?>>[
-      <String, Object?>{
-        'name': 'set_suck',
-        'description': 'Set suck intensity and mode.',
-      },
-      <String, Object?>{
-        'name': 'set_vibe',
-        'description': 'Set vibe intensity and mode.',
-      },
-      <String, Object?>{
-        'name': 'set_ems',
-        'description':
-            'Set EMS intensity and mode (soft limit requires confirmation).',
-      },
-      <String, Object?>{
-        'name': 'set_all',
-        'description': 'Set all channels in one logical request.',
-      },
-      <String, Object?>{
-        'name': 'stop_all',
-        'description': 'Stop all channels immediately.',
-      },
-      <String, Object?>{
-        'name': 'get_status',
-        'description': 'Get active device status.',
-      },
+      if (enabledToolNames.contains(SafetyV0Tools.stopAll))
+        <String, Object?>{
+          'name': 'stop_all',
+          'description': 'Stop all channels immediately.',
+        },
+      if (enabledToolNames.contains(SafetyV0Tools.getStatus))
+        <String, Object?>{
+          'name': 'get_status',
+          'description': 'Get active device status.',
+        },
     ];
   }
 

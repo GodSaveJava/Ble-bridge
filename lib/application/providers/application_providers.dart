@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/security/app_lock_controller.dart';
 import '../models/active_device_adapter_readiness.dart';
 import '../services/adapter_registry.dart';
 import '../services/adapter_validator.dart';
@@ -68,13 +69,17 @@ final remoteBridgeServiceProvider = Provider<RemoteBridgeService>((_) {
   );
 });
 
-final remoteBridgeProbeServiceProvider = Provider<RemoteBridgeProbeService>((_) {
+final remoteBridgeProbeServiceProvider = Provider<RemoteBridgeProbeService>((
+  _,
+) {
   throw UnimplementedError(
     'Provide a concrete RemoteBridgeProbeService in infrastructure.',
   );
 });
 
-final remoteBridgeTaskExecutorProvider = Provider<RemoteBridgeTaskExecutor>((_) {
+final remoteBridgeTaskExecutorProvider = Provider<RemoteBridgeTaskExecutor>((
+  _,
+) {
   throw UnimplementedError(
     'Provide a concrete RemoteBridgeTaskExecutor in infrastructure.',
   );
@@ -306,6 +311,7 @@ final mcpControlAuthorizationServiceProvider =
       return McpControlAuthorizationService(
         activeDeviceRegistry: ref.watch(activeDeviceRegistryProvider),
         adapterRegistry: ref.watch(adapterRegistryProvider),
+        isAppLocked: () => ref.read(appLockControllerProvider).locked,
       );
     });
 
@@ -380,9 +386,7 @@ final remoteBridgeTaskAssignmentHandlerProvider =
       final ConsumeRemoteBridgeTaskUseCase useCase = ref.watch(
         consumeRemoteBridgeTaskUseCaseProvider,
       );
-      return RemoteBridgeTaskAssignmentHandler(
-        consumeTask: useCase.consume,
-      );
+      return RemoteBridgeTaskAssignmentHandler(consumeTask: useCase.consume);
     });
 
 final processNextRemoteBridgeTaskUseCaseProvider =
@@ -402,21 +406,20 @@ final mcpToolRouterProvider = Provider<McpToolRouter>((ref) {
   );
 });
 
-final remoteBridgeToolDispatcherProvider = Provider<RemoteBridgeToolDispatcher>((
-  ref,
-) {
-  return RemoteBridgeToolDispatcher(
-    mcpToolRouter: ref.watch(mcpToolRouterProvider),
-  );
-});
-
-final remoteBridgeToolCallHandlerProvider = Provider<RemoteBridgeToolCallHandler>(
+final remoteBridgeToolDispatcherProvider = Provider<RemoteBridgeToolDispatcher>(
   (ref) {
-    return RemoteBridgeToolCallHandler(
-      dispatcher: ref.watch(remoteBridgeToolDispatcherProvider),
+    return RemoteBridgeToolDispatcher(
+      mcpToolRouter: ref.watch(mcpToolRouterProvider),
     );
   },
 );
+
+final remoteBridgeToolCallHandlerProvider =
+    Provider<RemoteBridgeToolCallHandler>((ref) {
+      return RemoteBridgeToolCallHandler(
+        dispatcher: ref.watch(remoteBridgeToolDispatcherProvider),
+      );
+    });
 
 final adapterRegistryProvider = Provider<AdapterRegistry>((ref) {
   return AdapterRegistry(

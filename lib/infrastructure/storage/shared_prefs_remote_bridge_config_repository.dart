@@ -8,9 +8,8 @@ import '../../domain/repositories/remote_bridge_config_repository.dart';
 
 class SharedPrefsRemoteBridgeConfigRepository
     implements RemoteBridgeConfigRepository {
-  SharedPrefsRemoteBridgeConfigRepository({
-    FlutterSecureStorage? secureStorage,
-  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  SharedPrefsRemoteBridgeConfigRepository({FlutterSecureStorage? secureStorage})
+    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const String _storageKey = 'remote_bridge_config_v1';
   static const String _tokenStorageKey = 'remote_bridge_client_token_v1';
@@ -31,12 +30,11 @@ class SharedPrefsRemoteBridgeConfigRepository
       _cache = const RemoteBridgeConfig().normalized();
       return _cache!;
     }
-    final Map<String, Object?> decoded =
-        (jsonDecode(raw) as Map).cast<String, Object?>();
-    final RemoteBridgeConfig loaded = RemoteBridgeConfig.fromJson(<String, Object?>{
-      ...decoded,
-      'clientToken': token ?? '',
-    }).normalized();
+    final Map<String, Object?> decoded = (jsonDecode(raw) as Map)
+        .cast<String, Object?>();
+    final RemoteBridgeConfig loaded = RemoteBridgeConfig.fromJson(
+      <String, Object?>{...decoded, 'clientToken': token ?? ''},
+    ).normalized();
     if (!_shouldUseLoadedConfig(loaded)) {
       _cache = const RemoteBridgeConfig().normalized();
       return _cache!;
@@ -80,6 +78,7 @@ class SharedPrefsRemoteBridgeConfigRepository
     if (!config.enabled || config.normalizedBaseUrl.isEmpty) {
       return false;
     }
-    return !config.normalizedBaseUrl.contains('bridge.toylink.local');
+    return config.isAllowedBySafetyV0EndpointPolicy &&
+        !config.normalizedBaseUrl.contains('bridge.toylink.local');
   }
 }

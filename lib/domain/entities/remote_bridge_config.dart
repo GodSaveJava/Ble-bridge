@@ -1,5 +1,5 @@
 class RemoteBridgeConfig {
-  static const String productionBridgeBaseUrl = 'http://47.95.242.29:8100';
+  static const String productionBridgeBaseUrl = 'https://bridge.toylink.local';
   static const String productionClientId = 'toylink-mobile-dev';
 
   const RemoteBridgeConfig({
@@ -12,8 +12,8 @@ class RemoteBridgeConfig {
   const RemoteBridgeConfig.production({
     this.clientToken = '',
     this.clientId = productionClientId,
-  })  : enabled = true,
-        baseUrl = productionBridgeBaseUrl;
+  }) : enabled = true,
+       baseUrl = productionBridgeBaseUrl;
 
   factory RemoteBridgeConfig.fromJson(Map<String, Object?> json) {
     return RemoteBridgeConfig(
@@ -30,13 +30,37 @@ class RemoteBridgeConfig {
   final String clientToken;
 
   bool get hasRequiredFields =>
-      !enabled || (normalizedBaseUrl.isNotEmpty && normalizedClientId.isNotEmpty);
+      !enabled ||
+      (normalizedBaseUrl.isNotEmpty &&
+          normalizedClientId.isNotEmpty &&
+          isAllowedBySafetyV0EndpointPolicy);
+
+  bool get isAllowedBySafetyV0EndpointPolicy {
+    if (!enabled) {
+      return true;
+    }
+    final Uri? uri = Uri.tryParse(normalizedBaseUrl);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      return false;
+    }
+    if (_isLoopbackHost(uri.host)) {
+      return uri.scheme == 'http' || uri.scheme == 'https';
+    }
+    return uri.scheme == 'https' && normalizedClientToken.isNotEmpty;
+  }
 
   String get normalizedBaseUrl => baseUrl.trim();
 
   String get normalizedClientId => clientId.trim();
 
   String get normalizedClientToken => clientToken.trim();
+
+  bool _isLoopbackHost(String host) {
+    final String normalized = host.trim().toLowerCase();
+    return normalized == 'localhost' ||
+        normalized == '127.0.0.1' ||
+        normalized == '::1';
+  }
 
   RemoteBridgeConfig copyWith({
     bool? enabled,

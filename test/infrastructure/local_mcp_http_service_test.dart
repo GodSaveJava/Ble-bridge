@@ -21,7 +21,7 @@ import 'package:toylink_ai/infrastructure/mock/mock_hardware_repository.dart';
 
 void main() {
   group('LocalMcpHttpService', () {
-    test('executes set_suck via HTTP tool endpoint', () async {
+    test('rejects set_suck via HTTP tool endpoint by default', () async {
       final container = ProviderContainer(
         overrides: [
           hardwareRepositoryProvider.overrideWith(
@@ -63,6 +63,7 @@ void main() {
         Uri.parse('http://127.0.0.1:8871/mcp/tool'),
       );
       request.headers.contentType = ContentType.json;
+      _authorize(request);
       request.write(
         jsonEncode(<String, Object?>{
           'name': 'set_suck',
@@ -74,9 +75,12 @@ void main() {
       final Map<String, dynamic> json =
           jsonDecode(body) as Map<String, dynamic>;
 
-      expect(response.statusCode, HttpStatus.ok);
-      expect(json['ok'], true);
-      expect((json['status'] as Map<String, dynamic>)['suckIntensity'], 25);
+      expect(response.statusCode, HttpStatus.badRequest);
+      expect(json['ok'], false);
+      expect(
+        (json['error'] as Map<String, dynamic>)['code'],
+        'tool_not_enabled_for_mcp_safety_v0',
+      );
     });
 
     test('returns validation error for malformed payload', () async {
@@ -121,6 +125,7 @@ void main() {
         Uri.parse('http://127.0.0.1:8872/mcp/tool'),
       );
       request.headers.contentType = ContentType.json;
+      _authorize(request);
       request.write('{ bad json');
       final response = await request.close();
       final body = await utf8.decodeStream(response);
@@ -135,54 +140,70 @@ void main() {
       );
     });
 
-    test('returns tool definitions from /mcp/tools', () async {
-      final container = ProviderContainer(
-        overrides: [
-          hardwareRepositoryProvider.overrideWith(
-            (_) => MockHardwareRepository(),
-          ),
-          adapterManifestRepositoryProvider.overrideWith(
-            (_) => _InMemoryManifestRepository(),
-          ),
-          verifiedAdapterRepositoryProvider.overrideWith(
-            (_) => _InMemoryVerifiedRepository(),
-          ),
-          activeAdapterBindingRepositoryProvider.overrideWith(
-            (_) => _InMemoryActiveBindingRepository(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'requires token and returns Safety V0 tool definitions from /mcp/tools',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith(
+              (_) => MockHardwareRepository(),
+            ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
+            verifiedAdapterRepositoryProvider.overrideWith(
+              (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final router = container.read(mcpToolRouterProvider);
-      final bridgeHandler = container.read(remoteBridgeToolCallHandlerProvider);
-      final service = LocalMcpHttpService(
-        toolRouter: router,
-        remoteBridgeToolCallHandler: bridgeHandler,
-        host: '127.0.0.1',
-        port: 8873,
-      );
-      addTearDown(service.stop);
+        final router = container.read(mcpToolRouterProvider);
+        final bridgeHandler = container.read(
+          remoteBridgeToolCallHandlerProvider,
+        );
+        final service = LocalMcpHttpService(
+          toolRouter: router,
+          remoteBridgeToolCallHandler: bridgeHandler,
+          host: '127.0.0.1',
+          port: 8873,
+        );
+        addTearDown(service.stop);
 
-      await service.start();
+        await service.start();
 
-      final client = HttpClient();
-      addTearDown(client.close);
+        final client = HttpClient();
+        addTearDown(client.close);
 
-      final request = await client.getUrl(
-        Uri.parse('http://127.0.0.1:8873/mcp/tools'),
-      );
-      final response = await request.close();
-      final body = await utf8.decodeStream(response);
-      final Map<String, dynamic> json =
-          jsonDecode(body) as Map<String, dynamic>;
+        final request = await client.getUrl(
+          Uri.parse('http://127.0.0.1:8873/mcp/tools'),
+        );
+        final unauthorized = await request.close();
+        expect(unauthorized.statusCode, HttpStatus.unauthorized);
 
-      expect(response.statusCode, HttpStatus.ok);
-      expect(json['ok'], true);
-      expect((json['tools'] as List<dynamic>).length, 6);
-    });
+        final authorizedRequest = await client.getUrl(
+          Uri.parse('http://127.0.0.1:8873/mcp/tools'),
+        );
+        _authorize(authorizedRequest);
+        final response = await authorizedRequest.close();
+        final body = await utf8.decodeStream(response);
+        final Map<String, dynamic> json =
+            jsonDecode(body) as Map<String, dynamic>;
 
-    test('supports call-style payload at /mcp/call', () async {
+        expect(response.statusCode, HttpStatus.ok);
+        expect(json['ok'], true);
+        final tools = (json['tools'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map((Map<String, dynamic> tool) => tool['name'])
+            .toList();
+        expect(tools, <String>['stop_all', 'get_status']);
+      },
+    );
+
+    test('rejects set_vibe call-style payload by default', () async {
       final container = ProviderContainer(
         overrides: [
           hardwareRepositoryProvider.overrideWith(
@@ -224,6 +245,7 @@ void main() {
         Uri.parse('http://127.0.0.1:8874/mcp/call'),
       );
       request.headers.contentType = ContentType.json;
+      _authorize(request);
       request.write(
         jsonEncode(<String, Object?>{
           'tool': 'set_vibe',
@@ -235,13 +257,16 @@ void main() {
       final Map<String, dynamic> json =
           jsonDecode(body) as Map<String, dynamic>;
 
-      expect(response.statusCode, HttpStatus.ok);
-      expect(json['ok'], true);
-      expect((json['status'] as Map<String, dynamic>)['vibeIntensity'], 40);
+      expect(response.statusCode, HttpStatus.badRequest);
+      expect(json['ok'], false);
+      expect(
+        (json['error'] as Map<String, dynamic>)['code'],
+        'tool_not_enabled_for_mcp_safety_v0',
+      );
     });
 
     test(
-      'returns adapter_not_verified for control tool without verification',
+      'rejects control tool before adapter verification in Safety V0',
       () async {
         final container = ProviderContainer(
           overrides: [
@@ -282,6 +307,7 @@ void main() {
           Uri.parse('http://127.0.0.1:8875/mcp/tool'),
         );
         request.headers.contentType = ContentType.json;
+        _authorize(request);
         request.write(
           jsonEncode(<String, Object?>{
             'name': 'set_suck',
@@ -297,7 +323,7 @@ void main() {
         expect(json['ok'], false);
         expect(
           (json['error'] as Map<String, dynamic>)['code'],
-          'adapter_not_verified',
+          'tool_not_enabled_for_mcp_safety_v0',
         );
       },
     );
@@ -340,6 +366,7 @@ void main() {
         Uri.parse('http://127.0.0.1:8876/mobile-bridge/tool-call'),
       );
       request.headers.contentType = ContentType.json;
+      _authorize(request);
       request.write(
         jsonEncode(<String, Object?>{
           'requestId': 'bridge-req-1',
@@ -354,7 +381,8 @@ void main() {
       expect(response.statusCode, HttpStatus.ok);
       expect(json['ok'], true);
       expect(json['requestId'], 'bridge-req-1');
-      expect((json['result'] as Map<String, dynamic>)['deviceId'], 'mock-sosexy-001');
+      expect((json['result'] as Map<String, dynamic>)['deviceId'], isNull);
+      expect((json['result'] as Map<String, dynamic>)['isConnected'], isTrue);
     });
 
     test(
@@ -399,6 +427,7 @@ void main() {
           Uri.parse('http://127.0.0.1:8877/mobile-bridge/tool-call'),
         );
         request.headers.contentType = ContentType.json;
+        _authorize(request);
         request.write(
           jsonEncode(<String, Object?>{
             'requestId': 'bridge-req-2',
@@ -481,6 +510,7 @@ void main() {
           Uri.parse('http://127.0.0.1:8878/mobile-bridge/task-assignment'),
         );
         request.headers.contentType = ContentType.json;
+        _authorize(request);
         request.write(
           jsonEncode(<String, Object?>{
             'requestId': 'bridge-task-1',
@@ -495,15 +525,19 @@ void main() {
         expect(response.statusCode, HttpStatus.ok);
         expect(json['ok'], true);
         expect(json['requestId'], 'bridge-task-1');
-        expect(
-          (json['result'] as Map<String, dynamic>)['deviceId'],
-          'mock-sosexy-001',
-        );
+        expect((json['result'] as Map<String, dynamic>)['deviceId'], isNull);
         expect(bridgeService.reportedResults, hasLength(1));
         expect(bridgeService.reportedResults.single.requestId, 'bridge-task-1');
       },
     );
   });
+}
+
+void _authorize(HttpClientRequest request) {
+  request.headers.set(
+    HttpHeaders.authorizationHeader,
+    'Bearer toylink-local-mcp-dev-token',
+  );
 }
 
 class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
@@ -618,7 +652,8 @@ class _RecordingBridgeService implements RemoteBridgeService {
       );
 
   final RemoteBridgeSession _session;
-  final List<RemoteBridgeTaskResult> reportedResults = <RemoteBridgeTaskResult>[];
+  final List<RemoteBridgeTaskResult> reportedResults =
+      <RemoteBridgeTaskResult>[];
 
   @override
   RemoteBridgeSession get currentSession => _session;

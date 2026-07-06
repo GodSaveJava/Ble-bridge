@@ -1,13 +1,12 @@
 import 'mcp_tool_router.dart';
+import 'safety_v0_tools.dart';
+import '../../domain/entities/remote_bridge_payload_sanitizer.dart';
 
 class RemoteBridgeToolDispatcher {
   RemoteBridgeToolDispatcher({required McpToolRouter mcpToolRouter})
     : _mcpToolRouter = mcpToolRouter;
 
-  static const Set<String> enabledToolNames = <String>{
-    'get_status',
-    'stop_all',
-  };
+  static const Set<String> enabledToolNames = SafetyV0Tools.names;
 
   final McpToolRouter _mcpToolRouter;
 
@@ -27,6 +26,16 @@ class RemoteBridgeToolDispatcher {
       );
     }
 
-    return _mcpToolRouter.callTool(toolName, arguments: arguments);
+    final McpToolResult result = await _mcpToolRouter.callTool(
+      toolName,
+      arguments: arguments,
+    );
+    if (!result.ok) {
+      return result;
+    }
+    return McpToolResult(
+      ok: true,
+      data: RemoteBridgePayloadSanitizer.sanitizeMap(result.data),
+    );
   }
 }

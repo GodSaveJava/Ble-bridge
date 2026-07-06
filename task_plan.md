@@ -30,13 +30,13 @@ Phase 0 已完成代码/测试/CI 基线，但 Android cmdline-tools、真机 BL
   - [x] 跑通并归档 `cd bridge_server; dart test`
   - [x] 建立最小 CI 基线：Flutter analyze/test + bridge server dart test
 - [ ] Phase 1：安全 V0
-  - [ ] Remote Bridge 强制 HTTPS / token 策略
-  - [ ] Bridge session / connector token 使用 CSPRNG、过期、轮换、会话绑定
-  - [ ] Bridge server 固定安全 V0 allowlist：`get_status,stop_all`
-  - [ ] `/debug/enqueue` 按 allowlist 校验工具名，默认关闭且 token 鉴权
-  - [ ] 本地 MCP 加鉴权，Phase 1 默认只暴露 `get_status,stop_all`
-  - [ ] AppLock 接入控制授权链，locked 时只放行 `stop_all`
-  - [ ] 远程 `get_status` / task result 脱敏，不上传 BLE raw id / GATT 指纹
+  - [x] Remote Bridge 强制 HTTPS / token 策略
+  - [x] Bridge session / connector token 使用 CSPRNG、过期、轮换、会话绑定
+  - [x] Bridge server 固定安全 V0 allowlist：`get_status,stop_all`
+  - [x] `/debug/enqueue` 按 allowlist 校验工具名，默认关闭且 token 鉴权
+  - [x] 本地 MCP 加鉴权，Phase 1 默认只暴露 `get_status,stop_all`
+  - [x] AppLock 接入控制授权链，locked 时只放行 `stop_all`
+  - [x] 远程 `get_status` / task result 脱敏，不上传 BLE raw id / GATT 指纹
   - [ ] `stop_all` 高优先级抢占路径与测试证据
   - [ ] 更新面向用户的 BYO-AI Connector 接入文档，避免暗示远程 `set_*` 已开放
 - [ ] Phase 2：BYO-AI 接入层
@@ -49,13 +49,14 @@ Phase 0 已完成代码/测试/CI 基线，但 Android cmdline-tools、真机 BL
 - `flutter doctor -v` 仍提示 Android cmdline-tools 缺失；真机 Android 构建和 BLE 实测前必须补齐。
 - 当前 Codex 进程没有继承新的用户 PATH；新 PowerShell 或重启 Codex 后应能直接找到 `flutter` / `dart`。
 - 没有 2026-07-06 真机 BLE 扫描、连接、adapter verification、急停、后台保活证据。
-- Phase 1 之前不得开放远程 `set_*`；本地 MCP 当前仍有控制类工具，必须在安全 V0 中加鉴权和默认暴露限制。
+- Phase 1 自动化安全基线已通过，但真机 BLE 和 `stop_all` 端到端抢占证据仍缺失。
 
 ## Governing Documents
 
 - `docs/22-byo-ai-hardware-connector-roadmap.md`
 - `CODEX.md`
 - `docs/evidence/2026-07-06-phase-0-baseline-evidence.md`
+- `docs/evidence/2026-07-06-phase-1-safety-v0-evidence.md`
 - `docs/evidence/phase-0-1-evidence-manifest-template.md`
 - `docs/16-product-goals-and-next-design-plan.md`
 - `docs/19-claude-remote-mcp-architecture.md`
@@ -68,10 +69,7 @@ Phase 0 已完成代码/测试/CI 基线，但 Android cmdline-tools、真机 BL
 
 ## Next Execution Order
 
-1. Phase 1 threat model：列出 Remote Bridge、本地 MCP、AppLock、token、debug route 的攻击面。
-2. Bridge server allowlist 固定为 `get_status,stop_all`，并补测试。
-3. `/debug/enqueue` 默认关闭，启用后要求 debug token，并拒绝非 allowlist 工具。
-4. 本地 MCP 加鉴权与默认工具暴露限制。
-5. AppLock 接入远程/本地控制授权链：locked 只允许 `stop_all`。
-6. `get_status` / task result 脱敏。
-7. `stop_all` 抢占路径补强并归档证据。
+1. 补 `stop_all` 远程/MCP 端到端抢占测试，必要时加 device command epoch guard。
+2. 更新 BYO-AI Connector 文档，明确 Phase 1 只开放 `get_status,stop_all`。
+3. 补 Android cmdline-tools，开始真机 BLE 扫描、连接、adapter verification、急停与后台保活证据。
+4. 全量回归后再评估 Phase 1 是否可判 PASS。

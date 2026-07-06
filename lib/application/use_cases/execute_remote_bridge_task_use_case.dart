@@ -1,3 +1,4 @@
+import '../mcp/safety_v0_tools.dart';
 import '../../domain/entities/remote_bridge_session.dart';
 import '../../domain/entities/remote_bridge_task_result.dart';
 import '../../domain/services/remote_bridge_service.dart';
@@ -19,6 +20,17 @@ class ExecuteRemoteBridgeTaskUseCase {
     Map<String, Object?> input = const <String, Object?>{},
   }) async {
     final RemoteBridgeSession session = _remoteBridgeService.currentSession;
+
+    if (!SafetyV0Tools.contains(tool)) {
+      return RemoteBridgeTaskResult(
+        ok: false,
+        requestId: requestId,
+        tool: tool,
+        errorCode: 'tool_not_enabled_for_bridge',
+        errorMessage:
+            'Remote bridge Safety V0 only allows get_status and stop_all.',
+      );
+    }
 
     if (!session.isReady) {
       return RemoteBridgeTaskResult(

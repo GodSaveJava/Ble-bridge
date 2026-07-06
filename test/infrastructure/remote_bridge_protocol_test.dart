@@ -6,7 +6,10 @@ import 'package:toylink_ai/infrastructure/bridge/remote_bridge_protocol.dart';
 
 void main() {
   test('remote bridge protocol builds stable session paths', () {
-    expect(RemoteBridgeProtocol.sessionStartPath, '/mobile-bridge/session/start');
+    expect(
+      RemoteBridgeProtocol.sessionStartPath,
+      '/mobile-bridge/session/start',
+    );
     expect(
       RemoteBridgeProtocol.sessionRefreshPath('bridge-session-1'),
       '/mobile-bridge/session/bridge-session-1/refresh',
@@ -38,7 +41,10 @@ void main() {
           ok: true,
           requestId: 'task-1',
           tool: 'get_status',
-          result: <String, dynamic>{'status': 'ready'},
+          result: <String, dynamic>{
+            'deviceId': 'mock-sosexy-001',
+            'status': 'ready',
+          },
         ),
       ),
       <String, Object?>{
@@ -54,35 +60,40 @@ void main() {
   });
 
   test('remote bridge protocol parses session response payload', () {
-    final RemoteBridgeSession session = RemoteBridgeProtocol.parseSessionResponse(
-      <String, dynamic>{
-        'bridgeSessionId': 'bridge-session-1',
-        'connectorUrl': 'https://bridge.toylink.local/mcp/claude',
-        'connectorToken': 'token-1',
-        'toolNames': <String>['get_status', 'stop_all'],
-      },
-      fallback: const RemoteBridgeSession(
-        status: RemoteBridgeSessionStatus.offline,
-        bridgeSessionId: 'fallback-session',
-      ),
-    );
+    final RemoteBridgeSession session =
+        RemoteBridgeProtocol.parseSessionResponse(
+          <String, dynamic>{
+            'bridgeSessionId': 'bridge-session-1',
+            'connectorUrl': 'https://bridge.toylink.local/mcp/claude',
+            'connectorToken': 'token-1',
+            'toolNames': <String>['get_status', 'stop_all'],
+          },
+          fallback: const RemoteBridgeSession(
+            status: RemoteBridgeSessionStatus.offline,
+            bridgeSessionId: 'fallback-session',
+          ),
+        );
 
     expect(session.status, RemoteBridgeSessionStatus.ready);
     expect(session.bridgeSessionId, 'bridge-session-1');
-    expect(session.connectorInfo?.connectorUrl, 'https://bridge.toylink.local/mcp/claude');
+    expect(
+      session.connectorInfo?.connectorUrl,
+      'https://bridge.toylink.local/mcp/claude',
+    );
     expect(session.connectorInfo?.connectorToken, 'token-1');
-    expect(session.connectorInfo?.toolNames, <String>['get_status', 'stop_all']);
+    expect(session.connectorInfo?.toolNames, <String>[
+      'get_status',
+      'stop_all',
+    ]);
   });
 
   test('remote bridge protocol parses task assignment payload', () {
     final RemoteBridgeTaskAssignment? assignment =
-        RemoteBridgeProtocol.parseTaskAssignmentResponse(
-      <String, dynamic>{
-        'requestId': 'task-1',
-        'tool': 'get_status',
-        'input': <String, Object?>{'source': 'bridge'},
-      },
-    );
+        RemoteBridgeProtocol.parseTaskAssignmentResponse(<String, dynamic>{
+          'requestId': 'task-1',
+          'tool': 'get_status',
+          'input': <String, Object?>{'source': 'bridge'},
+        });
 
     expect(assignment, isNotNull);
     expect(assignment?.requestId, 'task-1');

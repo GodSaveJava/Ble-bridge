@@ -20,17 +20,17 @@ void main() {
         remoteBridgeToolCallHandlerProvider,
       );
 
-      final Map<String, Object?> response = await handler.handle(<String, Object?>{
-        'requestId': 'req-1',
-        'tool': 'get_status',
-      });
+      final Map<String, Object?> response = await handler.handle(
+        <String, Object?>{'requestId': 'req-1', 'tool': 'get_status'},
+      );
 
       expect(response['ok'], true);
       expect(response['requestId'], 'req-1');
       expect(response['tool'], 'get_status');
+      expect((response['result'] as Map<String, Object?>)['deviceId'], isNull);
       expect(
-        (response['result'] as Map<String, Object?>)['deviceId'],
-        'mock-sosexy-001',
+        (response['result'] as Map<String, Object?>)['isConnected'],
+        isTrue,
       );
     });
 
@@ -42,16 +42,15 @@ void main() {
         remoteBridgeToolCallHandlerProvider,
       );
 
-      final Map<String, Object?> response = await handler.handle(<String, Object?>{
-        'tool': 'stop_all',
-        'input': const <String, Object?>{},
-      });
+      final Map<String, Object?> response = await handler.handle(
+        <String, Object?>{
+          'tool': 'stop_all',
+          'input': const <String, Object?>{},
+        },
+      );
 
       expect(response['ok'], true);
-      expect(
-        (response['result'] as Map<String, Object?>)['suckIntensity'],
-        0,
-      );
+      expect((response['result'] as Map<String, Object?>)['suckIntensity'], 0);
     });
 
     test('returns validation error when tool field is missing', () async {
@@ -62,9 +61,9 @@ void main() {
         remoteBridgeToolCallHandlerProvider,
       );
 
-      final Map<String, Object?> response = await handler.handle(<String, Object?>{
-        'requestId': 'req-2',
-      });
+      final Map<String, Object?> response = await handler.handle(
+        <String, Object?>{'requestId': 'req-2'},
+      );
 
       expect(response['ok'], false);
       expect(response['requestId'], 'req-2');
@@ -82,10 +81,12 @@ void main() {
         remoteBridgeToolCallHandlerProvider,
       );
 
-      final Map<String, Object?> response = await handler.handle(<String, Object?>{
-        'tool': 'set_suck',
-        'input': const <String, Object?>{'intensity': 10, 'mode': 1},
-      });
+      final Map<String, Object?> response = await handler.handle(
+        <String, Object?>{
+          'tool': 'set_suck',
+          'input': const <String, Object?>{'intensity': 10, 'mode': 1},
+        },
+      );
 
       expect(response['ok'], false);
       expect(
@@ -151,7 +152,8 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   Future<void> save(VerifiedAdapterRecord record) async {}
 }
 
-class _InMemoryActiveBindingRepository implements ActiveAdapterBindingRepository {
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
   @override
   Stream<List<ActiveAdapterBinding>> watchAll() async* {
     yield const <ActiveAdapterBinding>[];

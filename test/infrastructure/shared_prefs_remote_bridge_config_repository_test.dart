@@ -58,18 +58,34 @@ void main() {
       expect(reloaded.clientToken, isEmpty);
     });
 
-    test('disables legacy mock config instead of using public defaults', () async {
+    test(
+      'disables legacy mock config instead of using public defaults',
+      () async {
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'remote_bridge_config_v1',
+          '{"enabled":true,"baseUrl":"https://bridge.toylink.local","clientId":"device-a"}',
+        );
+
+        final RemoteBridgeConfig config = await repository.load();
+
+        expect(config.enabled, isFalse);
+        expect(config.baseUrl, isEmpty);
+        expect(config.clientId, RemoteBridgeConfig.productionClientId);
+      },
+    );
+
+    test('disables saved non-loopback HTTP config', () async {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         'remote_bridge_config_v1',
-        '{"enabled":true,"baseUrl":"https://bridge.toylink.local","clientId":"device-a"}',
+        '{"enabled":true,"baseUrl":"http://47.95.242.29:8100","clientId":"device-a"}',
       );
 
       final RemoteBridgeConfig config = await repository.load();
 
       expect(config.enabled, isFalse);
       expect(config.baseUrl, isEmpty);
-      expect(config.clientId, RemoteBridgeConfig.productionClientId);
     });
   });
 }

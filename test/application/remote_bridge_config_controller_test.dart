@@ -53,13 +53,40 @@ void main() {
             ),
           );
 
-      final RemoteBridgeConfig config = container.read(
-        remoteBridgeConfigControllerProvider,
-      ).requireValue;
+      final RemoteBridgeConfig config = container
+          .read(remoteBridgeConfigControllerProvider)
+          .requireValue;
       expect(config.baseUrl, 'https://bridge.example.com');
       expect(config.clientId, 'device-a');
       expect(config.clientToken, 'secret-token');
       expect(repository.current.clientToken, 'secret-token');
+    });
+
+    test('rejects non-loopback HTTP bridge config', () async {
+      final _InMemoryRemoteBridgeConfigRepository repository =
+          _InMemoryRemoteBridgeConfigRepository(const RemoteBridgeConfig());
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeConfigRepositoryProvider.overrideWith((_) => repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(remoteBridgeConfigControllerProvider.future);
+      await container
+          .read(remoteBridgeConfigControllerProvider.notifier)
+          .save(
+            const RemoteBridgeConfig(
+              enabled: true,
+              baseUrl: 'http://47.95.242.29:8100',
+              clientId: 'device-a',
+              clientToken: 'secret-token',
+            ),
+          );
+
+      final state = container.read(remoteBridgeConfigControllerProvider);
+      expect(state.hasError, isTrue);
+      expect(repository.current.enabled, isFalse);
     });
 
     test('reset returns disabled config', () async {
@@ -83,9 +110,9 @@ void main() {
           .read(remoteBridgeConfigControllerProvider.notifier)
           .reset();
 
-      final RemoteBridgeConfig config = container.read(
-        remoteBridgeConfigControllerProvider,
-      ).requireValue;
+      final RemoteBridgeConfig config = container
+          .read(remoteBridgeConfigControllerProvider)
+          .requireValue;
       expect(config.enabled, isFalse);
       expect(config.baseUrl, isEmpty);
     });

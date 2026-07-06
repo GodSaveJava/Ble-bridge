@@ -12,6 +12,11 @@ class ManageRemoteBridgeConfigUseCase {
 
   Future<RemoteBridgeConfig> save(RemoteBridgeConfig config) async {
     final RemoteBridgeConfig normalized = config.normalized();
+    if (!normalized.isAllowedBySafetyV0EndpointPolicy) {
+      throw ArgumentError(
+        'Remote Bridge must use HTTPS and a token outside loopback.',
+      );
+    }
     await _repository.save(normalized);
     return normalized;
   }

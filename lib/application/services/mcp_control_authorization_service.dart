@@ -15,14 +15,27 @@ class McpControlAuthorizationService {
   const McpControlAuthorizationService({
     required ActiveDeviceRegistry activeDeviceRegistry,
     required AdapterRegistry adapterRegistry,
+    required bool Function() isAppLocked,
   }) : _activeDeviceRegistry = activeDeviceRegistry,
-       _adapterRegistry = adapterRegistry;
+       _adapterRegistry = adapterRegistry,
+       _isAppLocked = isAppLocked;
 
   final ActiveDeviceRegistry _activeDeviceRegistry;
   final AdapterRegistry _adapterRegistry;
+  final bool Function() _isAppLocked;
 
   Future<void> ensureToolAllowed(String toolName) async {
-    if (_isAlwaysAllowed(toolName) || !_requiresVerifiedAdapter(toolName)) {
+    if (_isAlwaysAllowed(toolName)) {
+      return;
+    }
+    if (_isAppLocked()) {
+      throw Failure(
+        code: FailureCode.securityLock,
+        message: 'App is locked. Unlock ToyLink before using AI tools.',
+        details: <String, Object?>{'tool': toolName},
+      );
+    }
+    if (!_requiresVerifiedAdapter(toolName)) {
       return;
     }
 

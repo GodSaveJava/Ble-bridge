@@ -16,7 +16,9 @@ void main() {
     test('dispatches get_status through MCP tool router', () async {
       final ProviderContainer container = ProviderContainer(
         overrides: [
-          hardwareRepositoryProvider.overrideWith((_) => MockHardwareRepository()),
+          hardwareRepositoryProvider.overrideWith(
+            (_) => MockHardwareRepository(),
+          ),
           adapterManifestRepositoryProvider.overrideWith(
             (_) => _InMemoryManifestRepository(),
           ),
@@ -37,14 +39,16 @@ void main() {
       final McpToolResult result = await dispatcher.dispatchTool('get_status');
 
       expect(result.ok, isTrue);
-      expect(result.data?['deviceId'], 'mock-sosexy-001');
+      expect(result.data?['deviceId'], isNull);
       expect(result.data?['isConnected'], isTrue);
     });
 
     test('dispatches stop_all through MCP tool router', () async {
       final ProviderContainer container = ProviderContainer(
         overrides: [
-          hardwareRepositoryProvider.overrideWith((_) => MockHardwareRepository()),
+          hardwareRepositoryProvider.overrideWith(
+            (_) => MockHardwareRepository(),
+          ),
           adapterManifestRepositoryProvider.overrideWith(
             (_) => _InMemoryManifestRepository(),
           ),
@@ -70,35 +74,40 @@ void main() {
       expect(result.data?['emsIntensity'], 0);
     });
 
-    test('rejects control tools that are not enabled for remote bridge yet', () async {
-      final ProviderContainer container = ProviderContainer(
-        overrides: [
-          hardwareRepositoryProvider.overrideWith((_) => MockHardwareRepository()),
-          adapterManifestRepositoryProvider.overrideWith(
-            (_) => _InMemoryManifestRepository(),
-          ),
-          verifiedAdapterRepositoryProvider.overrideWith(
-            (_) => _InMemoryVerifiedRepository(),
-          ),
-          activeAdapterBindingRepositoryProvider.overrideWith(
-            (_) => _InMemoryActiveBindingRepository(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'rejects control tools that are not enabled for remote bridge yet',
+      () async {
+        final ProviderContainer container = ProviderContainer(
+          overrides: [
+            hardwareRepositoryProvider.overrideWith(
+              (_) => MockHardwareRepository(),
+            ),
+            adapterManifestRepositoryProvider.overrideWith(
+              (_) => _InMemoryManifestRepository(),
+            ),
+            verifiedAdapterRepositoryProvider.overrideWith(
+              (_) => _InMemoryVerifiedRepository(),
+            ),
+            activeAdapterBindingRepositoryProvider.overrideWith(
+              (_) => _InMemoryActiveBindingRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final RemoteBridgeToolDispatcher dispatcher = container.read(
-        remoteBridgeToolDispatcherProvider,
-      );
+        final RemoteBridgeToolDispatcher dispatcher = container.read(
+          remoteBridgeToolDispatcherProvider,
+        );
 
-      final McpToolResult result = await dispatcher.dispatchTool(
-        'set_suck',
-        arguments: const <String, Object?>{'intensity': 10, 'mode': 1},
-      );
+        final McpToolResult result = await dispatcher.dispatchTool(
+          'set_suck',
+          arguments: const <String, Object?>{'intensity': 10, 'mode': 1},
+        );
 
-      expect(result.ok, isFalse);
-      expect(result.errorCode, 'tool_not_enabled_for_bridge');
-    });
+        expect(result.ok, isFalse);
+        expect(result.errorCode, 'tool_not_enabled_for_bridge');
+      },
+    );
   });
 }
 
@@ -140,7 +149,8 @@ class _InMemoryVerifiedRepository implements VerifiedAdapterRepository {
   Future<void> save(VerifiedAdapterRecord record) async {}
 }
 
-class _InMemoryActiveBindingRepository implements ActiveAdapterBindingRepository {
+class _InMemoryActiveBindingRepository
+    implements ActiveAdapterBindingRepository {
   @override
   Stream<List<ActiveAdapterBinding>> watchAll() async* {
     yield const <ActiveAdapterBinding>[];

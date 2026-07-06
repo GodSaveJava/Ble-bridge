@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:toylink_ai/application/providers/application_providers.dart';
+import 'package:toylink_ai/core/security/app_lock_controller.dart';
 import 'package:toylink_ai/domain/devices/toy_device.dart';
 import 'package:toylink_ai/domain/entities/active_adapter_binding.dart';
 import 'package:toylink_ai/domain/entities/adapter_manifest.dart';
@@ -260,6 +261,46 @@ void main() {
         expect(result.errorCode, 'no_active_device');
       },
     );
+
+    test('app lock allows only stop_all while locked', () async {
+      final container = ProviderContainer(
+        overrides: [
+          hardwareRepositoryProvider.overrideWith(
+            (_) => MockHardwareRepository(),
+          ),
+          adapterManifestRepositoryProvider.overrideWith(
+            (_) => _InMemoryManifestRepository(),
+          ),
+          verifiedAdapterRepositoryProvider.overrideWith(
+            (_) => _InMemoryVerifiedRepository(
+              records: <VerifiedAdapterRecord>[
+                _record(status: AdapterVerificationStatus.verified),
+              ],
+            ),
+          ),
+          activeAdapterBindingRepositoryProvider.overrideWith(
+            (_) => _InMemoryActiveBindingRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(appLockControllerProvider.notifier).setEnabled(true);
+      final router = container.read(mcpToolRouterProvider);
+
+      final status = await router.callTool('get_status');
+      final setSuck = await router.callTool(
+        'set_suck',
+        arguments: const <String, Object?>{'intensity': 20, 'mode': 1},
+      );
+      final stopAll = await router.callTool('stop_all');
+
+      expect(status.ok, isFalse);
+      expect(status.errorCode, 'security_lock_required');
+      expect(setSuck.ok, isFalse);
+      expect(setSuck.errorCode, 'security_lock_required');
+      expect(stopAll.ok, isTrue);
+    });
   });
 }
 

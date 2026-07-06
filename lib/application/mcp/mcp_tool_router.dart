@@ -77,6 +77,7 @@ class McpToolRouter {
         case 'stop_all':
           return _ok(await _controlDeviceUseCase.stopAll());
         case 'get_status':
+          await _mcpControlAuthorizationService.ensureToolAllowed(name);
           return _ok(await _controlDeviceUseCase.getStatus());
         default:
           return const McpToolResult(

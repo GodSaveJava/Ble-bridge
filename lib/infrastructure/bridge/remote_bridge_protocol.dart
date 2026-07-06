@@ -1,6 +1,7 @@
 import '../../domain/entities/remote_bridge_session.dart';
 import '../../domain/entities/remote_bridge_task_assignment.dart';
 import '../../domain/entities/remote_bridge_task_result.dart';
+import '../../domain/entities/remote_bridge_payload_sanitizer.dart';
 
 abstract final class RemoteBridgeProtocol {
   static const String sessionStartPath = '/mobile-bridge/session/start';
@@ -36,9 +37,7 @@ abstract final class RemoteBridgeProtocol {
   static const String statusField = 'status';
 
   static Map<String, Object?> sessionRequestBody(String clientId) {
-    return <String, Object?>{
-      clientIdField: clientId,
-    };
+    return <String, Object?>{clientIdField: clientId};
   }
 
   static Map<String, Object?> taskResultRequestBody(
@@ -50,7 +49,7 @@ abstract final class RemoteBridgeProtocol {
       requestIdField: result.requestId,
       toolField: result.tool,
       okField: result.ok,
-      resultField: result.result,
+      resultField: RemoteBridgePayloadSanitizer.sanitizeMap(result.result),
       errorCodeField: result.errorCode,
       errorMessageField: result.errorMessage,
     };
@@ -62,10 +61,8 @@ abstract final class RemoteBridgeProtocol {
   }) {
     final String bridgeSessionId =
         json[bridgeSessionIdField] as String? ?? fallback.bridgeSessionId ?? '';
-    final String connectorUrl =
-        json[connectorUrlField] as String? ?? '';
-    final String connectorToken =
-        json[connectorTokenField] as String? ?? '';
+    final String connectorUrl = json[connectorUrlField] as String? ?? '';
+    final String connectorToken = json[connectorTokenField] as String? ?? '';
     final List<String> toolNames =
         (json[toolNamesField] as List<dynamic>? ?? const <dynamic>[])
             .map((dynamic item) => item.toString())
