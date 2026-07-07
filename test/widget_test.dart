@@ -368,6 +368,17 @@ void main() {
     expect(find.text(_kConnectorQrDeepLink), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
     expect(find.text(_kCopyDeepLink), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(_kConnectorPlatformTemplates),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(_kConnectorPlatformTemplates), findsOneWidget);
+    expect(find.text(_kClaudeRemoteMcpTemplate), findsOneWidget);
+    expect(find.text(_kGptActionsTemplate), findsOneWidget);
+    expect(find.text(_kOpenApiTemplate), findsOneWidget);
+    expect(find.text(_kWebhookTemplate), findsOneWidget);
     expect(find.text(_kOpenSafetyTools), findsOneWidget);
     expect(find.textContaining(_kSafetyV0SetToolsBlocked), findsOneWidget);
     expect(find.text(_kCopyCardToVerify), findsOneWidget);
@@ -1360,6 +1371,11 @@ const String _kConnectorCardTitle = 'ToyLink 连接卡片';
 const String _kCopyConnectorCard = '复制连接卡片';
 const String _kConnectorQrDeepLink = '二维码 / Deep link';
 const String _kCopyDeepLink = '复制 Deep link';
+const String _kConnectorPlatformTemplates = '多平台模板';
+const String _kClaudeRemoteMcpTemplate = 'Claude Remote MCP';
+const String _kGptActionsTemplate = 'ChatGPT / GPT Actions';
+const String _kOpenApiTemplate = 'OpenAPI / REST Tool';
+const String _kWebhookTemplate = 'Webhook';
 const String _kOpenSafetyTools = '开放工具：get_status / stop_all';
 const String _kSafetyV0SetToolsBlocked = 'Phase 1 不开放 set_* 控制';
 const String _kCopyCardToVerify = '复制连接卡片后开始验证';

@@ -9,6 +9,7 @@ import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
 import '../../domain/connector_card_payload.dart';
+import '../../domain/connector_platform_template.dart';
 import '../../../../shared/widgets/bridge_source_info.dart';
 import '../../../../shared/widgets/bridge_session_copy.dart';
 import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
@@ -720,6 +721,8 @@ class _ConnectorCard extends ConsumerWidget {
           const SizedBox(height: 12),
           _ConnectorTransferPanel(bridgeState: bridgeState),
           const SizedBox(height: 12),
+          _ConnectorPlatformTemplatesPanel(bridgeState: bridgeState),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -806,6 +809,117 @@ class _ConnectorCard extends ConsumerWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Deep link 已复制')));
+  }
+}
+
+class _ConnectorPlatformTemplatesPanel extends ConsumerWidget {
+  const _ConnectorPlatformTemplatesPanel({required this.bridgeState});
+
+  final RemoteBridgeSessionState bridgeState;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final ConnectorCardPayload payload = _connectorCardPayload(bridgeState);
+    final List<ConnectorPlatformTemplate> templates =
+        buildConnectorPlatformTemplates(payload);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.integration_instructions, color: colors.primary),
+              const SizedBox(width: 8),
+              Text(
+                '多平台模板',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text('按你的 AI 平台复制对应模板。所有模板仍只开放 get_status / stop_all。'),
+          const SizedBox(height: 12),
+          for (final ConnectorPlatformTemplate template
+              in templates) ...<Widget>[
+            _ConnectorPlatformTemplateRow(
+              template: template,
+              onCopy: () => _copyTemplate(context, ref, template),
+            ),
+            if (template != templates.last) const Divider(height: 20),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyTemplate(
+    BuildContext context,
+    WidgetRef ref,
+    ConnectorPlatformTemplate template,
+  ) async {
+    ref
+        .read(remoteBridgeSessionControllerProvider.notifier)
+        .markConnectorCardCopied();
+    await Clipboard.setData(ClipboardData(text: template.content));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${template.title} 模板已复制')));
+  }
+}
+
+class _ConnectorPlatformTemplateRow extends StatelessWidget {
+  const _ConnectorPlatformTemplateRow({
+    required this.template,
+    required this.onCopy,
+  });
+
+  final ConnectorPlatformTemplate template;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                template.title,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                template.subtitle,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        OutlinedButton.icon(
+          onPressed: onCopy,
+          icon: const Icon(Icons.copy, size: 16),
+          label: Text(template.copyLabel),
+        ),
+      ],
+    );
   }
 }
 

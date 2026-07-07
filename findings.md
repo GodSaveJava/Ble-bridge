@@ -21,6 +21,7 @@
 - 连接卡片验证流已落地：复制后页面进入等待状态，收到成功的远程 `get_status` 后自动显示 AI 已连接/验证通过。
 - 连接卡片跨设备搬运已支持 QR/deep link 导出：MCP 页可展示二维码并复制 `toylink://connector-card/v1` URI。
 - Android deep link 导入已落地：`toylink://connector-card/v1` 可打开导入页并校验 Safety V0 payload，包含 `set_*` 的卡片会被拒绝。
+- 多平台模板已落地：MCP 页可复制 Claude Remote MCP、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 四类 Safety V0 模板；仍需真实平台接入证据。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。
 - `stop_all` 远程/MCP 端到端抢占证据已补：远程 `/mobile-bridge/tool-call` 可触发设备层 stop 包，并 supersede pending 非 stop 写入。

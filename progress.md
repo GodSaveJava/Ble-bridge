@@ -115,3 +115,10 @@
 - The app routes imported connector links to a connector card import page that parses the payload, validates Safety V0 constraints, previews URL/token/tools, and lets the user copy the card again.
 - Imported payloads containing non-V0 tools such as `set_suck` are rejected instead of being treated as valid connector cards.
 - Emulator smoke test passed on `emulator-5554`: installed debug APK, launched `toylink://connector-card/v1?...` with `adb shell am start`, and confirmed the import page rendered.
+
+## 2026-07-07
+
+- Added multi-platform connector templates to the MCP page.
+- The connection card now generates copyable templates for Claude Remote MCP, ChatGPT / GPT Actions, OpenAPI / REST Tool, and Webhook.
+- GPT Actions and OpenAPI templates are emitted as OpenAPI 3.1 JSON with bearer auth and a strict `get_status` / `stop_all` enum.
+- Copying any platform template moves the UI into the same `get_status` verification wait state.

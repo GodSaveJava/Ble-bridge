@@ -90,6 +90,7 @@ ToyLink 不是聊天替代品，不迁移聊天记录、角色关系或记忆体
 - MCP Connector 作为首选协议。
 - 增加 OpenAPI / REST tool schema，服务不支持 MCP 但支持 HTTP tools 的用户 AI。
 - 提供 Claude、ChatGPT / GPT、自建 Agent 三套接入说明。
+- 在连接卡片中提供 Claude Remote MCP、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 四类可复制模板。
 - 将 Claude onboarding 扩展为通用 AI Connector Setup，并按平台展示步骤。
 - 用“首次真实工具调用成功”作为接入完成条件，而不是只靠用户自报。
 

@@ -46,7 +46,8 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
   - [x] 连接卡片验证流：等待 AI 调用 `get_status` 后自动标记接入成功
   - [x] 二维码 / deep link 导出：用于跨设备搬运连接卡片
   - [x] Android deep link 导入：从 `toylink://connector-card/v1` 打开并预填连接卡片
-  - [ ] 多平台模板：Claude、ChatGPT / GPT Actions、OpenAPI、Webhook
+  - [x] 多平台模板：Claude、ChatGPT / GPT Actions、OpenAPI、Webhook
+  - [ ] 真实平台接入证据：至少一个 MCP 客户端和一个 REST / OpenAPI tool 客户端
 - [ ] Phase 3：低强度控制开放
 - [ ] Phase 4：GPT / 多平台正式支持
 - [ ] Phase 5：规模化与发布
@@ -79,4 +80,4 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
 1. 接入 Android 真机，开启 USB 调试后采集 ADB 设备识别证据。
 2. 安装 debug APK，切换 Real BLE，采集扫描、连接、adapter verification、急停与后台保活证据。
 3. 全量回归后再评估 Phase 1 是否可判 PASS。
-4. 继续扩展 Phase 2：多平台模板、真实平台接入证据。
+4. 继续扩展 Phase 2：真实平台接入证据、通用 AI Connector Setup 页面化。
