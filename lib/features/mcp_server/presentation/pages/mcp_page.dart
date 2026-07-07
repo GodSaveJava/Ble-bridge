@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../application/models/active_device_adapter_readiness.dart';
@@ -76,7 +79,8 @@ class McpPage extends ConsumerWidget {
       orElse: () => false,
     );
     final RemoteBridgeRuntimeSource bridgeSource;
-    if (remoteBridgeService case final RemoteBridgeServiceDiagnostics diagnostics) {
+    if (remoteBridgeService
+        case final RemoteBridgeServiceDiagnostics diagnostics) {
       bridgeSource = diagnostics.runtimeSource;
     } else {
       bridgeSource = RemoteBridgeRuntimeSource.unknown;
@@ -106,7 +110,9 @@ class McpPage extends ConsumerWidget {
                       runSpacing: 8,
                       children: <Widget>[
                         _StatusChip(
-                          label: localMcpState.isRunning ? 'MCP 已启动' : 'MCP 未启动',
+                          label: localMcpState.isRunning
+                              ? 'MCP 已启动'
+                              : 'MCP 未启动',
                         ),
                         _StatusChip(label: aiControlStatus),
                       ],
@@ -218,7 +224,9 @@ class McpPage extends ConsumerWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
-                        _StatusChip(label: bridgeSessionStatusLabel(bridgeState.status)),
+                        _StatusChip(
+                          label: bridgeSessionStatusLabel(bridgeState.status),
+                        ),
                         _StatusChip(label: bridgeSourceLabel(bridgeSource)),
                         _StatusChip(
                           label: bridgeState.canOnboardClaude
@@ -253,9 +261,15 @@ class McpPage extends ConsumerWidget {
                     ],
                     const SizedBox(height: 4),
                     Text('当前桥接来源：${bridgeSourceDescription(bridgeSource)}'),
+                    if (bridgeState.canOnboardClaude) ...<Widget>[
+                      const SizedBox(height: 12),
+                      _ConnectorCard(bridgeState: bridgeState),
+                    ],
                     if (bridgeSource == RemoteBridgeRuntimeSource.savedConfig &&
-                        (bridgeState.status == RemoteBridgeSessionStatus.offline ||
-                            bridgeState.status == RemoteBridgeSessionStatus.error)) ...<Widget>[
+                        (bridgeState.status ==
+                                RemoteBridgeSessionStatus.offline ||
+                            bridgeState.status ==
+                                RemoteBridgeSessionStatus.error)) ...<Widget>[
                       const SizedBox(height: 8),
                       Text(
                         '你已经启用了已保存的真实 Bridge 配置。如果桥接会话启动失败，请先回到远程桥接配置页执行一次“测试连接”。',
@@ -279,15 +293,17 @@ class McpPage extends ConsumerWidget {
                     const SizedBox(height: 12),
                     BridgeDiagnosticsBanner(
                       diagnostics: bridgeDiagnostics,
-                      onActionPressed: () => handleRemoteBridgeDiagnosticsAction(
-                        context: context,
-                        diagnostics: bridgeDiagnostics,
-                        onRestartBridgeSession: () => ref
-                            .read(
-                              remoteBridgeSessionControllerProvider.notifier,
-                            )
-                            .startSession(),
-                      ),
+                      onActionPressed: () =>
+                          handleRemoteBridgeDiagnosticsAction(
+                            context: context,
+                            diagnostics: bridgeDiagnostics,
+                            onRestartBridgeSession: () => ref
+                                .read(
+                                  remoteBridgeSessionControllerProvider
+                                      .notifier,
+                                )
+                                .startSession(),
+                          ),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -303,9 +319,7 @@ class McpPage extends ConsumerWidget {
                                           .notifier,
                                     )
                                     .startSession(),
-                          child: Text(
-                            bridgeState.isBusy ? '处理中...' : '启动桥接会话',
-                          ),
+                          child: Text(bridgeState.isBusy ? '处理中...' : '启动桥接会话'),
                         ),
                         OutlinedButton(
                           onPressed: bridgeState.isBusy
@@ -319,7 +333,8 @@ class McpPage extends ConsumerWidget {
                           child: const Text('刷新接入信息'),
                         ),
                         OutlinedButton(
-                          onPressed: bridgeState.isBusy ||
+                          onPressed:
+                              bridgeState.isBusy ||
                                   bridgeState.isConsumingTask ||
                                   bridgeState.status !=
                                       RemoteBridgeSessionStatus.ready
@@ -331,9 +346,7 @@ class McpPage extends ConsumerWidget {
                                     )
                                     .consumeNextTask(),
                           child: Text(
-                            bridgeState.isConsumingTask
-                                ? '拉取中...'
-                                : '拉取一条远程任务',
+                            bridgeState.isConsumingTask ? '拉取中...' : '拉取一条远程任务',
                           ),
                         ),
                         OutlinedButton(
@@ -356,7 +369,8 @@ class McpPage extends ConsumerWidget {
                           child: const Text('重新生成接入信息'),
                         ),
                         OutlinedButton(
-                          onPressed: bridgeState.isBusy ||
+                          onPressed:
+                              bridgeState.isBusy ||
                                   bridgeState.status ==
                                       RemoteBridgeSessionStatus.offline
                               ? null
@@ -372,9 +386,7 @@ class McpPage extends ConsumerWidget {
                           OutlinedButton(
                             onPressed: () => context.push('/claude-onboarding'),
                             child: Text(
-                              claudeSetupCompleted
-                                  ? '查看接入信息'
-                                  : '去配置 Claude',
+                              claudeSetupCompleted ? '查看接入信息' : '去配置 Claude',
                             ),
                           ),
                       ],
@@ -384,9 +396,9 @@ class McpPage extends ConsumerWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -398,9 +410,7 @@ class McpPage extends ConsumerWidget {
                               children: <Widget>[
                                 Text(
                                   '自动拉取远程任务',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleSmall,
+                                  style: Theme.of(context).textTheme.titleSmall,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -414,7 +424,8 @@ class McpPage extends ConsumerWidget {
                           const SizedBox(width: 12),
                           Switch(
                             value: bridgeState.isAutoConsumeEnabled,
-                            onChanged: bridgeState.isBusy ||
+                            onChanged:
+                                bridgeState.isBusy ||
                                     bridgeState.isConsumingTask ||
                                     (bridgeState.status !=
                                             RemoteBridgeSessionStatus.ready &&
@@ -437,13 +448,11 @@ class McpPage extends ConsumerWidget {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: (bridgeState.lastTaskResult?.ok ?? false)
-                              ? Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer
+                              ? Theme.of(context).colorScheme.primaryContainer
                                     .withValues(alpha: 0.72)
-                              : Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Column(
@@ -496,7 +505,9 @@ class McpPage extends ConsumerWidget {
                 ),
               ),
             ),
-            if (claudeHealthAsync case AsyncData<ClaudeConnectorHealthCheck>(:final value))
+            if (claudeHealthAsync case AsyncData<ClaudeConnectorHealthCheck>(
+              :final value,
+            ))
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -508,7 +519,9 @@ class McpPage extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      _StatusChip(label: _claudeHealthStatusLabel(value.status)),
+                      _StatusChip(
+                        label: _claudeHealthStatusLabel(value.status),
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         value.title,
@@ -517,14 +530,8 @@ class McpPage extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(value.summary),
                       const SizedBox(height: 12),
-                      _HealthRow(
-                        label: '设备验证通过',
-                        passed: value.deviceReady,
-                      ),
-                      _HealthRow(
-                        label: '桥接会话已就绪',
-                        passed: value.bridgeReady,
-                      ),
+                      _HealthRow(label: '设备验证通过', passed: value.deviceReady),
+                      _HealthRow(label: '桥接会话已就绪', passed: value.bridgeReady),
                       _HealthRow(
                         label: '接入信息已生成',
                         passed: value.connectorReady,
@@ -645,6 +652,138 @@ class _NextStepBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ConnectorCard extends StatelessWidget {
+  const _ConnectorCard({required this.bridgeState});
+
+  final RemoteBridgeSessionState bridgeState;
+
+  @override
+  Widget build(BuildContext context) {
+    final String openTools = bridgeState.toolNames.join(' / ');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Icon(
+                Icons.badge_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'ToyLink 连接卡片',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('把这张卡复制到你的 AI 工具配置里，用户侧只需要完成一次搬运。'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _StatusChip(label: '开放工具：$openTools'),
+              _StatusChip(label: '安全 V0'),
+              _StatusChip(label: 'Token：${bridgeState.maskedToken ?? '已生成'}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SelectableText(
+            bridgeState.connectorUrl ?? '',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: <Widget>[
+              FilledButton.icon(
+                onPressed: () => _copyConnectorConfig(context, bridgeState),
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('复制连接卡片'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _copyConnectorUrl(context, bridgeState),
+                icon: const Icon(Icons.link, size: 18),
+                label: const Text('只复制地址'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '验证方式：让你的 AI 调用 get_status；需要停机时只能调用 stop_all。Phase 1 不开放 set_* 控制。',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyConnectorConfig(
+    BuildContext context,
+    RemoteBridgeSessionState state,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: _connectorCardJson(state)));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('连接卡片已复制')));
+  }
+
+  Future<void> _copyConnectorUrl(
+    BuildContext context,
+    RemoteBridgeSessionState state,
+  ) async {
+    final String connectorUrl = state.connectorUrl ?? '';
+    if (connectorUrl.isEmpty) {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: connectorUrl));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('接入地址已复制')));
+  }
+}
+
+String _connectorCardJson(RemoteBridgeSessionState state) {
+  return const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+    'type': 'toylink_connector_card',
+    'version': 1,
+    'phase': 'safety_v0',
+    'connectorUrl': state.connectorUrl,
+    'auth': <String, Object?>{'type': 'bearer', 'token': state.connectorToken},
+    'tools': state.toolNames,
+    'instructions':
+        'Only call get_status and stop_all in Phase 1. Remote set_* controls are not enabled.',
+  });
 }
 
 class _McpAction {
@@ -821,4 +960,3 @@ String _claudeHealthStatusLabel(ClaudeConnectorHealthStatus status) {
     ClaudeConnectorHealthStatus.ready => '自检通过',
   };
 }
-

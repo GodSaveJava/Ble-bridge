@@ -17,6 +17,7 @@
 - `flutter build apk --debug` 已通过，产物为 `build\app\outputs\flutter-apk\app-debug.apk`。
 - 当前 ADB 没有检测到 Android 真机，Flutter 也没有可用 AVD；真机 BLE 验证仍需用户连接设备并打开 USB 调试。
 - 仍缺少当天真机证据：扫描、连接、adapter binding、低强度验证、急停、后台保活、Bridge 调用截图或日志 manifest。
+- 用户配置流程的第一轮简化已落地为 MCP 页连接卡片：用户可以一键复制结构化 connector 配置，不再分别搬运 URL、token 和工具范围。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。
 - `stop_all` 远程/MCP 端到端抢占证据已补：远程 `/mobile-bridge/tool-call` 可触发设备层 stop 包，并 supersede pending 非 stop 写入。

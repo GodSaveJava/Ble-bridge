@@ -356,6 +356,18 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
+      find.text(_kConnectorCardTitle),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kConnectorCardTitle), findsOneWidget);
+    expect(find.text(_kCopyConnectorCard), findsOneWidget);
+    expect(find.text(_kOpenSafetyTools), findsOneWidget);
+    expect(find.textContaining(_kSafetyV0SetToolsBlocked), findsOneWidget);
+
+    await tester.scrollUntilVisible(
       find.text(_kClaudeHealthCheckTitle),
       300,
       scrollable: find.byType(Scrollable).first,
@@ -451,7 +463,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('最近任务处理成功'), findsOneWidget);
-    expect(find.textContaining('get_status'), findsOneWidget);
+    expect(find.textContaining('已处理远程任务：get_status'), findsOneWidget);
     expect(find.textContaining('bridge-task-9'), findsOneWidget);
   });
 
@@ -537,7 +549,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
 
     expect(find.textContaining('已自动处理远程任务'), findsOneWidget);
-    expect(find.textContaining('stop_all'), findsOneWidget);
+    expect(find.textContaining('已自动处理远程任务：stop_all'), findsOneWidget);
     expect(find.textContaining('bridge-task-auto-9'), findsOneWidget);
   });
 
@@ -1327,6 +1339,10 @@ const String _kConnectorUrlReady =
     '接入地址：https://bridge.toylink.local/mcp/claude';
 const String _kConnectorTokenReady = '接入令牌：已生成';
 const String _kGoConfigureClaude = '去配置 Claude';
+const String _kConnectorCardTitle = 'ToyLink 连接卡片';
+const String _kCopyConnectorCard = '复制连接卡片';
+const String _kOpenSafetyTools = '开放工具：get_status / stop_all';
+const String _kSafetyV0SetToolsBlocked = 'Phase 1 不开放 set_* 控制';
 const String _kClaudeOnboardingTitle = 'Claude 接入向导';
 const String _kClaudeBlockedTitle = '还不能开始 Claude 接入';
 const String _kClaudeReadyTitle = '现在可以开始接入 Claude';

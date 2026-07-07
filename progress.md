@@ -82,3 +82,13 @@
   - `flutter build apk --debug`: PASS, output `build\app\outputs\flutter-apk\app-debug.apk`.
   - `adb devices -l`: no Android device attached.
   - `flutter emulators`: no Android AVD source available.
+
+## 2026-07-07
+
+- Started Phase 2 BYO-AI onboarding simplification while preserving Phase 1 Safety V0 boundaries.
+- Added a ToyLink connector card to the MCP page when the remote bridge session is ready:
+  - Shows connector URL, masked token, Safety V0 status, and current tools.
+  - Provides one-click copy for a structured connector card JSON.
+  - Keeps Phase 1 copy explicit: only `get_status` and `stop_all`; remote `set_*` remains unavailable.
+- Verification:
+  - `flutter test test\widget_test.dart --name "mcp page shows connector info after remote bridge is ready"`: PASS.
