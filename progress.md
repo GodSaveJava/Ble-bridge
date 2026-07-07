@@ -122,3 +122,19 @@
 - The connection card now generates copyable templates for Claude Remote MCP, ChatGPT / GPT Actions, OpenAPI / REST Tool, and Webhook.
 - GPT Actions and OpenAPI templates are emitted as OpenAPI 3.1 JSON with bearer auth and a strict `get_status` / `stop_all` enum.
 - Copying any platform template moves the UI into the same `get_status` verification wait state.
+
+## 2026-07-07
+
+- Added REST/OpenAPI connector smoke evidence for Phase 2.
+- The new smoke test generates an OpenAPI / REST Tool template from a Safety V0 connector card, parses the generated schema, starts the local MCP HTTP service, and performs a real `POST /mobile-bridge/tool-call` request for `get_status`.
+- Verification:
+  - `flutter test test\features\connector_rest_openapi_smoke_test.dart`: PASS, with `POST [200] /mobile-bridge/tool-call`.
+  - `flutter analyze`: PASS.
+  - Full `flutter test`: PASS, `200` tests.
+  - `cd bridge_server; dart test`: PASS, `10` tests.
+  - `flutter build apk --debug`: PASS, output `build\app\outputs\flutter-apk\app-debug.apk`.
+  - `git diff --check`: PASS.
+- Scope note:
+  - This is reproducible REST/OpenAPI client evidence.
+  - It is not yet live external ChatGPT / Claude platform evidence.
+  - MCP client live evidence remains pending.

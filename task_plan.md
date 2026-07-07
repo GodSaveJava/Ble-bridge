@@ -47,7 +47,9 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
   - [x] 二维码 / deep link 导出：用于跨设备搬运连接卡片
   - [x] Android deep link 导入：从 `toylink://connector-card/v1` 打开并预填连接卡片
   - [x] 多平台模板：Claude、ChatGPT / GPT Actions、OpenAPI、Webhook
-  - [ ] 真实平台接入证据：至少一个 MCP 客户端和一个 REST / OpenAPI tool 客户端
+  - [x] REST / OpenAPI tool 客户端 smoke 证据：从生成 schema 发起真实 `get_status` HTTP 调用
+  - [ ] MCP 客户端 live evidence
+  - [ ] 外部平台手工证据：至少一个 ChatGPT / Claude / 其他用户自有 AI 工具调用环境
 - [ ] Phase 3：低强度控制开放
 - [ ] Phase 4：GPT / 多平台正式支持
 - [ ] Phase 5：规模化与发布
@@ -56,6 +58,7 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
 
 - 当前 Codex 进程没有继承新的用户 PATH；新 PowerShell 或重启 Codex 后应能直接找到 `flutter` / `dart`。
 - `flutter doctor -v` Android toolchain 已通过；仅剩 Windows desktop Visual Studio 缺失和当前进程 PATH 提示，不阻塞 Android。
+- `flutter build apk --debug` 当前可通过，但会提示 Kotlin Gradle Plugin 未来版本兼容警告，需要后续依赖/Gradle 迁移跟踪。
 - 没有 2026-07-06 真机 BLE 扫描、连接、adapter verification、急停、后台保活证据。
 - Phase 1 软件侧安全基线已通过，包含 `stop_all` 远程/MCP 端到端抢占测试；Android debug APK 可构建；真机 BLE 与 Android 后台保活证据仍缺失。
 
@@ -65,6 +68,7 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
 - `CODEX.md`
 - `docs/evidence/2026-07-06-phase-0-baseline-evidence.md`
 - `docs/evidence/2026-07-06-phase-1-safety-v0-evidence.md`
+- `docs/evidence/2026-07-07-phase-2-rest-openapi-connector-evidence.md`
 - `docs/evidence/phase-0-1-evidence-manifest-template.md`
 - `docs/16-product-goals-and-next-design-plan.md`
 - `docs/19-claude-remote-mcp-architecture.md`
@@ -80,4 +84,4 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
 1. 接入 Android 真机，开启 USB 调试后采集 ADB 设备识别证据。
 2. 安装 debug APK，切换 Real BLE，采集扫描、连接、adapter verification、急停与后台保活证据。
 3. 全量回归后再评估 Phase 1 是否可判 PASS。
-4. 继续扩展 Phase 2：真实平台接入证据、通用 AI Connector Setup 页面化。
+4. 继续扩展 Phase 2：MCP 客户端 live evidence、外部平台手工证据、通用 AI Connector Setup 页面化。

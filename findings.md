@@ -15,6 +15,7 @@
 - 用户级 PATH 已包含 `C:\Users\NPC\dev\flutter\bin`；当前 Codex 进程没有继承，需要重启或在命令中显式重载 PATH。
 - Android cmdline-tools 已补齐到 `C:\Users\NPC\AppData\Local\Android\Sdk`；`flutter doctor -v` Android toolchain 已通过。
 - `flutter build apk --debug` 已通过，产物为 `build\app\outputs\flutter-apk\app-debug.apk`。
+- 当前 Android debug APK 构建会提示 Kotlin Gradle Plugin 未来版本兼容警告；2026-07-07 构建仍为 PASS，但后续应安排依赖/Gradle 迁移跟踪。
 - 当前 ADB 没有检测到 Android 真机，Flutter 也没有可用 AVD；真机 BLE 验证仍需用户连接设备并打开 USB 调试。
 - 仍缺少当天真机证据：扫描、连接、adapter binding、低强度验证、急停、后台保活、Bridge 调用截图或日志 manifest。
 - 用户配置流程的第一轮简化已落地为 MCP 页连接卡片：用户可以一键复制结构化 connector 配置，不再分别搬运 URL、token 和工具范围。
@@ -22,6 +23,9 @@
 - 连接卡片跨设备搬运已支持 QR/deep link 导出：MCP 页可展示二维码并复制 `toylink://connector-card/v1` URI。
 - Android deep link 导入已落地：`toylink://connector-card/v1` 可打开导入页并校验 Safety V0 payload，包含 `set_*` 的卡片会被拒绝。
 - 多平台模板已落地：MCP 页可复制 Claude Remote MCP、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 四类 Safety V0 模板；仍需真实平台接入证据。
+- REST/OpenAPI 模板已有自动化 smoke 证据：测试会从生成的 OpenAPI schema 反推 server/path/tool enum，并实际调用本地 `POST /mobile-bridge/tool-call` 的 `get_status`，返回 200；这只能证明 REST/OpenAPI 客户端路径可用，不能替代 ChatGPT / Claude 外部平台实测。
+- Phase 2 真实平台接入证据需要拆开验收：REST/OpenAPI smoke 已补；MCP 客户端 live evidence 与外部平台手工证据仍未完成。
+- 2026-07-07 全量回归通过：`flutter analyze`、`flutter test`（200 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。
 - `stop_all` 远程/MCP 端到端抢占证据已补：远程 `/mobile-bridge/tool-call` 可触发设备层 stop 包，并 supersede pending 非 stop 写入。
