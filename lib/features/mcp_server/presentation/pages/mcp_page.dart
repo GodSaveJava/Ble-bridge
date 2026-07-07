@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +8,7 @@ import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
 import '../../../../domain/entities/remote_bridge_session.dart';
 import '../../../../domain/services/remote_bridge_service.dart';
+import '../../domain/connector_card_payload.dart';
 import '../../../../shared/widgets/bridge_source_info.dart';
 import '../../../../shared/widgets/bridge_session_copy.dart';
 import '../../../../shared/widgets/bridge_diagnostics_banner.dart';
@@ -762,7 +761,9 @@ class _ConnectorCard extends ConsumerWidget {
     ref
         .read(remoteBridgeSessionControllerProvider.notifier)
         .markConnectorCardCopied();
-    await Clipboard.setData(ClipboardData(text: _connectorCardJson(state)));
+    await Clipboard.setData(
+      ClipboardData(text: _connectorCardPayload(state).toPrettyJson()),
+    );
     if (!context.mounted) {
       return;
     }
@@ -796,7 +797,9 @@ class _ConnectorCard extends ConsumerWidget {
     ref
         .read(remoteBridgeSessionControllerProvider.notifier)
         .markConnectorCardCopied();
-    await Clipboard.setData(ClipboardData(text: _connectorCardDeepLink(state)));
+    await Clipboard.setData(
+      ClipboardData(text: _connectorCardPayload(state).toDeepLink()),
+    );
     if (!context.mounted) {
       return;
     }
@@ -814,7 +817,7 @@ class _ConnectorTransferPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final String deepLink = _connectorCardDeepLink(bridgeState);
+    final String deepLink = _connectorCardPayload(bridgeState).toDeepLink();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -948,30 +951,12 @@ class _ConnectorVerificationPanel extends StatelessWidget {
   }
 }
 
-String _connectorCardJson(RemoteBridgeSessionState state) {
-  return const JsonEncoder.withIndent(
-    '  ',
-  ).convert(_connectorCardPayload(state));
-}
-
-String _connectorCardDeepLink(RemoteBridgeSessionState state) {
-  final String payload = base64UrlEncode(
-    utf8.encode(jsonEncode(_connectorCardPayload(state))),
+ConnectorCardPayload _connectorCardPayload(RemoteBridgeSessionState state) {
+  return ConnectorCardPayload.fromBridgeSession(
+    connectorUrl: state.connectorUrl,
+    connectorToken: state.connectorToken,
+    toolNames: state.toolNames,
   );
-  return 'toylink://connector-card/v1?payload=$payload';
-}
-
-Map<String, Object?> _connectorCardPayload(RemoteBridgeSessionState state) {
-  return <String, Object?>{
-    'type': 'toylink_connector_card',
-    'version': 1,
-    'phase': 'safety_v0',
-    'connectorUrl': state.connectorUrl,
-    'auth': <String, Object?>{'type': 'bearer', 'token': state.connectorToken},
-    'tools': state.toolNames,
-    'instructions':
-        'Only call get_status and stop_all in Phase 1. Remote set_* controls are not enabled.',
-  };
 }
 
 class _McpAction {

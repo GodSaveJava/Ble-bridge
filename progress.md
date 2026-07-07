@@ -107,3 +107,11 @@
 - The MCP page now renders a QR code and copyable `toylink://connector-card/v1?...` URI generated from the same Safety V0 connector payload.
 - Copying the deep link also moves the UI into the `get_status` verification wait state.
 - Android deep link import is still a follow-up item; this step only solves cross-device transport/export.
+
+## 2026-07-07
+
+- Added Android deep link import for connector cards.
+- Android Manifest now accepts `toylink://connector-card/v1` VIEW intents.
+- The app routes imported connector links to a connector card import page that parses the payload, validates Safety V0 constraints, previews URL/token/tools, and lets the user copy the card again.
+- Imported payloads containing non-V0 tools such as `set_suck` are rejected instead of being treated as valid connector cards.
+- Emulator smoke test passed on `emulator-5554`: installed debug APK, launched `toylink://connector-card/v1?...` with `adb shell am start`, and confirmed the import page rendered.

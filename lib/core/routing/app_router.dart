@@ -8,6 +8,7 @@ import '../../features/device_manager/presentation/pages/device_manager_page.dar
 import '../../features/device_manager/presentation/pages/adapter_verification_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/mcp_server/presentation/pages/claude_onboarding_page.dart';
+import '../../features/mcp_server/presentation/pages/connector_card_import_page.dart';
 import '../../features/mcp_server/presentation/pages/mcp_page.dart';
 import '../../features/settings/presentation/pages/background_stability_checklist_page.dart';
 import '../../features/settings/presentation/pages/remote_bridge_config_page.dart';
@@ -42,6 +43,14 @@ class AppRouter {
             builder: (_, _) => const BackgroundStabilityChecklistPage(),
           ),
           GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
+          GoRoute(
+            path: '/connector-card/v1',
+            builder: (_, state) => ConnectorCardImportPage(uri: state.uri),
+          ),
+          GoRoute(
+            path: '/v1',
+            builder: (_, state) => ConnectorCardImportPage(uri: state.uri),
+          ),
           GoRoute(
             path: '/claude-onboarding',
             builder: (_, _) => const ClaudeOnboardingPage(),
