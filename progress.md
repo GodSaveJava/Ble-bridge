@@ -92,3 +92,11 @@
   - Keeps Phase 1 copy explicit: only `get_status` and `stop_all`; remote `set_*` remains unavailable.
 - Verification:
   - `flutter test test\widget_test.dart --name "mcp page shows connector info after remote bridge is ready"`: PASS.
+
+## 2026-07-07
+
+- Continued Phase 2 onboarding simplification with a connector verification loop.
+- The MCP page now treats the first successful `get_status` remote task as proof that the user's own AI is connected:
+  - Copying the connector card moves the UI into "waiting for get_status".
+  - A successful `get_status` task automatically marks the connector as verified.
+  - Safety V0 copy remains unchanged: only `get_status` and `stop_all` are allowed.

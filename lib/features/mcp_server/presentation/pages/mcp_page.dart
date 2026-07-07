@@ -654,13 +654,13 @@ class _NextStepBanner extends StatelessWidget {
   }
 }
 
-class _ConnectorCard extends StatelessWidget {
+class _ConnectorCard extends ConsumerWidget {
   const _ConnectorCard({required this.bridgeState});
 
   final RemoteBridgeSessionState bridgeState;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final String openTools = bridgeState.toolNames.join(' / ');
     return Container(
       width: double.infinity,
@@ -716,12 +716,15 @@ class _ConnectorCard extends StatelessWidget {
             ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
           ),
           const SizedBox(height: 12),
+          _ConnectorVerificationPanel(bridgeState: bridgeState),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: <Widget>[
               FilledButton.icon(
-                onPressed: () => _copyConnectorConfig(context, bridgeState),
+                onPressed: () =>
+                    _copyConnectorConfig(context, ref, bridgeState),
                 icon: const Icon(Icons.copy, size: 18),
                 label: const Text('复制连接卡片'),
               ),
@@ -744,8 +747,12 @@ class _ConnectorCard extends StatelessWidget {
 
   Future<void> _copyConnectorConfig(
     BuildContext context,
+    WidgetRef ref,
     RemoteBridgeSessionState state,
   ) async {
+    ref
+        .read(remoteBridgeSessionControllerProvider.notifier)
+        .markConnectorCardCopied();
     await Clipboard.setData(ClipboardData(text: _connectorCardJson(state)));
     if (!context.mounted) {
       return;
@@ -770,6 +777,74 @@ class _ConnectorCard extends StatelessWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('接入地址已复制')));
+  }
+}
+
+class _ConnectorVerificationPanel extends StatelessWidget {
+  const _ConnectorVerificationPanel({required this.bridgeState});
+
+  final RemoteBridgeSessionState bridgeState;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final bool verified = bridgeState.isConnectorVerified;
+    final bool waiting = bridgeState.isConnectorVerificationWaiting;
+    final IconData icon = verified
+        ? Icons.verified_outlined
+        : waiting
+        ? Icons.hourglass_top_outlined
+        : Icons.radio_button_unchecked;
+    final Color color = verified
+        ? colors.primary
+        : waiting
+        ? colors.tertiary
+        : colors.onSurfaceVariant;
+    final String title = verified
+        ? 'AI 已连接/验证通过'
+        : waiting
+        ? '等待 AI 调用 get_status'
+        : '复制连接卡片后开始验证';
+    final String body = verified
+        ? '已收到一次成功的 get_status 调用。后续仍按 Safety V0 只允许 get_status / stop_all。'
+        : waiting
+        ? '回到你的 AI 聊天页面，让它调用 get_status；ToyLink 收到后会自动标记成功。'
+        : '先复制连接卡片并粘贴到你的 AI 工具配置中，再用 get_status 做首次真实验证。';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: verified
+            ? colors.primaryContainer.withValues(alpha: 0.56)
+            : colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: verified ? colors.primary : colors.outlineVariant,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(body, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

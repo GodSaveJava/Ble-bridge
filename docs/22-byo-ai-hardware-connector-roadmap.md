@@ -84,6 +84,8 @@ ToyLink 不是聊天替代品，不迁移聊天记录、角色关系或记忆体
 
 目标：让不同 AI 平台都能接入 ToyLink，但仍只开放安全 V0 工具。
 
+- 在 App 内生成连接卡片，打包 connector URL、token、阶段、安全工具范围和接入说明，减少用户手动搬运配置项。
+- 复制连接卡片后进入验证状态，收到首次成功 `get_status` 后自动标记 AI 已连接。
 - MCP Connector 作为首选协议。
 - 增加 OpenAPI / REST tool schema，服务不支持 MCP 但支持 HTTP tools 的用户 AI。
 - 提供 Claude、ChatGPT / GPT、自建 Agent 三套接入说明。

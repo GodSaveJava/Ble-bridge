@@ -21,6 +21,8 @@ class RemoteBridgeSessionState {
     this.isAutoConsumeEnabled = false,
     this.lastTaskResult,
     this.taskFeedbackMessage,
+    this.connectorCardCopiedAt,
+    this.connectorVerifiedAt,
   });
 
   factory RemoteBridgeSessionState.fromSession(RemoteBridgeSession session) {
@@ -50,6 +52,8 @@ class RemoteBridgeSessionState {
   final bool isAutoConsumeEnabled;
   final RemoteBridgeTaskResult? lastTaskResult;
   final String? taskFeedbackMessage;
+  final DateTime? connectorCardCopiedAt;
+  final DateTime? connectorVerifiedAt;
 
   bool get isBusy =>
       status == RemoteBridgeSessionStatus.connecting ||
@@ -61,6 +65,11 @@ class RemoteBridgeSessionState {
       connectorUrl!.isNotEmpty &&
       connectorToken != null &&
       connectorToken!.isNotEmpty;
+
+  bool get isConnectorVerificationWaiting =>
+      connectorCardCopiedAt != null && connectorVerifiedAt == null;
+
+  bool get isConnectorVerified => connectorVerifiedAt != null;
 
   RemoteBridgeSessionState copyWith({
     RemoteBridgeSessionStatus? status,
@@ -76,8 +85,11 @@ class RemoteBridgeSessionState {
     bool? isAutoConsumeEnabled,
     RemoteBridgeTaskResult? lastTaskResult,
     String? taskFeedbackMessage,
+    DateTime? connectorCardCopiedAt,
+    DateTime? connectorVerifiedAt,
     bool clearError = false,
     bool clearTaskFeedback = false,
+    bool clearConnectorVerification = false,
   }) {
     return RemoteBridgeSessionState(
       status: status ?? this.status,
@@ -90,14 +102,19 @@ class RemoteBridgeSessionState {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
       isConsumingTask: isConsumingTask ?? this.isConsumingTask,
-      isAutoConsumeEnabled:
-          isAutoConsumeEnabled ?? this.isAutoConsumeEnabled,
+      isAutoConsumeEnabled: isAutoConsumeEnabled ?? this.isAutoConsumeEnabled,
       lastTaskResult: clearTaskFeedback
           ? null
           : (lastTaskResult ?? this.lastTaskResult),
       taskFeedbackMessage: clearTaskFeedback
           ? null
           : (taskFeedbackMessage ?? this.taskFeedbackMessage),
+      connectorCardCopiedAt: clearConnectorVerification
+          ? null
+          : (connectorCardCopiedAt ?? this.connectorCardCopiedAt),
+      connectorVerifiedAt: clearConnectorVerification
+          ? null
+          : (connectorVerifiedAt ?? this.connectorVerifiedAt),
     );
   }
 }
@@ -110,7 +127,9 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
   RemoteBridgeSessionState build() {
     final useCase = ref.watch(manageRemoteBridgeSessionUseCaseProvider);
     _subscription?.cancel();
-    _subscription = useCase.watchSession().listen((RemoteBridgeSession session) {
+    _subscription = useCase.watchSession().listen((
+      RemoteBridgeSession session,
+    ) {
       state = _mergeSession(session);
     });
     ref.onDispose(() {
@@ -180,26 +199,32 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
 
   Future<void> setAutoConsumeEnabled(bool enabled) async {
     try {
-      await ref.read(manageRemoteBridgeAutoConsumeUseCaseProvider).saveEnabled(
-            enabled,
-          );
+      await ref
+          .read(manageRemoteBridgeAutoConsumeUseCaseProvider)
+          .saveEnabled(enabled);
       state = state.copyWith(
         isAutoConsumeEnabled: enabled,
-        taskFeedbackMessage:
-            enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
+        taskFeedbackMessage: enabled ? '已开启自动拉取远程任务。' : '已关闭自动拉取远程任务。',
         lastTaskResult: enabled ? state.lastTaskResult : null,
       );
     } catch (_) {
       state = state.copyWith(
-        taskFeedbackMessage: enabled
-            ? '自动拉取启用失败，请稍后重试。'
-            : '自动拉取关闭失败，请稍后重试。',
+        taskFeedbackMessage: enabled ? '自动拉取启用失败，请稍后重试。' : '自动拉取关闭失败，请稍后重试。',
       );
     }
   }
 
   void clearError() {
     state = state.copyWith(clearError: true);
+  }
+
+  void markConnectorCardCopied() {
+    state = state.copyWith(
+      connectorCardCopiedAt: DateTime.now(),
+      taskFeedbackMessage: state.isConnectorVerified
+          ? state.taskFeedbackMessage
+          : '连接卡片已复制，等待 AI 调用 get_status。',
+    );
   }
 
   Future<void> _consumeNextTask({
@@ -232,9 +257,11 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
         return;
       }
 
+      final bool verifiesConnector = result.ok && result.tool == 'get_status';
       state = state.copyWith(
         isConsumingTask: false,
         lastTaskResult: result,
+        connectorVerifiedAt: verifiesConnector ? DateTime.now() : null,
         taskFeedbackMessage: result.ok
             ? '$successPrefix${result.tool ?? 'unknown'}'
             : (result.errorMessage ?? '远程任务处理失败。'),
@@ -248,11 +275,20 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
   }
 
   RemoteBridgeSessionState _mergeSession(RemoteBridgeSession session) {
-    return RemoteBridgeSessionState.fromSession(session).copyWith(
+    final RemoteBridgeSessionState next = RemoteBridgeSessionState.fromSession(
+      session,
+    );
+    final bool sameConnector =
+        next.connectorUrl == state.connectorUrl &&
+        next.connectorToken == state.connectorToken;
+    return next.copyWith(
       isConsumingTask: state.isConsumingTask,
       isAutoConsumeEnabled: state.isAutoConsumeEnabled,
       lastTaskResult: state.lastTaskResult,
       taskFeedbackMessage: state.taskFeedbackMessage,
+      connectorCardCopiedAt: sameConnector ? state.connectorCardCopiedAt : null,
+      connectorVerifiedAt: sameConnector ? state.connectorVerifiedAt : null,
+      clearConnectorVerification: !sameConnector,
     );
   }
 
@@ -286,15 +322,13 @@ class RemoteBridgeSessionController extends Notifier<RemoteBridgeSessionState> {
         return;
       }
       if (!state.isAutoConsumeEnabled) {
-        state = state.copyWith(
-          taskFeedbackMessage: '自动拉取设置读取失败，已保持关闭。',
-        );
+        state = state.copyWith(taskFeedbackMessage: '自动拉取设置读取失败，已保持关闭。');
       }
     }
   }
 }
 
-final remoteBridgeSessionControllerProvider = NotifierProvider<
-  RemoteBridgeSessionController,
-  RemoteBridgeSessionState
->(RemoteBridgeSessionController.new);
+final remoteBridgeSessionControllerProvider =
+    NotifierProvider<RemoteBridgeSessionController, RemoteBridgeSessionState>(
+      RemoteBridgeSessionController.new,
+    );

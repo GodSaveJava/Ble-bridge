@@ -60,7 +60,9 @@ void main() {
     test('surfaces a friendly error when bridge session start fails', () async {
       final ProviderContainer container = ProviderContainer(
         overrides: [
-          remoteBridgeServiceProvider.overrideWith((_) => _FailingBridgeService()),
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => _FailingBridgeService(),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -125,6 +127,28 @@ void main() {
       );
       expect(state.lastTaskResult?.requestId, 'bridge-task-7');
       expect(state.taskFeedbackMessage, contains('get_status'));
+      expect(state.isConnectorVerified, isTrue);
+    });
+
+    test('markConnectorCardCopied starts verification wait state', () {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          remoteBridgeServiceProvider.overrideWith(
+            (_) => MockRemoteBridgeService(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container
+          .read(remoteBridgeSessionControllerProvider.notifier)
+          .markConnectorCardCopied();
+
+      final RemoteBridgeSessionState state = container.read(
+        remoteBridgeSessionControllerProvider,
+      );
+      expect(state.isConnectorVerificationWaiting, isTrue);
+      expect(state.taskFeedbackMessage, contains('等待 AI 调用 get_status'));
     });
 
     test('auto consume fetches ready task after enabling loop', () async {
@@ -206,7 +230,9 @@ void main() {
 
       expect(await repository.loadEnabled(), isTrue);
       expect(
-        container.read(remoteBridgeSessionControllerProvider).isAutoConsumeEnabled,
+        container
+            .read(remoteBridgeSessionControllerProvider)
+            .isAutoConsumeEnabled,
         isTrue,
       );
     });
@@ -219,20 +245,21 @@ ProcessNextRemoteBridgeTaskUseCase _testProcessUseCase(
   return ProcessNextRemoteBridgeTaskUseCase(
     remoteBridgeService: bridgeService,
     assignmentHandler: RemoteBridgeTaskAssignmentHandler(
-      consumeTask: ({
-        String? requestId,
-        required String tool,
-        Map<String, Object?> input = const <String, Object?>{},
-      }) async {
-        return RemoteBridgeTaskResult(
-          ok: true,
-          requestId: requestId,
-          tool: tool,
-          result: tool == 'get_status'
-              ? const <String, Object?>{'deviceId': 'mock-sosexy-001'}
-              : const <String, Object?>{'stopped': true},
-        );
-      },
+      consumeTask:
+          ({
+            String? requestId,
+            required String tool,
+            Map<String, Object?> input = const <String, Object?>{},
+          }) async {
+            return RemoteBridgeTaskResult(
+              ok: true,
+              requestId: requestId,
+              tool: tool,
+              result: tool == 'get_status'
+                  ? const <String, Object?>{'deviceId': 'mock-sosexy-001'}
+                  : const <String, Object?>{'stopped': true},
+            );
+          },
     ),
   );
 }

@@ -366,6 +366,18 @@ void main() {
     expect(find.text(_kCopyConnectorCard), findsOneWidget);
     expect(find.text(_kOpenSafetyTools), findsOneWidget);
     expect(find.textContaining(_kSafetyV0SetToolsBlocked), findsOneWidget);
+    expect(find.text(_kCopyCardToVerify), findsOneWidget);
+
+    final Finder copyConnectorCardButton = find.widgetWithText(
+      FilledButton,
+      _kCopyConnectorCard,
+    );
+    await tester.ensureVisible(copyConnectorCardButton);
+    await tester.pumpAndSettle();
+    await tester.tap(copyConnectorCardButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text(_kWaitingForGetStatus), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text(_kClaudeHealthCheckTitle),
@@ -465,6 +477,7 @@ void main() {
     expect(find.text('最近任务处理成功'), findsOneWidget);
     expect(find.textContaining('已处理远程任务：get_status'), findsOneWidget);
     expect(find.textContaining('bridge-task-9'), findsOneWidget);
+    expect(find.text(_kAiConnectorVerified), findsOneWidget);
   });
 
   testWidgets('mcp page can enable automatic remote task consume', (
@@ -1343,6 +1356,9 @@ const String _kConnectorCardTitle = 'ToyLink 连接卡片';
 const String _kCopyConnectorCard = '复制连接卡片';
 const String _kOpenSafetyTools = '开放工具：get_status / stop_all';
 const String _kSafetyV0SetToolsBlocked = 'Phase 1 不开放 set_* 控制';
+const String _kCopyCardToVerify = '复制连接卡片后开始验证';
+const String _kWaitingForGetStatus = '等待 AI 调用 get_status';
+const String _kAiConnectorVerified = 'AI 已连接/验证通过';
 const String _kClaudeOnboardingTitle = 'Claude 接入向导';
 const String _kClaudeBlockedTitle = '还不能开始 Claude 接入';
 const String _kClaudeReadyTitle = '现在可以开始接入 Claude';
