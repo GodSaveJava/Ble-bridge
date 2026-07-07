@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../application/models/active_device_adapter_readiness.dart';
 import '../../../../application/providers/application_providers.dart';
@@ -718,6 +719,8 @@ class _ConnectorCard extends ConsumerWidget {
           const SizedBox(height: 12),
           _ConnectorVerificationPanel(bridgeState: bridgeState),
           const SizedBox(height: 12),
+          _ConnectorTransferPanel(bridgeState: bridgeState),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -732,6 +735,12 @@ class _ConnectorCard extends ConsumerWidget {
                 onPressed: () => _copyConnectorUrl(context, bridgeState),
                 icon: const Icon(Icons.link, size: 18),
                 label: const Text('只复制地址'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    _copyConnectorDeepLink(context, ref, bridgeState),
+                icon: const Icon(Icons.qr_code_2, size: 18),
+                label: const Text('复制 Deep link'),
               ),
             ],
           ),
@@ -777,6 +786,97 @@ class _ConnectorCard extends ConsumerWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('接入地址已复制')));
+  }
+
+  Future<void> _copyConnectorDeepLink(
+    BuildContext context,
+    WidgetRef ref,
+    RemoteBridgeSessionState state,
+  ) async {
+    ref
+        .read(remoteBridgeSessionControllerProvider.notifier)
+        .markConnectorCardCopied();
+    await Clipboard.setData(ClipboardData(text: _connectorCardDeepLink(state)));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Deep link 已复制')));
+  }
+}
+
+class _ConnectorTransferPanel extends StatelessWidget {
+  const _ConnectorTransferPanel({required this.bridgeState});
+
+  final RemoteBridgeSessionState bridgeState;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final String deepLink = _connectorCardDeepLink(bridgeState);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.qr_code_2, color: colors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '二维码 / Deep link',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text('扫码或复制 URI，把同一张连接卡片搬到另一台设备或 AI 配置页。'),
+          const SizedBox(height: 12),
+          Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: QrImageView(
+                  data: deepLink,
+                  version: QrVersions.auto,
+                  size: 148,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SelectableText(
+            deepLink,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -849,7 +949,20 @@ class _ConnectorVerificationPanel extends StatelessWidget {
 }
 
 String _connectorCardJson(RemoteBridgeSessionState state) {
-  return const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+  return const JsonEncoder.withIndent(
+    '  ',
+  ).convert(_connectorCardPayload(state));
+}
+
+String _connectorCardDeepLink(RemoteBridgeSessionState state) {
+  final String payload = base64UrlEncode(
+    utf8.encode(jsonEncode(_connectorCardPayload(state))),
+  );
+  return 'toylink://connector-card/v1?payload=$payload';
+}
+
+Map<String, Object?> _connectorCardPayload(RemoteBridgeSessionState state) {
+  return <String, Object?>{
     'type': 'toylink_connector_card',
     'version': 1,
     'phase': 'safety_v0',
@@ -858,7 +971,7 @@ String _connectorCardJson(RemoteBridgeSessionState state) {
     'tools': state.toolNames,
     'instructions':
         'Only call get_status and stop_all in Phase 1. Remote set_* controls are not enabled.',
-  });
+  };
 }
 
 class _McpAction {

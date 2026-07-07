@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'package:toylink_ai/application/bridge/remote_bridge_task_assignment_handler.dart';
 import 'package:toylink_ai/application/models/active_device_adapter_readiness.dart';
@@ -364,6 +365,9 @@ void main() {
 
     expect(find.text(_kConnectorCardTitle), findsOneWidget);
     expect(find.text(_kCopyConnectorCard), findsOneWidget);
+    expect(find.text(_kConnectorQrDeepLink), findsOneWidget);
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.text(_kCopyDeepLink), findsOneWidget);
     expect(find.text(_kOpenSafetyTools), findsOneWidget);
     expect(find.textContaining(_kSafetyV0SetToolsBlocked), findsOneWidget);
     expect(find.text(_kCopyCardToVerify), findsOneWidget);
@@ -1354,6 +1358,8 @@ const String _kConnectorTokenReady = '接入令牌：已生成';
 const String _kGoConfigureClaude = '去配置 Claude';
 const String _kConnectorCardTitle = 'ToyLink 连接卡片';
 const String _kCopyConnectorCard = '复制连接卡片';
+const String _kConnectorQrDeepLink = '二维码 / Deep link';
+const String _kCopyDeepLink = '复制 Deep link';
 const String _kOpenSafetyTools = '开放工具：get_status / stop_all';
 const String _kSafetyV0SetToolsBlocked = 'Phase 1 不开放 set_* 控制';
 const String _kCopyCardToVerify = '复制连接卡片后开始验证';

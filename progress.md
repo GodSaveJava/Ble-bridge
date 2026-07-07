@@ -100,3 +100,10 @@
   - Copying the connector card moves the UI into "waiting for get_status".
   - A successful `get_status` task automatically marks the connector as verified.
   - Safety V0 copy remains unchanged: only `get_status` and `stop_all` are allowed.
+
+## 2026-07-07
+
+- Added QR/deep link export for the ToyLink connector card.
+- The MCP page now renders a QR code and copyable `toylink://connector-card/v1?...` URI generated from the same Safety V0 connector payload.
+- Copying the deep link also moves the UI into the `get_status` verification wait state.
+- Android deep link import is still a follow-up item; this step only solves cross-device transport/export.
