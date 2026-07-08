@@ -24,7 +24,11 @@
 - Android deep link 导入已落地：`toylink://connector-card/v1` 可打开导入页并校验 Safety V0 payload，包含 `set_*` 的卡片会被拒绝。
 - 多平台模板已落地：MCP 页可复制 Claude Remote MCP、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 四类 Safety V0 模板；仍需真实平台接入证据。
 - REST/OpenAPI 模板已有自动化 smoke 证据：测试会从生成的 OpenAPI schema 反推 server/path/tool enum，并实际调用本地 `POST /mobile-bridge/tool-call` 的 `get_status`，返回 200；这只能证明 REST/OpenAPI 客户端路径可用，不能替代 ChatGPT / Claude 外部平台实测。
-- Phase 2 真实平台接入证据需要拆开验收：REST/OpenAPI smoke 已补；MCP 客户端 live evidence 与外部平台手工证据仍未完成。
+- MCP 客户端 live evidence 已补：测试以客户端视角访问 `/mcp/status`、`/mcp/tools`、`/mcp/call`，确认 `get_status` 可调用且 `set_suck` 被 Safety V0 拒绝。
+- `LocalMcpHttpService.endpointInfo` 曾在自定义端口下仍报告 `8765`；已修复为按实际 `host` / `port` 返回，避免客户端发现信息失真。
+- Phase 2 真实平台接入证据需要拆开验收：REST/OpenAPI smoke 已补，MCP 客户端 live evidence 已补；外部平台手工证据仍未完成。
+- 本地 MCP 与远程 BYO-AI connector 的隐私边界不同：本地 MCP `get_status` 仍按本地合约返回 `deviceId`，远程 `/mobile-bridge/tool-call` 路径继续做脱敏。
+- 2026-07-08 全量回归通过：`flutter analyze`、`flutter test`（201 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 2026-07-07 全量回归通过：`flutter analyze`、`flutter test`（200 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。

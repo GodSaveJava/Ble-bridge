@@ -60,11 +60,7 @@ class LocalMcpHttpService implements McpService {
       InternetAddress.tryParse(host) ?? InternetAddress.loopbackIPv4,
       port,
     );
-    _endpointInfo = const McpEndpointInfo(
-      host: '127.0.0.1',
-      port: 8765,
-      path: '/mcp/tool',
-    );
+    _endpointInfo = McpEndpointInfo(host: host, port: port, path: '/mcp/tool');
   }
 
   @override

@@ -138,3 +138,20 @@
   - This is reproducible REST/OpenAPI client evidence.
   - It is not yet live external ChatGPT / Claude platform evidence.
   - MCP client live evidence remains pending.
+
+## 2026-07-08
+
+- Added MCP client smoke evidence for Phase 2.
+- The new smoke test starts `LocalMcpHttpService` on a non-default localhost port, discovers service status, fetches Safety V0 tool definitions, calls `get_status` through `/mcp/call`, and verifies `set_suck` is rejected by the Safety V0 allowlist.
+- Fixed `LocalMcpHttpService.endpointInfo` so custom host/port values are reflected correctly instead of always reporting `127.0.0.1:8765`.
+- Verification:
+  - `flutter test test\features\connector_mcp_client_smoke_test.dart test\features\connector_rest_openapi_smoke_test.dart`: PASS, with `GET [200] /mcp/status`, `GET [200] /mcp/tools`, `POST [200] /mcp/call`, `POST [400] /mcp/call`, and `POST [200] /mobile-bridge/tool-call`.
+  - `flutter analyze`: PASS.
+  - Full `flutter test`: PASS, `201` tests.
+  - `cd bridge_server; dart test`: PASS, `10` tests.
+  - `flutter build apk --debug`: PASS, output `build\app\outputs\flutter-apk\app-debug.apk`.
+  - `git diff --check`: PASS.
+- Scope note:
+  - This is reproducible local MCP client evidence over localhost Streamable HTTP.
+  - It is not yet external Claude / ChatGPT platform evidence.
+  - Local MCP `get_status` follows `docs/03-mcp-tool-contract.md` and includes local `deviceId`; remote BYO-AI connector status remains separately de-identified on `/mobile-bridge/tool-call`.
