@@ -68,6 +68,10 @@ void main() {
         webhookTemplate.content,
         contains('https://bridge.toylink.local/mobile-bridge/tool-call'),
       );
+      expect(
+        (jsonDecode(webhookTemplate.content) as Map<String, dynamic>)['url'],
+        'https://bridge.toylink.local/mobile-bridge/tool-call',
+      );
       expect(webhookTemplate.content, contains('Bearer toy-connector-token'));
       expect(webhookTemplate.content, contains('get_status'));
       expect(webhookTemplate.content, contains('stop_all'));

@@ -170,7 +170,13 @@ Map<String, Object?> _openApiSchema(
 
 Uri _toolCallUrl(ConnectorCardPayload card) {
   final Uri connectorUri = Uri.parse(card.connectorUrl);
-  return connectorUri.replace(path: '/mobile-bridge/tool-call', query: '');
+  return Uri(
+    scheme: connectorUri.scheme,
+    userInfo: connectorUri.userInfo,
+    host: connectorUri.host,
+    port: connectorUri.hasPort ? connectorUri.port : null,
+    path: '/mobile-bridge/tool-call',
+  );
 }
 
 String _prettyJson(Map<String, Object?> value) {

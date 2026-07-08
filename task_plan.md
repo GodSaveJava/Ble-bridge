@@ -50,6 +50,7 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
   - [x] REST / OpenAPI tool 客户端 smoke 证据：从生成 schema 发起真实 `get_status` HTTP 调用
   - [x] MCP 客户端 live evidence：发现 `/mcp/tools` 并通过 `/mcp/call` 调用 `get_status`
   - [x] 通用 AI Connector Setup 页面化：按平台展示 Claude、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 模板
+  - [x] 外部平台手工验收预检包：提供 connector preflight 工具和 evidence 规则
   - [ ] 外部平台手工证据：至少一个 ChatGPT / Claude / 其他用户自有 AI 工具调用环境
 - [ ] Phase 3：低强度控制开放
 - [ ] Phase 4：GPT / 多平台正式支持
@@ -72,6 +73,7 @@ Phase 0 已完成代码/测试/CI 基线；Android cmdline-tools 已补齐，And
 - `docs/evidence/2026-07-07-phase-2-rest-openapi-connector-evidence.md`
 - `docs/evidence/2026-07-08-phase-2-mcp-client-evidence.md`
 - `docs/evidence/2026-07-08-phase-2-generic-ai-connector-setup-evidence.md`
+- `docs/evidence/2026-07-08-phase-2-external-platform-preflight-kit.md`
 - `docs/evidence/phase-0-1-evidence-manifest-template.md`
 - `docs/16-product-goals-and-next-design-plan.md`
 - `docs/19-claude-remote-mcp-architecture.md`

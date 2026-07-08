@@ -177,3 +177,27 @@
 - Scope note:
   - This completes the UI/page work for generic AI connector setup.
   - It does not complete external platform hand verification; at least one real user-owned AI environment still needs to be checked.
+
+## 2026-07-08
+
+- Added an external platform manual-evidence preflight kit for Phase 2.
+- Added `tool/external_platform_preflight.dart`:
+  - Accepts either a copied connector card JSON or direct connector URL/token.
+  - Validates Safety V0 tool scope.
+  - Derives the `/mobile-bridge/tool-call` endpoint.
+  - Supports `--dry-run` for no-network validation.
+  - Can write markdown evidence via `--evidence-out`.
+- Added `docs/23-external-platform-manual-evidence.md` with PASS/PENDING/BLOCKED/FAIL rules for real ChatGPT / Claude / user-owned AI verification.
+- Cleaned connector platform URL generation so Webhook and preflight output use `/mobile-bridge/tool-call` without a trailing `?`.
+- Verification:
+  - `dart run tool\external_platform_preflight.dart --help`: PASS.
+  - `dart run tool\external_platform_preflight.dart --connector-url https://bridge.toylink.local/mcp/claude --token toy_bridge_token_ready --platform "ChatGPT GPT Actions" --dry-run`: PASS.
+  - `flutter test test\features\connector_platform_template_test.dart`: PASS, `3` tests.
+  - `flutter analyze`: PASS.
+  - Full `flutter test`: PASS, `203` tests.
+  - `cd bridge_server; dart test`: PASS, `10` tests.
+  - `flutter build apk --debug`: PASS, output `build\app\outputs\flutter-apk\app-debug.apk`.
+  - `git diff --check`: PASS.
+- Scope note:
+  - This is not external platform hand evidence by itself.
+  - It is the repeatable preflight/evidence capture path to use when a real platform account/environment is available.

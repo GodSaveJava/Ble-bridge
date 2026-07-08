@@ -33,6 +33,10 @@
 - 通用 AI Connector Setup 页面已落地：`/ai-connector-setup` 按平台展示 Claude Remote MCP、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 模板，并从 MCP 页提供 `通用 AI 接入` 入口。
 - 通用接入页面仍只是配置降本和模板搬运，不等价于 ChatGPT / Claude 外部平台手工验收通过。
 - 2026-07-08 通用接入页面回归通过：`flutter analyze`、`flutter test`（203 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
+- 外部平台手工验收已有预检包：`tool/external_platform_preflight.dart` 可校验连接卡片、推导 `/mobile-bridge/tool-call`、执行或 dry-run `get_status` / unsafe tool 拒绝检查，并可输出 markdown 证据。
+- `docs/23-external-platform-manual-evidence.md` 已定义外部平台 PASS/PENDING/BLOCKED/FAIL 规则；真实 ChatGPT / Claude / 用户自有 AI 环境验收仍未完成。
+- Webhook / preflight 的 tool-call URL 已去掉尾部空查询符号，避免平台配置时复制到 `...?`。
+- 2026-07-08 外部平台预检包回归通过：`flutter analyze`、`flutter test`（203 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 2026-07-07 全量回归通过：`flutter analyze`、`flutter test`（200 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。
