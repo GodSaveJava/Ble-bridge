@@ -29,6 +29,10 @@
 - Phase 2 真实平台接入证据需要拆开验收：REST/OpenAPI smoke 已补，MCP 客户端 live evidence 已补；外部平台手工证据仍未完成。
 - 本地 MCP 与远程 BYO-AI connector 的隐私边界不同：本地 MCP `get_status` 仍按本地合约返回 `deviceId`，远程 `/mobile-bridge/tool-call` 路径继续做脱敏。
 - 2026-07-08 全量回归通过：`flutter analyze`、`flutter test`（201 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
+- 2026-07-08 ADB 复查仍没有列出设备；Phase 1 真机 BLE 和后台保活证据仍 BLOCKED。
+- 通用 AI Connector Setup 页面已落地：`/ai-connector-setup` 按平台展示 Claude Remote MCP、ChatGPT / GPT Actions、OpenAPI / REST Tool、Webhook 模板，并从 MCP 页提供 `通用 AI 接入` 入口。
+- 通用接入页面仍只是配置降本和模板搬运，不等价于 ChatGPT / Claude 外部平台手工验收通过。
+- 2026-07-08 通用接入页面回归通过：`flutter analyze`、`flutter test`（203 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 2026-07-07 全量回归通过：`flutter analyze`、`flutter test`（200 tests）、`bridge_server dart test`（10 tests）、`flutter build apk --debug`、`git diff --check`。
 - 安全高风险仍集中在 Phase 1：HTTPS/token、token 生命周期、本地 MCP 鉴权、AppLock 授权链、debug route、远程结果脱敏。
 - Phase 1 自动化安全基线已落地：Bridge server allowlist/debug token、非 loopback HTTPS+token、CSPRNG session/token、session TTL/client binding、本地 MCP token、AppLock 授权链、远程结果脱敏均有测试覆盖。

@@ -155,3 +155,25 @@
   - This is reproducible local MCP client evidence over localhost Streamable HTTP.
   - It is not yet external Claude / ChatGPT platform evidence.
   - Local MCP `get_status` follows `docs/03-mcp-tool-contract.md` and includes local `deviceId`; remote BYO-AI connector status remains separately de-identified on `/mobile-bridge/tool-call`.
+
+## 2026-07-08
+
+- Rechecked real-device evidence path:
+  - `adb devices -l`: ADB daemon started, but no devices were listed.
+  - Phase 1 real BLE scan/connect/adapter verification/emergency stop/background evidence remains BLOCKED.
+- Added generic AI Connector Setup page for Phase 2:
+  - New route: `/ai-connector-setup`.
+  - MCP page now shows a `通用 AI 接入` entry when bridge connector info is ready.
+  - The setup page reuses the existing Safety V0 connector card and platform templates for Claude Remote MCP, ChatGPT / GPT Actions, OpenAPI / REST Tool, and Webhook.
+  - The page keeps the remote tool scope explicit: `get_status` and `stop_all` only; `set_*` remains unavailable.
+- Verification:
+  - `flutter test test\features\ai_connector_setup_page_test.dart`: PASS, `2` tests.
+  - `flutter test test\widget_test.dart --name "mcp page shows connector info after remote bridge is ready"`: PASS.
+  - `flutter analyze`: PASS.
+  - Full `flutter test`: PASS, `203` tests.
+  - `cd bridge_server; dart test`: PASS, `10` tests.
+  - `flutter build apk --debug`: PASS, output `build\app\outputs\flutter-apk\app-debug.apk`.
+  - `git diff --check`: PASS.
+- Scope note:
+  - This completes the UI/page work for generic AI connector setup.
+  - It does not complete external platform hand verification; at least one real user-owned AI environment still needs to be checked.

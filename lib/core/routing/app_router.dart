@@ -7,6 +7,7 @@ import '../../features/control/presentation/pages/control_page.dart';
 import '../../features/device_manager/presentation/pages/device_manager_page.dart';
 import '../../features/device_manager/presentation/pages/adapter_verification_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/mcp_server/presentation/pages/ai_connector_setup_page.dart';
 import '../../features/mcp_server/presentation/pages/claude_onboarding_page.dart';
 import '../../features/mcp_server/presentation/pages/connector_card_import_page.dart';
 import '../../features/mcp_server/presentation/pages/mcp_page.dart';
@@ -43,6 +44,10 @@ class AppRouter {
             builder: (_, _) => const BackgroundStabilityChecklistPage(),
           ),
           GoRoute(path: '/mcp', builder: (_, _) => const McpPage()),
+          GoRoute(
+            path: '/ai-connector-setup',
+            builder: (_, _) => const AiConnectorSetupPage(),
+          ),
           GoRoute(
             path: '/connector-card/v1',
             builder: (_, state) => ConnectorCardImportPage(uri: state.uri),

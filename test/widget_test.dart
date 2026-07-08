@@ -406,6 +406,7 @@ void main() {
     expect(find.text(_kConnectorTokenReady), findsOneWidget);
     expect(find.text(_kRefreshConnectorInfo), findsOneWidget);
     expect(find.text(_kGoConfigureClaude), findsOneWidget);
+    expect(find.text(_kGenericAiConnectorSetup), findsOneWidget);
     expect(find.text(_kClaudeHealthCheckTitle), findsOneWidget);
     expect(find.text(_kClaudeHealthPendingTitle), findsOneWidget);
   });
@@ -1367,6 +1368,7 @@ const String _kConnectorUrlReady =
     '接入地址：https://bridge.toylink.local/mcp/claude';
 const String _kConnectorTokenReady = '接入令牌：已生成';
 const String _kGoConfigureClaude = '去配置 Claude';
+const String _kGenericAiConnectorSetup = '通用 AI 接入';
 const String _kConnectorCardTitle = 'ToyLink 连接卡片';
 const String _kCopyConnectorCard = '复制连接卡片';
 const String _kConnectorQrDeepLink = '二维码 / Deep link';

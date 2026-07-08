@@ -390,6 +390,12 @@ class McpPage extends ConsumerWidget {
                               claudeSetupCompleted ? '查看接入信息' : '去配置 Claude',
                             ),
                           ),
+                        if (bridgeState.canOnboardClaude)
+                          OutlinedButton(
+                            onPressed: () =>
+                                context.push('/ai-connector-setup'),
+                            child: const Text('通用 AI 接入'),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 12),
